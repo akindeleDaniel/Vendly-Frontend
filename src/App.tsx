@@ -46,7 +46,6 @@ function App () {
       return
     }
 
-
     fetch("http://localhost:3000/listings", {
       method: "POST",
       headers: {
@@ -63,6 +62,15 @@ function App () {
         setFormData({ title: "", description: "", price: "", category: "" });
       });
   }
+
+  function handleDelete(id: number){
+      fetch(`http://localhost:3000/listing/${id}`,{
+        method: "DELETE",
+      })
+      .then(()=>{
+        setListings(listings.filter((listing) => listing.id != id))
+      })
+    }
 
   return (
     <div>
@@ -107,6 +115,7 @@ function App () {
             <div>{listing.price}</div>
             <div>{listing.description}</div>
             <div>{listing.category}</div>
+            <button onClick={() => handleDelete(listing.id)}>Delete</button>
           </div>
         )
 
