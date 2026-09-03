@@ -28,6 +28,14 @@ function App () {
     category: ""
   })
 
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editFormData, setEditFormData] = useState<FormData>({
+    title: "",
+    description: "",
+    price: "",
+    category: ""
+  })
+
   useEffect(() =>{
     fetch("http://localhost:3000/listings")
     .then((response) => response.json())
@@ -64,12 +72,48 @@ function App () {
   }
 
   function handleDelete(id: number){
-      fetch(`http://localhost:3000/listing/${id}`,{
+      fetch(`http://localhost:3000/listings/${id}`,{
         method: "DELETE",
       })
       .then(()=>{
-        setListings(listings.filter((listing) => listing.id != id))
+        setListings(listings.filter((listing) => listing.id !== id))
       })
+    }
+
+  function handleEditClick(listing: Listing){
+    setEditingId(listing.id)
+    setEditFormData({
+      title: listing.title,
+      description: listing.description,
+      price: String(listing.price),
+      category: listing.category
+    })
+  }
+
+  function handleSave(id: number) {
+    fetch(`http://localhost:3000/listings/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...editFormData,
+        price: Number(editFormData.price),
+      }),
+    })
+      .then((response) => response.json())
+      .then((updatedListing) => {
+        setListings(
+          listings.map((listing) =>
+            listing.id === id ? updatedListing : listing
+          )
+        );
+        setEditingId(null);
+      });
+  }
+
+    function handleCancel() {
+      setEditingId(null);
     }
 
   return (
@@ -108,18 +152,51 @@ function App () {
       </form>
 
       {listings.map((listing) => {
-        return (
-          <div key={listing.id}>
-            <div>{listing.id}</div>
-            <div>{listing.title}</div>
-            <div>{listing.price}</div>
-            <div>{listing.description}</div>
-            <div>{listing.category}</div>
-            <button onClick={() => handleDelete(listing.id)}>Delete</button>
-          </div>
-        )
-
-      })}
+      return (
+        <div key={listing.id}>
+          {listing.id === editingId ? (
+            <>
+              <label>
+                Title
+                <input name="title" value={editFormData.title}
+                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+                />
+              </label>
+              <label>
+                Description
+                <input name="description" value={editFormData.description}
+                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+                />
+              </label>
+              <label>
+                Price
+                <input name="price" value={editFormData.price}
+                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+                />
+              </label>
+              <label>
+                Category
+                <input name="category" value={editFormData.category}
+                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+                />
+              </label>
+              <button onClick={() => handleSave(listing.id)}>Save</button>
+              <button onClick={handleCancel}>Cancel</button>
+            </>
+          ) : (
+            <>
+              <div>{listing.id}</div>
+              <div>{listing.title}</div>
+              <div>{listing.price}</div>
+              <div>{listing.description}</div>
+              <div>{listing.category}</div>
+              <button onClick={() => handleEditClick(listing)}>Edit Listing</button>
+              <button onClick={() => handleDelete(listing.id)}>Delete Listing</button>
+            </>
+          )}
+        </div>
+      );
+    })}
     </div>
   )
 
@@ -127,3 +204,6 @@ function App () {
 
 
 export default App
+
+
+
