@@ -23,6 +23,8 @@ function App () {
 
   const [listings, setListings] = useState<Listing[]>([])
 
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  
   const [formData, setFormData] =useState<FormData>({
     title: "",
     description: "",
@@ -38,11 +40,11 @@ function App () {
     category: ""
   })
 
-  useEffect(() =>{
-    fetch("http://localhost:3000/listings")
+  useEffect(() => {
+  fetch(`http://localhost:3000/listings?search=${searchTerm}`)
     .then((response) => response.json())
-    .then((data) => setListings(data))
-  }, [])
+    .then((data) => setListings(data));
+}, [searchTerm]);
 
   function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -121,6 +123,13 @@ function App () {
   return (
     <div>
       <h1>Vendly</h1>
+      <label>
+        Search
+        <input value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </label>
+
       <CreateListingForm 
         formData={formData}
         handleSubmit={handleSubmit}
