@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import ListingCard from "./ListingCard";
+import CreateListingForm from "./CreateListingForm";
 
-type Listing = {
+export type Listing = {
 id: number;
 title: string;
 description: string;
@@ -9,7 +11,7 @@ category: string;
 createdAt: string;// date is a string because when coming from express or json, it comes as a string(stringify)
 };
 
-type FormData = {
+export type FormData = {
   title: string
   description: string
   price: string
@@ -119,83 +121,25 @@ function App () {
   return (
     <div>
       <h1>Vendly</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Title
-          <input name="title"
-            value={formData.title}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <label>
-          Description
-          <input name="description"
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-        />
-        </label>
-        <label>
-          Price
-          <input name="price"
-          value={formData.price}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <label>
-          Category
-          <input name="category"
-          value={formData.category}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <button type="submit">Create Listing</button>
-      </form>
-
+      <CreateListingForm 
+        formData={formData}
+        handleSubmit={handleSubmit}
+        setFormData={setFormData}
+      />
       {listings.map((listing) => {
-      return (
-        <div key={listing.id}>
-          {listing.id === editingId ? (
-            <>
-              <label>
-                Title
-                <input name="title" value={editFormData.title}
-                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
-                />
-              </label>
-              <label>
-                Description
-                <input name="description" value={editFormData.description}
-                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
-                />
-              </label>
-              <label>
-                Price
-                <input name="price" value={editFormData.price}
-                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
-                />
-              </label>
-              <label>
-                Category
-                <input name="category" value={editFormData.category}
-                  onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
-                />
-              </label>
-              <button onClick={() => handleSave(listing.id)}>Save</button>
-              <button onClick={handleCancel}>Cancel</button>
-            </>
-          ) : (
-            <>
-              <div>{listing.id}</div>
-              <div>{listing.title}</div>
-              <div>{listing.price}</div>
-              <div>{listing.description}</div>
-              <div>{listing.category}</div>
-              <button onClick={() => handleEditClick(listing)}>Edit Listing</button>
-              <button onClick={() => handleDelete(listing.id)}>Delete Listing</button>
-            </>
-          )}
-        </div>
-      );
+        return (
+          <ListingCard  
+            listing={listing}
+            editingId={editingId}
+            editFormData={editFormData}
+            setEditFormData={setEditFormData}
+            handleEditClick={handleEditClick}
+            handleDelete={handleDelete}
+            handleCancel={handleCancel}
+            handleSave={handleSave}
+            key={listing.id} 
+          />
+        );
     })}
     </div>
   )
