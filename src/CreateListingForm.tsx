@@ -1,4 +1,4 @@
-import type { FormData } from "./App"
+import type { FormData } from "./HomePage"
 import type { SubmitEventHandler } from "react"
 
 type CreateListingFormProps = {

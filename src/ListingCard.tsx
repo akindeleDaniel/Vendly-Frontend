@@ -1,4 +1,4 @@
-import type {FormData, Listing} from "./App"
+import type {FormData, Listing} from "./HomePage"
 
 type ListingCardProps = {
     listing: Listing
