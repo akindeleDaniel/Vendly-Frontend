@@ -46,7 +46,7 @@ function HomePage () {
     .then((data) => setListings(data));
 }, [searchTerm]);
 
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
    {
     e.preventDefault();
     
@@ -59,30 +59,53 @@ function HomePage () {
       return
     }
 
-    fetch("http://localhost:3000/listings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...formData,
-        price: Number(formData.price),
-      }),
-    })
-      .then((response) => response.json())
-      .then((newListing) => {
-        setListings([...listings, newListing]);
-        setFormData({ title: "", description: "", price: "", category: "" });
-      });
+    try{
+      const response = await fetch("http://localhost:3000/listings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          price: Number(formData.price),
+        }),
+        credentials:"include"
+      })
+  
+      const data = await response.json()
+  
+      if(!response.ok){
+        alert(data.message)
+        return
+      }
+        
+        
+          setListings([...listings, data]);
+          setFormData({ title: "", description: "", price: "", category: "" })
+    }catch(error){
+      alert("Something went wrong. Please check your connection and try again.")
+    }
   }
 
-    function handleDelete(id: number){
-      fetch(`http://localhost:3000/listings/${id}`,{
-        method: "DELETE",
-      })
-      .then(()=>{
-        setListings(listings.filter((listing) => listing.id !== id))
-      })
+    async function handleDelete(id: number){
+      try{
+        const response = await fetch(`http://localhost:3000/listings/${id}`,{
+          method: "DELETE",
+          credentials:"include"
+        })
+  
+        const data = await response.json()
+  
+        if(!response.ok){
+          alert(data.message)
+          return
+        }
+        
+          setListings(listings.filter((listing) => listing.id !== id))
+
+      }catch(error){
+        alert("Something went wrong. Please check your connection and try again.")
+      }
     }
 
   function handleEditClick(listing: Listing){
@@ -95,26 +118,36 @@ function HomePage () {
     })
   }
 
-  function handleSave(id: number) {
-    fetch(`http://localhost:3000/listings/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...editFormData,
-        price: Number(editFormData.price),
-      }),
-    })
-      .then((response) => response.json())
-      .then((updatedListing) => {
-        setListings(
-          listings.map((listing) =>
-            listing.id === id ? updatedListing : listing
-          )
-        );
-        setEditingId(null);
-      });
+  async function handleSave(id: number) {
+    try{
+      const response = await fetch(`http://localhost:3000/listings/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          price: Number(editFormData.price),
+        }),
+        credentials:"include"
+      })
+
+      const data = await response.json()
+
+      if(!response.ok){
+        alert(data.message)
+        return
+      }       
+
+      setListings(
+        listings.map((listing) =>
+          listing.id === id ? data : listing
+        )
+      );
+      setEditingId(null);
+    }catch(error){
+      alert("Something went wrong. Please check your connection and try again.")
+    }
   }
 
     function handleCancel() {
