@@ -6,7 +6,11 @@ type ExistingUser = {
     password: string
 }
 
-function LoginPage (){
+type LoginPageProps = {
+    setIsLoggedIn : (value: boolean) => void
+}
+
+function LoginPage ({setIsLoggedIn}: LoginPageProps){
 
     const navigate = useNavigate()
     const [formData, setFormData] = useState<ExistingUser>({
@@ -47,6 +51,7 @@ function LoginPage (){
             })
 
             navigate("/")
+            setIsLoggedIn(true)
         }catch(error){
              alert("Something went wrong. Please check your connection and try again.")
         }

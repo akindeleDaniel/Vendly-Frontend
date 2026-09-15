@@ -18,7 +18,11 @@ export type FormData = {
   category: string
 }
 
-function HomePage () {
+type HomePageProps = {
+  isLoggedIn: boolean
+}
+
+function HomePage ({isLoggedIn}:HomePageProps) {
 
 
   const [listings, setListings] = useState<Listing[]>([])
@@ -44,7 +48,7 @@ function HomePage () {
   fetch(`http://localhost:3000/listings?search=${searchTerm}`)
     .then((response) => response.json())
     .then((data) => setListings(data));
-}, [searchTerm]);
+}, [searchTerm])
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
    {
@@ -80,8 +84,8 @@ function HomePage () {
       }
         
         
-          setListings([...listings, data]);
-          setFormData({ title: "", description: "", price: "", category: "" })
+      setListings([...listings, data]);
+      setFormData({ title: "", description: "", price: "", category: "" })
     }catch(error){
       alert("Something went wrong. Please check your connection and try again.")
     }
@@ -164,14 +168,15 @@ function HomePage () {
         />
       </label>
 
-      <CreateListingForm 
+      {isLoggedIn && <CreateListingForm 
         formData={formData}
         handleSubmit={handleSubmit}
         setFormData={setFormData}
-      />
+      />}
       {listings.map((listing) => {
         return (
-          <ListingCard  
+          <ListingCard 
+            isLoggedIn = {isLoggedIn} 
             listing={listing}
             editingId={editingId}
             editFormData={editFormData}
@@ -191,6 +196,3 @@ function HomePage () {
 
 
 export default HomePage
-
-
-
