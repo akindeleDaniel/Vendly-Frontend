@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 
 type ExistingUser = {
     email: string
@@ -13,6 +13,9 @@ type LoginPageProps = {
 function LoginPage ({setIsLoggedIn}: LoginPageProps){
 
     const navigate = useNavigate()
+    const location = useLocation()
+    const from = location.state?.from ?? "/" // this means if the request isn't coming from another page(just a normal login) take them to the home page (that's the use of the ?? sign)
+
     const [formData, setFormData] = useState<ExistingUser>({
         email: "",
         password: ""
@@ -50,7 +53,7 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
                 password: ""
             })
 
-            navigate("/")
+            navigate(from)
             setIsLoggedIn(true)
         }catch(error){
              alert("Something went wrong. Please check your connection and try again.")
