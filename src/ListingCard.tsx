@@ -2,47 +2,47 @@ import type {FormData, Listing} from "./HomePage"
 
 type ListingCardProps = {
   listing: Listing
-  editingId: number | null
-  editFormData: FormData
-  setEditFormData: (data: FormData) => void
-  handleEditClick: (listing: Listing) => void
-  handleDelete: (id: number) => void
-  handleSave: (id: number) => void
-  handleCancel: () => void
-  isLoggedIn: boolean
+  isEditable: boolean
+  editingId?: number | null
+  editFormData?: FormData
+  setEditFormData?: (data: FormData) => void
+  handleEditClick?: (listing: Listing) => void
+  handleDelete?: (id: number) => void
+  handleSave?: (id: number) => void
+  handleCancel?: () => void
 }
 
-function ListingCard({ listing, editingId, editFormData, setEditFormData, handleEditClick, handleDelete, handleSave, handleCancel, isLoggedIn }: ListingCardProps) {
+function ListingCard({ listing, editingId, editFormData, setEditFormData, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
   return (
     <div>
       {listing.id === editingId ? (
         <>
           <label>
             Title
-            <input name="title" value={editFormData.title}
-              onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+            <input name="title" value={editFormData!.title}
+              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Description
-            <input name="description" value={editFormData.description}
-              onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+            <input name="description" value={editFormData!.description}
+              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Price
-            <input name="price" value={editFormData.price}
-              onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+            <input name="price" value={editFormData!.price}
+              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Category
-            <input name="category" value={editFormData.category}
-              onChange={(e) => setEditFormData({...editFormData, [e.target.name]: e.target.value})}
+            <input name="category" value={editFormData!.category}
+              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
-          {isLoggedIn && <button onClick={() => handleSave(listing.id)}>Save</button>}
-          {isLoggedIn && <button onClick={handleCancel}>Cancel</button>}
+          {isEditable && <button onClick={() => handleSave!(listing.id)}>Save</button>}
+          {isEditable && <button onClick={handleCancel}>Cancel</button>}
         </>
       ) : (
         <>
@@ -51,8 +51,8 @@ function ListingCard({ listing, editingId, editFormData, setEditFormData, handle
           <div>{listing.price}</div>
           <div>{listing.description}</div>
           <div>{listing.category}</div>
-          {isLoggedIn && <button onClick={() => handleEditClick(listing)}>Edit Listing</button>}
-          {isLoggedIn && <button onClick={() => handleDelete(listing.id)}>Delete Listing</button>}
+          {isEditable && <button onClick={() => handleEditClick!(listing)}>Edit Listing</button>}
+          {isEditable && <button onClick={() => handleDelete!(listing.id)}>Delete Listing</button>}
         </>
       )}
     </div>
