@@ -3,6 +3,7 @@ import HomePage from "./HomePage";
 import RegisterPage from "./RegisterPage";
 import LoginPage from "./LoginPage";
 import MyListingPage from "./MyListingPage"
+import Navbar from "./Navbar"
 import { useEffect, useState } from "react";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Navbar isLoggedIn = {isLoggedIn} />
       <Routes>
         <Route path="/" element={<HomePage/>} />
         <Route path="/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} />} />

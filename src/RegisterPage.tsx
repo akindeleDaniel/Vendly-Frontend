@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 
 type User = {
     name: string
@@ -66,29 +66,30 @@ function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
     return(
         <>
             <form onSubmit={handleSubmit}>
-        <label>
-          Name
-          <input name="name"
-            value={formData.name}
+            <label>
+            Name
+            <input name="name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+            />
+            </label>
+            <label>
+            Email
+            <input name="email"
+            value={formData.email}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <label>
-          Email
-          <input name="email"
-          value={formData.email}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-        />
-        </label>
-        <label>
-          Password
-          <input name="password"
-          value={formData.password}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <button type="submit">Register</button>
-      </form>
+            />
+            </label>
+            <label>
+            Password
+            <input name="password"
+            value={formData.password}
+            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+            />
+            </label>
+            <button type="submit">Register</button>
+        </form>
+        <p>Already have an account? <Link to={"/login"}>Login</Link></p>
         </>
     )
 }

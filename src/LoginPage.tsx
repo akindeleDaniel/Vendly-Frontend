@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 
 type ExistingUser = {
     email: string
@@ -63,22 +63,23 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
     return(
         <>
             <form onSubmit={handleSubmit}>
-        <label>
-          Email
-          <input name="email"
-          value={formData.email}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-        />
-        </label>
-        <label>
-          Password
-          <input name="password"
-          value={formData.password}
-          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-          />
-        </label>
-        <button type="submit">Login</button>
-      </form>
+            <label>
+            Email
+            <input name="email"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+            />
+            </label>
+            <label>
+            Password
+            <input name="password"
+            value={formData.password}
+            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+            />
+            </label>
+            <button type="submit">Login</button>
+        </form>
+        <p>Don't have an account? <Link to={"/register"}>Register</Link></p>
         </>
     )
 }
