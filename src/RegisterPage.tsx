@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 type User = {
     name: string
@@ -6,7 +7,15 @@ type User = {
     password: string
 }
 
-function RegisterPage (){
+type RegisterPageProps = {
+    setIsLoggedIn : (value: boolean) => void
+}
+
+function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
+
+    const navigate = useNavigate()
+
+
     const [formData, setFormData] = useState<User>({
         name:"",
         email: "",
@@ -30,6 +39,7 @@ function RegisterPage (){
                 body: JSON.stringify({
                     ...formData
                 }),
+                credentials: "include"
             })
     
             const data = await response.json()
@@ -44,6 +54,9 @@ function RegisterPage (){
                 email: "",
                 password: ""
             })
+
+            navigate("/")
+            setIsLoggedIn(true)
 
         }catch(error){
              alert("Something went wrong. Please check your connection and try again.")

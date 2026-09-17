@@ -28,7 +28,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage/>} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} />} />
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
         <Route path="/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
       </Routes>
