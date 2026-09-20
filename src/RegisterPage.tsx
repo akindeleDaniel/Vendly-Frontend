@@ -9,9 +9,10 @@ type User = {
 
 type RegisterPageProps = {
     setIsLoggedIn : (value: boolean) => void
+    role: "CONSUMER" | "SELLER"
 }
 
-function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
+function RegisterPage ({setIsLoggedIn, role}: RegisterPageProps){
 
     const navigate = useNavigate()
 
@@ -37,7 +38,8 @@ function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    ...formData
+                    ...formData,
+                    role
                 }),
                 credentials: "include"
             })
@@ -55,7 +57,11 @@ function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
                 password: ""
             })
 
-            navigate("/")
+            if(role === "SELLER"){
+                navigate("/seller/onboarding")
+            }else{
+                navigate("/consumer/discover")
+            }
             setIsLoggedIn(true)
 
         }catch(error){
@@ -83,6 +89,7 @@ function RegisterPage ({setIsLoggedIn}: RegisterPageProps){
             <label>
             Password
             <input name="password"
+            type="password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />

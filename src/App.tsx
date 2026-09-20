@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import HomePage from "./HomePage";
 import RegisterPage from "./RegisterPage";
+import WelcomePage from "./WelcomePage";
 import LoginPage from "./LoginPage";
+import RolePage from "./RolePage"
 import MyListingPage from "./MyListingPage"
 import Navbar from "./Navbar"
 import { useEffect, useState } from "react";
@@ -29,8 +30,10 @@ function App() {
     <BrowserRouter>
       <Navbar isLoggedIn = {isLoggedIn} />
       <Routes>
-        <Route path="/" element={<HomePage/>} />
-        <Route path="/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} />} />
+        <Route path="/" element={<WelcomePage/>} />
+        <Route path="/consumer/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="CONSUMER"/>} />
+        <Route path="/seller/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="SELLER"/>} />
+        <Route path="/register" element={<RolePage />} />
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
         <Route path="/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
       </Routes>
