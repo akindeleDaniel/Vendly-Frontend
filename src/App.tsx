@@ -4,6 +4,7 @@ import WelcomePage from "./WelcomePage";
 import LoginPage from "./LoginPage";
 import RolePage from "./RolePage"
 import MyListingPage from "./MyListingPage"
+import SellerOnboardingPage from "./SellerOnboardingPage";
 import Navbar from "./Navbar"
 import { useEffect, useState } from "react";
 
@@ -31,10 +32,17 @@ function App() {
       <Navbar isLoggedIn = {isLoggedIn} />
       <Routes>
         <Route path="/" element={<WelcomePage/>} />
-        <Route path="/consumer/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="CONSUMER"/>} />
-        <Route path="/seller/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="SELLER"/>} />
+
         <Route path="/register" element={<RolePage />} />
+
+        <Route path="/consumer/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="CONSUMER"/>} />
+
+        <Route path="/seller/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} role="SELLER"/>} />
+
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
+
+        <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
+
         <Route path="/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
       </Routes>
     </BrowserRouter>
