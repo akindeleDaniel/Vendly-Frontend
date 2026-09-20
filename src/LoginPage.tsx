@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, useLocation, Link } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 
 type ExistingUser = {
     email: string
@@ -13,8 +13,6 @@ type LoginPageProps = {
 function LoginPage ({setIsLoggedIn}: LoginPageProps){
 
     const navigate = useNavigate()
-    const location = useLocation()
-    const from = location.state?.from ?? "/" // this means if the request isn't coming from another page(just a normal login) take them to the home page (that's the use of the ?? sign)
 
     const [formData, setFormData] = useState<ExistingUser>({
         email: "",
@@ -42,21 +40,27 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
             })
     
             const data = await response.json()
-    
+
+            
             if (!response.ok) {
                 alert(data.message) 
                 return
             }
-    
+            
             setFormData({
                 email: "",
                 password: ""
             })
-
-            navigate(from)
+            
+            
+            if(data.role === "CONSUMER"){
+                navigate("/consumer/discover")
+            }else if(data.role === "SELLER"){
+                navigate("/seller/myListing")
+            }
             setIsLoggedIn(true)
         }catch(error){
-             alert("Something went wrong. Please check your connection and try again.")
+            alert("Something went wrong. Please check your connection and try again.")
         }
     }
 
@@ -73,6 +77,7 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
             <label>
             Password
             <input name="password"
+            type="password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
