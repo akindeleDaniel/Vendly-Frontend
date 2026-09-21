@@ -51,14 +51,25 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
                 email: "",
                 password: ""
             })
-            
-            
+            setIsLoggedIn(true)
+                        
             if(data.role === "CONSUMER"){
                 navigate("/consumer/discover")
             }else if(data.role === "SELLER"){
-                navigate("/seller/myListing")
+                const profileResponse = await fetch("http://localhost:3000/seller/profile", {
+                    credentials: "include"
+                })
+
+                if (profileResponse.ok){
+                    navigate("/seller/myListing")
+                }else if(profileResponse.status === 404){
+                    navigate("/seller/onboarding")
+                }else{
+                    alert("You are logged in, but we could not load your store details. Please try logging in again.")
+                    return
+                }              
             }
-            setIsLoggedIn(true)
+            
         }catch(error){
             alert("Something went wrong. Please check your connection and try again.")
         }
