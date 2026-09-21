@@ -1,12 +1,13 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import RegisterPage from "./RegisterPage";
-import WelcomePage from "./WelcomePage";
-import LoginPage from "./LoginPage";
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import RegisterPage from "./RegisterPage"
+import WelcomePage from "./WelcomePage"
+import LoginPage from "./LoginPage"
 import RolePage from "./RolePage"
 import MyListingPage from "./MyListingPage"
-import SellerOnboardingPage from "./SellerOnboardingPage";
+import SellerOnboardingPage from "./SellerOnboardingPage"
+import EditSellerProfilePage from "./EditSellerProfilePage"
 import Navbar from "./Navbar"
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -42,6 +43,8 @@ function App() {
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
 
         <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
+
+        <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />
 
         <Route path="/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
       </Routes>
