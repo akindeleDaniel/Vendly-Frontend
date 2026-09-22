@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { uploadImage } from "./lib/uploadImage"
 
 type SellerProfile = {
     businessName: string
@@ -56,23 +57,12 @@ function EditSellerProfilePage (){
             let logoUrl = currentLogoUrl// keeps the old logo unless a new one was picked
 
             if (logoFile !== null) {
-                const imageData = new FormData()
-                imageData.append("file", logoFile)
-                imageData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
-
-                const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                    method: "POST",
-                    body: imageData
-                })
-
-                const cloudinaryData = await cloudinaryResponse.json()
-
-                if (!cloudinaryResponse.ok || !cloudinaryData.secure_url) {
+                const uploadedUrl = await uploadImage(logoFile)
+                if (uploadedUrl === null) {
                     alert("Image upload failed")
                     return
                 }
-
-                logoUrl = cloudinaryData.secure_url
+                logoUrl = uploadedUrl
             }
 
             const response = await fetch("http://localhost:3000/seller/profile", {

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { uploadImage } from "./lib/uploadImage"
 
 type SellerProfile = {
     businessName: string
@@ -26,24 +27,12 @@ function SellerOnboardingPage (){
         }
 
         try{
-            // step 1: send the image straight to cloudinary, not to our backend
-            const imageData = new FormData()
-            imageData.append("file", logoFile)
-            imageData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET)
-
-            const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                method: "POST",
-                body: imageData// no Content-Type header here, FormData sets its own
-            })
-
-            const cloudinaryData = await cloudinaryResponse.json()
-
-            if (!cloudinaryResponse.ok || !cloudinaryData.secure_url) {
+            const logoUrl = await uploadImage(logoFile)
+            if (logoUrl === null) {
                 alert("Image upload failed")
                 return
             }
 
-            // step 2: send the url cloudinary gave us to our own backend
             const response = await fetch("http://localhost:3000/seller/profile", {
                 method: "POST",
                 headers: {
@@ -51,7 +40,7 @@ function SellerOnboardingPage (){
                 },
                 body: JSON.stringify({
                     ...formData,
-                    logoUrl: cloudinaryData.secure_url
+                    logoUrl
                 }),
                 credentials: "include"
             })

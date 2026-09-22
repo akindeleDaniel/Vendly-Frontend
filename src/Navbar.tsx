@@ -12,7 +12,7 @@ function Navbar ({isLoggedIn}: NavbarProps){
         <nav>
             {
                 isLoggedIn ? (
-                    <Link to={"/myListing"}>Profile</Link>
+                    <Link to={"/seller/myListing"}>Profile</Link>
                 ) : (
                     <>
                         {pathname !== "/" && <Link to={"/"}>Home</Link>}

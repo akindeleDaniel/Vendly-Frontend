@@ -3,6 +3,7 @@ import RegisterPage from "./RegisterPage"
 import WelcomePage from "./WelcomePage"
 import LoginPage from "./LoginPage"
 import RolePage from "./RolePage"
+import HomePage from "./HomePage"
 import MyListingPage from "./MyListingPage"
 import SellerOnboardingPage from "./SellerOnboardingPage"
 import EditSellerProfilePage from "./EditSellerProfilePage"
@@ -42,11 +43,13 @@ function App() {
 
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
 
+        <Route path="/consumer/discover" element={<HomePage/>} />
+
         <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
 
         <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />
 
-        <Route path="/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
+        <Route path="/seller/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
       </Routes>
     </BrowserRouter>
   );

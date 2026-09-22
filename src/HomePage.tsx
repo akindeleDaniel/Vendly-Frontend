@@ -7,6 +7,7 @@ title: string;
 description: string;
 price: number;
 category: string;
+imageUrl: string;
 createdAt: string;// date is a string because when coming from express or json, it comes as a string(stringify)
 };
 
@@ -42,6 +43,7 @@ function HomePage () {
           <ListingCard 
             isEditable={false}
             listing={listing} 
+            key={listing.id}
           />
         );
     })}
