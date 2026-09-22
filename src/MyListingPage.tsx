@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import type { Listing, FormData } from "./HomePage"
+import type { Listing, FormData } from "./DiscoveryPage"
 import ListingCard from "./ListingCard"
 import CreateListingForm from "./CreateListingForm"
 import { uploadImage } from "./lib/uploadImage"

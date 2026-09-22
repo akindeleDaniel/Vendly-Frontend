@@ -1,4 +1,4 @@
-import type {FormData, Listing} from "./HomePage"
+import type {FormData, Listing} from "./DiscoveryPage"
 import { CATEGORIES } from "./categories"
 
 type ListingCardProps = {

@@ -1,4 +1,4 @@
-import type { FormData } from "./HomePage"
+import type { FormData } from "./DiscoveryPage"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "./categories"
 
