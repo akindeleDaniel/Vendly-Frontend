@@ -16,6 +16,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     const [listings, setListings] = useState<Listing[]>([])
     const [storeLogoUrl, setStoreLogoUrl] = useState<string>("")
     const [storeName, setStoreName] = useState<string>("")
+    const [storeSlug, setStoreSlug] = useState<string>("")
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
     const [formKey, setFormKey] = useState(0)
@@ -202,6 +203,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
             if (response.ok) {
                 setStoreLogoUrl(data.logoUrl)
                 setStoreName(data.businessName)
+                setStoreSlug(data.slug)
             }
         }
 
@@ -213,6 +215,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         <div>
             {storeLogoUrl && <img src={storeLogoUrl} alt={storeName || "Store logo"} width="80" />}
             {storeName && <h1>{storeName}</h1>}
+            {storeSlug && <p>Your shop link: /shop/{storeSlug}</p>}
 
             <CreateListingForm 
               key={formKey}

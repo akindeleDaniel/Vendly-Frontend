@@ -9,6 +9,8 @@ price: number;
 category: string;
 imageUrl: string;
 createdAt: string;// date is a string because when coming from express or json, it comes as a string(stringify)
+sellerSlug?: string | null;
+sellerName?: string | null;
 };
 
 export type FormData = {

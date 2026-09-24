@@ -8,6 +8,7 @@ import MyListingPage from "./MyListingPage"
 import SellerOnboardingPage from "./SellerOnboardingPage"
 import EditSellerProfilePage from "./EditSellerProfilePage"
 import Navbar from "./Navbar"
+import ShopPage from "./ShopPage"
 import { useEffect, useState } from "react"
 
 function App() {
@@ -50,6 +51,8 @@ function App() {
         <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />
 
         <Route path="/seller/myListing" element={<MyListingPage isLoggedIn ={isLoggedIn} isLoading = {isLoading}/>}/>
+
+        <Route path="/shop/:slug" element={<ShopPage/>} />
       </Routes>
     </BrowserRouter>
   );
