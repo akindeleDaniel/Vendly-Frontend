@@ -20,6 +20,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
     const [formKey, setFormKey] = useState(0)
+    const [linkCopied, setLinkCopied] = useState(false)
     
     const [formData, setFormData] =useState<FormData>({
     title: "",
@@ -35,6 +36,24 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     price: "",
     category: ""
   })
+
+  const handleCopyShopLink = async () => {
+      if (!storeSlug) return
+
+      const shopUrl = `${window.location.origin}/shop/${storeSlug}`
+
+      try {
+          await navigator.clipboard.writeText(shopUrl)
+
+          setLinkCopied(true)
+
+          setTimeout(() => {
+              setLinkCopied(false)
+          }, 2000)
+      } catch {
+          // Keep the UI unchanged if copying fails.
+      }
+  }
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
    {
@@ -215,7 +234,15 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         <div>
             {storeLogoUrl && <img src={storeLogoUrl} alt={storeName || "Store logo"} width="80" />}
             {storeName && <h1>{storeName}</h1>}
-            {storeSlug && <p>Your shop link: /shop/{storeSlug}</p>}
+            {storeSlug && (
+              <div>
+                  <p>Your shop link: /shop/{storeSlug}</p>
+
+                  <button type="button" onClick={handleCopyShopLink}>
+                      {linkCopied ? "Copied!" : "Copy shop link"}
+                  </button>
+              </div>
+            )}
 
             <CreateListingForm 
               key={formKey}
