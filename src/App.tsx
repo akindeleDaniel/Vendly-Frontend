@@ -43,8 +43,6 @@ function App() {
 
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
 
-        <Route path="/consumer/discover" element={<DiscoveryPage/>} />
-
         <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
 
         <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />

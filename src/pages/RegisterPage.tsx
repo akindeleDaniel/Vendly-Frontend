@@ -60,7 +60,7 @@ function RegisterPage ({setIsLoggedIn, role}: RegisterPageProps){
             if(role === "SELLER"){
                 navigate("/seller/onboarding")
             }else{
-                navigate("/consumer/discover")
+                navigate("/")
             }
             setIsLoggedIn(true)
 

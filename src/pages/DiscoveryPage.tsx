@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import ListingCard from "../components/ListingCard"
 import { CATEGORIES } from "../data/categories"
 
 export type Listing = {
@@ -44,20 +45,73 @@ type LocationStatus =
   | "refreshing"
   | "refresh-error"
 
+type RequestStatus = "idle" | "loading" | "error" | "success"
+
 function DiscoveryPage () {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
+  const [products, setProducts] = useState<Listing[]>([])
   const [shops, setShops] = useState<ShopSummary[]>([])
-  const [requestStatus, setRequestStatus] = useState<"idle" | "loading" | "error" | "success">("idle")
-  const [requestError, setRequestError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const [productRequestStatus, setProductRequestStatus] = useState<RequestStatus>("idle")
+  const [shopRequestStatus, setShopRequestStatus] = useState<RequestStatus>("idle")
+  const [productRequestError, setProductRequestError] = useState<string | null>(null)
+  const [shopRequestError, setShopRequestError] = useState<string | null>(null)
+  const [productRetryCount, setProductRetryCount] = useState(0)
+  const [shopRetryCount, setShopRetryCount] = useState(0)
   const [consumerLocation, setConsumerLocation] = useState<ConsumerLocation | null>(null)
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("not-requested")
   const [categorySearch, setCategorySearch] = useState("")
+  const [searchText, setSearchText] = useState("")
+  const search = searchText.trim()
   const filteredCategories = CATEGORIES.filter((category) =>
     category.toLowerCase().includes(categorySearch.trim().toLowerCase())
   )
+
+  useEffect(() => {
+    if (!selectedCategory || !search) {
+      return
+    }
+
+    const controller = new AbortController()
+    const query = new URLSearchParams({ category: selectedCategory })
+    if (search) {
+      query.set("search", search)
+    }
+
+    async function fetchProducts() {
+      setProductRequestStatus("loading")
+      setProductRequestError(null)
+      setProducts([])
+
+      try {
+        const response = await fetch(`http://localhost:3000/listings?${query.toString()}`, {
+          signal: controller.signal
+        })
+
+        if (!response.ok) {
+          throw new Error(`Product request failed with status ${response.status}`)
+        }
+
+        const data: Listing[] = await response.json()
+        if (controller.signal.aborted) {
+          return
+        }
+        setProducts(data)
+        setProductRequestStatus("success")
+      } catch {
+        if (controller.signal.aborted) {
+          return
+        }
+        setProductRequestError("Unable to load products. Check your connection and try again.")
+        setProductRequestStatus("error")
+      }
+    }
+
+    fetchProducts()
+
+    return () => controller.abort()
+  }, [selectedCategory, search, productRetryCount])
 
   useEffect(() => {
     if (!selectedCategory) {
@@ -66,15 +120,17 @@ function DiscoveryPage () {
 
     const controller = new AbortController()
     const query = new URLSearchParams({ category: selectedCategory })
-
+    if (search) {
+      query.set("search", search)
+    }
     if (consumerLocation) {
       query.set("latitude", String(consumerLocation.latitude))
       query.set("longitude", String(consumerLocation.longitude))
     }
 
     async function fetchShops() {
-      setRequestStatus("loading")
-      setRequestError(null)
+      setShopRequestStatus("loading")
+      setShopRequestError(null)
       setShops([])
 
       try {
@@ -87,21 +143,24 @@ function DiscoveryPage () {
         }
 
         const data: ShopSummary[] = await response.json()
+        if (controller.signal.aborted) {
+          return
+        }
         setShops(data)
-        setRequestStatus("success")
+        setShopRequestStatus("success")
       } catch {
         if (controller.signal.aborted) {
           return
         }
-        setRequestError("Unable to load shops. Check your connection and try again.")
-        setRequestStatus("error")
+        setShopRequestError("Unable to load shops. Check your connection and try again.")
+        setShopRequestStatus("error")
       }
     }
 
     fetchShops()
 
     return () => controller.abort()
-  }, [selectedCategory, consumerLocation, retryCount])
+  }, [selectedCategory, search, consumerLocation, shopRetryCount])
 
   function requestLocation() {
     if (!navigator.geolocation) {
@@ -133,9 +192,23 @@ function DiscoveryPage () {
       nextSearchParams.set("category", category)
     }
     setSearchParams(nextSearchParams, { preventScrollReset: true })
+    setSearchText("")
     setShops([])
-    setRequestError(null)
-    setRequestStatus("idle")
+    setProducts([])
+    setShopRequestError(null)
+    setProductRequestError(null)
+    setShopRequestStatus("idle")
+    setProductRequestStatus("idle")
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchText(value)
+
+    if (!value.trim()) {
+      setProducts([])
+      setProductRequestError(null)
+      setProductRequestStatus("idle")
+    }
   }
 
   return (
@@ -170,7 +243,7 @@ function DiscoveryPage () {
             type="button"
             onClick={() => handleCategoryChange("")}
           >
-            Back to categories
+            Back to Home
           </button>
           <section aria-live="polite">
             {locationStatus === "not-requested" && (
@@ -201,33 +274,70 @@ function DiscoveryPage () {
               </>
             )}
           </section>
-          {requestStatus === "loading" && <p>Loading shops...</p>}
-          {requestStatus === "error" && (
-            <div role="alert">
-              <p>{requestError}</p>
-              <button type="button" onClick={() => setRetryCount((count) => count + 1)}>
-                Retry
-              </button>
-            </div>
+          <label>
+            Search this category
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => handleSearchChange(event.currentTarget.value)}
+            />
+          </label>
+          {search && (
+            <section>
+              <h3>Products</h3>
+              {productRequestStatus === "loading" && <p>Loading products...</p>}
+              {productRequestStatus === "error" && (
+                <div role="alert">
+                  <p>{productRequestError}</p>
+                  <button type="button" onClick={() => setProductRetryCount((count) => count + 1)}>
+                    Retry products
+                  </button>
+                </div>
+              )}
+              {productRequestStatus === "success" && products.length === 0 && (
+                <p>No products found in this category.</p>
+              )}
+              {productRequestStatus === "success" && products.length > 0 && (
+                <ul>
+                  {products.map((product) => (
+                    <li key={product.id}>
+                      <ListingCard listing={product} isEditable={false} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
-          {requestStatus === "success" && shops.length === 0 && (
-            <p>No shops found in this category.</p>
-          )}
-          {requestStatus === "success" && shops.length > 0 && (
-            <ul>
-              {shops.map((shop) => (
-                <li key={shop.id}>
-                  <Link to={`/shop/${shop.slug}`}>
-                    {shop.logoUrl && <img src={shop.logoUrl} alt="" width="48" />}
-                    <span>{shop.businessName}</span>
-                    <span>
-                      {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <section>
+            <h3>Shops</h3>
+            {shopRequestStatus === "loading" && <p>Loading shops...</p>}
+            {shopRequestStatus === "error" && (
+              <div role="alert">
+                <p>{shopRequestError}</p>
+                <button type="button" onClick={() => setShopRetryCount((count) => count + 1)}>
+                  Retry shops
+                </button>
+              </div>
+            )}
+            {shopRequestStatus === "success" && shops.length === 0 && (
+              <p>No shops found in this category.</p>
+            )}
+            {shopRequestStatus === "success" && shops.length > 0 && (
+              <ul>
+                {shops.map((shop) => (
+                  <li key={shop.id}>
+                    <Link to={`/shop/${shop.slug}?${searchParams.toString()}`}>
+                      {shop.logoUrl && <img src={shop.logoUrl} alt="" width="48" />}
+                      <span>{shop.businessName}</span>
+                      <span>
+                        {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </section>
       )}
     </div>

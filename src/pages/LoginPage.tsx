@@ -54,7 +54,7 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
             setIsLoggedIn(true)
                         
             if(data.role === "CONSUMER"){
-                navigate("/consumer/discover")
+                navigate("/")
             }else if(data.role === "SELLER"){
                 const profileResponse = await fetch("http://localhost:3000/seller/profile", {
                     credentials: "include"
