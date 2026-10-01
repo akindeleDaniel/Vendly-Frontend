@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom"
-import type {FormData, Listing} from "./DiscoveryPage"
-import { CATEGORIES } from "./categories"
+import type {FormData, Listing} from "../pages/DiscoveryPage"
+import { CATEGORIES } from "../data/categories"
 
 type ListingCardProps = {
   listing: Listing

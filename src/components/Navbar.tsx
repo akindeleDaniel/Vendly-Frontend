@@ -10,6 +10,7 @@ function Navbar ({isLoggedIn}: NavbarProps){
 
     return(
         <nav>
+            <Link to={"/consumer/discover"}>Marketplace</Link>
             {
                 isLoggedIn ? (
                     <Link to={"/seller/myListing"}>Profile</Link>

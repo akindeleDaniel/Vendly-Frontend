@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import type { Listing } from "./DiscoveryPage"
-import ListingCard from "./ListingCard"
+import type { Listing } from "../pages/DiscoveryPage"
+import ListingCard from "../components/ListingCard"
 
 type ShopProfile = {
     businessName: string

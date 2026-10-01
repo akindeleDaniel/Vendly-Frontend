@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { uploadImage } from "./lib/uploadImage"
+import { uploadImage } from "../lib/uploadImage"
 
 type SellerProfile = {
     businessName: string

@@ -1,6 +1,6 @@
-import type { FormData } from "./DiscoveryPage"
+import type { FormData } from "../pages/DiscoveryPage"
 import type { SubmitEventHandler } from "react"
-import { CATEGORIES } from "./categories"
+import { CATEGORIES } from "../data/categories"
 
 type CreateListingFormProps = {
     formData: FormData

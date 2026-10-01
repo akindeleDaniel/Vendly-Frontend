@@ -1,14 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import RegisterPage from "./RegisterPage"
-import WelcomePage from "./WelcomePage"
-import LoginPage from "./LoginPage"
-import RolePage from "./RolePage"
-import HomePage from "./DiscoveryPage"
-import MyListingPage from "./MyListingPage"
-import SellerOnboardingPage from "./SellerOnboardingPage"
-import EditSellerProfilePage from "./EditSellerProfilePage"
-import Navbar from "./Navbar"
-import ShopPage from "./ShopPage"
+import RegisterPage from "./pages/RegisterPage"
+import LoginPage from "./pages/LoginPage"
+import RolePage from "./pages/RolePage"
+import DiscoveryPage from "./pages/DiscoveryPage"
+import MyListingPage from "./pages/MyListingPage"
+import SellerOnboardingPage from "./pages/SellerOnboardingPage"
+import EditSellerProfilePage from "./pages/EditSellerProfilePage"
+import Navbar from "./components/Navbar"
+import ShopPage from "./pages/ShopPage"
 import { useEffect, useState } from "react"
 
 function App() {
@@ -34,7 +33,7 @@ function App() {
     <BrowserRouter>
       <Navbar isLoggedIn = {isLoggedIn} />
       <Routes>
-        <Route path="/" element={<WelcomePage/>} />
+        <Route path="/" element={<DiscoveryPage/>} />
 
         <Route path="/register" element={<RolePage />} />
 
@@ -44,7 +43,7 @@ function App() {
 
         <Route path="/login" element={<LoginPage setIsLoggedIn = {setIsLoggedIn}/>} />
 
-        <Route path="/consumer/discover" element={<HomePage/>} />
+        <Route path="/consumer/discover" element={<DiscoveryPage/>} />
 
         <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
 

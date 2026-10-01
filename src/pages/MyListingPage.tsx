@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import type { Listing, FormData } from "./DiscoveryPage"
-import ListingCard from "./ListingCard"
-import CreateListingForm from "./CreateListingForm"
-import { uploadImage } from "./lib/uploadImage"
+import ListingCard from "../components/ListingCard"
+import CreateListingForm from "../components/CreateListingForm"
+import { uploadImage } from "../lib/uploadImage"
 
 type MyListingsPageProps = {
     isLoggedIn: boolean
