@@ -22,6 +22,25 @@ function App() {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [isLoading, setIsLoading] = useState(true)// starts with true since it is still checking
 
+  async function handleLogout() {
+    const response = await fetch("http://localhost:3000/users/logout", {
+      method: "POST",
+      credentials: "include"
+    })
+
+    if (!response.ok) {
+      const data: unknown = await response.json().catch(() => null)
+      const message =
+        typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
+          ? data.message
+          : `Unable to log out (status ${response.status}).`
+      throw new Error(message)
+    }
+
+    setIsLoggedIn(false)
+    setUserRole(null)
+  }
+
   useEffect(() => { // the reason we have a function in the use effect is because useEffect doesn't allow the use of async in it so we havve to create a function that accepts it
     async function checkAuth() {
       try {
@@ -57,7 +76,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar isLoggedIn={isLoggedIn} userRole={userRole} />
+      <Navbar isLoggedIn={isLoggedIn} userRole={userRole} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
 
