@@ -11,9 +11,14 @@ price: number;
 category: string;
 imageUrl: string;
 createdAt: string;// date is a string because when coming from express or json, it comes as a string(stringify)
+stockQuantity: number;
 sellerSlug?: string | null;
 sellerName?: string | null;
 };
+
+type DiscoveryPageProps = {
+  userRole: "CONSUMER" | "SELLER" | null
+}
 
 export type FormData = {
   title: string
@@ -47,7 +52,7 @@ type LocationStatus =
 
 type RequestStatus = "idle" | "loading" | "error" | "success"
 
-function DiscoveryPage () {
+function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
@@ -301,7 +306,7 @@ function DiscoveryPage () {
                 <ul>
                   {products.map((product) => (
                     <li key={product.id}>
-                      <ListingCard listing={product} isEditable={false} />
+                      <ListingCard listing={product} isEditable={false} userRole={userRole} />
                     </li>
                   ))}
                 </ul>

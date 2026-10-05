@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type {FormData, Listing} from "../pages/DiscoveryPage"
 import { CATEGORIES } from "../data/categories"
@@ -5,6 +6,7 @@ import { CATEGORIES } from "../data/categories"
 type ListingCardProps = {
   listing: Listing
   isEditable: boolean
+  userRole?: "CONSUMER" | "SELLER" | null
   editingId?: number | null
   editFormData?: FormData
   setEditFormData?: (data: FormData) => void
@@ -15,14 +17,65 @@ type ListingCardProps = {
   handleCancel?: () => void
 }
 
-function ListingCard({ listing, editingId, editFormData, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [cartFeedback, setCartFeedback] = useState("")
+  const [quantity, setQuantity] = useState(1)
+  const selectedQuantity = Math.min(quantity, listing.stockQuantity)
 
   function handleCardClick(){
     if(!isEditable && listing.sellerSlug){
       navigate(`/shop/${listing.sellerSlug}`)
     }
   }
+
+  async function handleAddToCart() {
+    if (listing.stockQuantity === 0) {
+      return
+    }
+
+    setIsAddingToCart(true)
+    setCartFeedback("")
+
+    try {
+      const response = await fetch("http://localhost:3000/cart/items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          listingId: listing.id,
+          quantity: selectedQuantity
+        })
+      })
+
+      if (response.status === 401) {
+        navigate("/login")
+        return
+      }
+
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null)
+        const message =
+          typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
+            ? data.message
+            : response.status === 409
+              ? "This listing is sold out or does not have enough stock."
+              : `Unable to add this listing to your cart (status ${response.status}).`
+        window.alert(message)
+        return
+      }
+
+      setCartFeedback("Added to cart.")
+    } catch {
+      window.alert("Unable to add this listing to your cart. Please check your connection and try again.")
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
   return (
     <div>
       {listing.id === editingId ? (
@@ -82,14 +135,44 @@ function ListingCard({ listing, editingId, editFormData, setEditFormData, setEdi
             style={!isEditable && listing.sellerSlug ? { cursor: "pointer" } : undefined}
           >
             {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} width="200" />}
-            <div>{listing.id}</div>
             <div>{listing.title}</div>
             <div>{listing.price}</div>
             <div>{listing.description}</div>
             <div>{listing.category}</div>
+            <div>{listing.stockQuantity}</div>
           </div>
           {isEditable && <button onClick={() => handleEditClick!(listing)}>Edit Listing</button>}
           {isEditable && <button onClick={() => handleDelete!(listing.id)}>Delete Listing</button>}
+          {!isEditable && userRole === "CONSUMER" && (
+            <>
+              {listing.stockQuantity > 0 ? (
+                <>
+                  <p>Available: {listing.stockQuantity}</p>
+                  <label>
+                    Quantity:
+                    <select
+                      value={selectedQuantity}
+                      onChange={(event) => setQuantity(Number(event.currentTarget.value))}
+                    >
+                      {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <p>Sold out</p>
+              )}
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isAddingToCart || listing.stockQuantity === 0}
+              >
+                {isAddingToCart ? "Adding..." : "Add to Cart"}
+              </button>
+              {cartFeedback && <p role="status">{cartFeedback}</p>}
+            </>
+          )}
         </>
       )}
     </div>

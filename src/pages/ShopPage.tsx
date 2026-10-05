@@ -11,7 +11,11 @@ type ShopProfile = {
     slug: string
 }
 
-function ShopPage () {
+type ShopPageProps = {
+    userRole: "CONSUMER" | "SELLER" | null
+}
+
+function ShopPage ({ userRole }: ShopPageProps) {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
 
@@ -138,6 +142,7 @@ function ShopPage () {
                 <ListingCard
                     isEditable={false}
                     listing={listing}
+                    userRole={userRole}
                     key={listing.id}
                 />
             ))}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import RolePage from "./pages/RolePage"
@@ -59,7 +59,7 @@ function App() {
     <BrowserRouter>
       <Navbar isLoggedIn={isLoggedIn} userRole={userRole} />
       <Routes>
-        <Route path="/" element={<DiscoveryPage/>} />
+        <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
 
         <Route path="/register" element={<RolePage />} />
 
@@ -73,9 +73,22 @@ function App() {
 
         <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />
 
-        <Route path="/seller/myListing" element={<MyListingPage isLoggedIn={isLoggedIn} isLoading={isLoading} userRole={userRole}/>}/>
+        <Route
+          path="/seller/myListing"
+          element={
+            isLoading ? (
+              <p>Checking authentication...</p>
+            ) : !isLoggedIn ? (
+              <Navigate to="/login" replace />
+            ) : userRole !== "SELLER" ? (
+              <Navigate to="/" replace />
+            ) : (
+              <MyListingPage isLoggedIn={isLoggedIn} isLoading={isLoading} userRole={userRole} />
+            )
+          }
+        />
 
-        <Route path="/shop/:slug" element={<ShopPage/>} />
+        <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
 
         <Route path="/cart" element={<CartPage />} />
       </Routes>
