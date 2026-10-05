@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom"
 
 type NavbarProps = {
     isLoggedIn : boolean
+    userRole: "CONSUMER" | "SELLER" | null
 }
 
 function Navbar ({isLoggedIn}: NavbarProps){

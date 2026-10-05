@@ -8,6 +8,7 @@ import { uploadImage } from "../lib/uploadImage"
 type MyListingsPageProps = {
     isLoggedIn: boolean
     isLoading: boolean
+    userRole: "CONSUMER" | "SELLER" | null
 }
 
 function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {

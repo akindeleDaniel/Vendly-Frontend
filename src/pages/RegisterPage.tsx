@@ -9,10 +9,11 @@ type User = {
 
 type RegisterPageProps = {
     setIsLoggedIn : (value: boolean) => void
+    setUserRole: (value: "CONSUMER" | "SELLER" | null) => void
     role: "CONSUMER" | "SELLER"
 }
 
-function RegisterPage ({setIsLoggedIn, role}: RegisterPageProps){
+function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
 
     const navigate = useNavigate()
 
@@ -63,6 +64,7 @@ function RegisterPage ({setIsLoggedIn, role}: RegisterPageProps){
                 navigate("/")
             }
             setIsLoggedIn(true)
+            setUserRole(role)
 
         }catch(error){
              alert("Something went wrong. Please check your connection and try again.")

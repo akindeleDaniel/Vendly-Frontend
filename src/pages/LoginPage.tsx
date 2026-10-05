@@ -8,9 +8,10 @@ type ExistingUser = {
 
 type LoginPageProps = {
     setIsLoggedIn : (value: boolean) => void
+    setUserRole: (value: "CONSUMER" | "SELLER" | null) => void
 }
 
-function LoginPage ({setIsLoggedIn}: LoginPageProps){
+function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
 
     const navigate = useNavigate()
 
@@ -46,12 +47,18 @@ function LoginPage ({setIsLoggedIn}: LoginPageProps){
                 alert(data.message) 
                 return
             }
+
+            if(data.role !== "CONSUMER" && data.role !== "SELLER") {
+                alert("Unable to determine account role. Please try again.")
+                return
+            }
             
             setFormData({
                 email: "",
                 password: ""
             })
             setIsLoggedIn(true)
+            setUserRole(data.role)
                         
             if(data.role === "CONSUMER"){
                 navigate("/")
