@@ -35,6 +35,8 @@ function CartPage() {
   const [quantityFeedback, setQuantityFeedback] = useState<Record<number, string>>({})
   const [removingListingId, setRemovingListingId] = useState<number | null>(null)
   const [removeFeedback, setRemoveFeedback] = useState<Record<number, string>>({})
+  const [isClearing, setIsClearing] = useState(false)
+  const [clearCartError, setClearCartError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,6 +92,7 @@ function CartPage() {
     if (
       updatingListingId !== null ||
       removingListingId !== null ||
+      isClearing ||
       item.listing.stockQuantity === 0 ||
       !Number.isInteger(quantity) ||
       quantity < 1 ||
@@ -150,7 +153,7 @@ function CartPage() {
   }
 
   async function removeItem(item: CartItem) {
-    if (updatingListingId !== null || removingListingId !== null) {
+    if (updatingListingId !== null || removingListingId !== null || isClearing) {
       return
     }
 
@@ -208,6 +211,56 @@ function CartPage() {
     }
   }
 
+  async function clearCart() {
+    if (
+      cartItems.length === 0 ||
+      updatingListingId !== null ||
+      removingListingId !== null ||
+      isClearing
+    ) {
+      return
+    }
+
+    if (!window.confirm("Are you sure you want to clear your cart?")) {
+      return
+    }
+
+    setIsClearing(true)
+    setClearCartError(null)
+
+    try {
+      const response = await fetch("http://localhost:3000/cart", {
+        method: "DELETE",
+        credentials: "include"
+      })
+
+      if (response.status === 401) {
+        navigate("/login")
+        return
+      }
+
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null)
+        const message =
+          typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
+            ? data.message
+            : `Unable to clear your cart (status ${response.status}).`
+        setClearCartError(message)
+        return
+      }
+
+      setCartItems([])
+      setSelectedQuantities({})
+      setQuantityFeedback({})
+      setRemoveFeedback({})
+    } catch (clearError) {
+      console.error("Unable to clear cart:", clearError)
+      setClearCartError("Unable to clear your cart. Please check your connection and try again.")
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   if (isLoading) {
     return <p>Loading cart...</p>
   }
@@ -247,7 +300,7 @@ function CartPage() {
                 Quantity:
                 <select
                   value={selectedQuantities[item.listingId]}
-                  disabled={updatingListingId !== null || removingListingId !== null}
+                  disabled={isClearing || updatingListingId !== null || removingListingId !== null}
                   onChange={(event) => {
                     const newQuantity = Number(event.currentTarget.value)
                     setSelectedQuantities((quantities) => ({
@@ -267,6 +320,7 @@ function CartPage() {
                 disabled={
                   updatingListingId !== null ||
                   removingListingId !== null ||
+                  isClearing ||
                   selectedQuantities[item.listingId] === item.quantity
                 }
               >
@@ -284,7 +338,7 @@ function CartPage() {
           <button
             type="button"
             onClick={() => removeItem(item)}
-            disabled={updatingListingId !== null || removingListingId !== null}
+            disabled={isClearing || updatingListingId !== null || removingListingId !== null}
           >
             {removingListingId === item.listingId ? "Removing..." : "Remove item"}
           </button>
@@ -293,6 +347,15 @@ function CartPage() {
           )}
         </article>
       ))}
+
+      <button
+        type="button"
+        onClick={clearCart}
+        disabled={isClearing || updatingListingId !== null || removingListingId !== null}
+      >
+        {isClearing ? "Clearing..." : "Clear Cart"}
+      </button>
+      {clearCartError && <p role="alert">{clearCartError}</p>}
     </main>
   )
 }

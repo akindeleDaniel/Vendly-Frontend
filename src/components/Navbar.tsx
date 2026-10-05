@@ -14,7 +14,7 @@ function Navbar ({isLoggedIn, userRole}: NavbarProps){
             {
                 isLoggedIn ? (
                     <>
-                        {userRole === "CONSUMER" && <Link to={"/cart"}>Cart</Link>}
+                        {userRole === "CONSUMER" && pathname !== "/cart" && <Link to={"/cart"}>Cart</Link>}
                         <Link to={"/seller/myListing"}>Profile</Link>
                     </>
                 ) : (
