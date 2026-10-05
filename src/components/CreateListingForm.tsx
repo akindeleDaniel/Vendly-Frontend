@@ -2,10 +2,14 @@ import type { FormData } from "../pages/DiscoveryPage"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "../data/categories"
 
+export type CreateListingFormData = FormData & {
+    stockQuantity: string
+}
+
 type CreateListingFormProps = {
-    formData: FormData
+    formData: CreateListingFormData
     handleSubmit: SubmitEventHandler<HTMLFormElement>
-    setFormData: (data: FormData) => void
+    setFormData: (data: CreateListingFormData) => void
     setImageFile: (file: File | null) => void
 }
 
@@ -28,8 +32,15 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile}:
         </label>
         <label>
           Price
-          <input name="price"
+          <input type="number" min="0.01" step="any" required name="price"
           value={formData.price}
+          onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+          />
+        </label>
+        <label>
+          Stock Quantity
+          <input type="number" min="0" step="1" required name="stockQuantity"
+          value={formData.stockQuantity}
           onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
           />
         </label>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import type { Listing, FormData } from "./DiscoveryPage"
 import ListingCard from "../components/ListingCard"
-import CreateListingForm from "../components/CreateListingForm"
+import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { uploadImage } from "../lib/uploadImage"
 
 type MyListingsPageProps = {
@@ -23,11 +23,12 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     const [formKey, setFormKey] = useState(0)
     const [linkCopied, setLinkCopied] = useState(false)
     
-    const [formData, setFormData] =useState<FormData>({
+    const [formData, setFormData] =useState<CreateListingFormData>({
     title: "",
     description: "",
     price: "",
-    category: ""
+    category: "",
+    stockQuantity: ""
   })
 
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -60,12 +61,16 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
    {
     e.preventDefault();
     
-    if(formData.title === "" || formData.category === "" || formData.price === "" || formData.description === "" || imageFile === null){
+    if(formData.title === "" || formData.category === "" || formData.price === "" || formData.stockQuantity === "" || formData.description === "" || imageFile === null){
       alert("This cannot be blank")
       return
     }
-    if (isNaN(Number(formData.price)) === true || Number(formData.price) <= 0){
+    if (!Number.isFinite(Number(formData.price)) || Number(formData.price) <= 0){
       alert("Price must be a number greater than 0")
+      return
+    }
+    if (!Number.isInteger(Number(formData.stockQuantity)) || Number(formData.stockQuantity) < 0) {
+      alert("Stock quantity must be a whole number greater than or equal to 0")
       return
     }
 
@@ -84,6 +89,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         body: JSON.stringify({
           ...formData,
           price: Number(formData.price),
+          stockQuantity: Number(formData.stockQuantity),
           imageUrl
         }),
         credentials:"include"
@@ -98,7 +104,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         
         
       setListings([...listings, data]);
-      setFormData({ title: "", description: "", price: "", category: "" })
+      setFormData({ title: "", description: "", price: "", category: "", stockQuantity: "" })
       setImageFile(null)
       setFormKey(formKey + 1)
     }catch(error){

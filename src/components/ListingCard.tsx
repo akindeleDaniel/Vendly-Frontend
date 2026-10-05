@@ -136,10 +136,10 @@ function ListingCard({ listing, userRole, editingId, editFormData, setEditFormDa
           >
             {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} width="200" />}
             <div>{listing.title}</div>
-            <div>{listing.price}</div>
+            <p>Price: {listing.price}</p>
             <div>{listing.description}</div>
             <div>{listing.category}</div>
-            <div>{listing.stockQuantity}</div>
+            <p>Available stock: {listing.stockQuantity}</p>
           </div>
           {isEditable && <button onClick={() => handleEditClick!(listing)}>Edit Listing</button>}
           {isEditable && <button onClick={() => handleDelete!(listing.id)}>Delete Listing</button>}
@@ -147,7 +147,6 @@ function ListingCard({ listing, userRole, editingId, editFormData, setEditFormDa
             <>
               {listing.stockQuantity > 0 ? (
                 <>
-                  <p>Available: {listing.stockQuantity}</p>
                   <label>
                     Quantity:
                     <select
