@@ -33,6 +33,8 @@ function CartPage() {
   const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({})
   const [updatingListingId, setUpdatingListingId] = useState<number | null>(null)
   const [quantityFeedback, setQuantityFeedback] = useState<Record<number, string>>({})
+  const [removingListingId, setRemovingListingId] = useState<number | null>(null)
+  const [removeFeedback, setRemoveFeedback] = useState<Record<number, string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -87,6 +89,7 @@ function CartPage() {
     const quantity = selectedQuantities[item.listingId]
     if (
       updatingListingId !== null ||
+      removingListingId !== null ||
       item.listing.stockQuantity === 0 ||
       !Number.isInteger(quantity) ||
       quantity < 1 ||
@@ -146,6 +149,65 @@ function CartPage() {
     }
   }
 
+  async function removeItem(item: CartItem) {
+    if (updatingListingId !== null || removingListingId !== null) {
+      return
+    }
+
+    setRemovingListingId(item.listingId)
+    setRemoveFeedback((feedback) => ({ ...feedback, [item.listingId]: "" }))
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/cart/items/${encodeURIComponent(String(item.listingId))}`,
+        {
+          method: "DELETE",
+          credentials: "include"
+        }
+      )
+
+      if (response.status === 401) {
+        navigate("/login")
+        return
+      }
+
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null)
+        const message =
+          typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
+            ? data.message
+            : `Unable to remove this item (status ${response.status}).`
+        setRemoveFeedback((feedback) => ({ ...feedback, [item.listingId]: message }))
+        return
+      }
+
+      setCartItems((items) => items.filter((cartItem) => cartItem.listingId !== item.listingId))
+      setSelectedQuantities((quantities) => {
+        const remainingQuantities = { ...quantities }
+        delete remainingQuantities[item.listingId]
+        return remainingQuantities
+      })
+      setQuantityFeedback((feedback) => {
+        const remainingFeedback = { ...feedback }
+        delete remainingFeedback[item.listingId]
+        return remainingFeedback
+      })
+      setRemoveFeedback((feedback) => {
+        const remainingFeedback = { ...feedback }
+        delete remainingFeedback[item.listingId]
+        return remainingFeedback
+      })
+    } catch (removeError) {
+      console.error("Unable to remove cart item:", removeError)
+      setRemoveFeedback((feedback) => ({
+        ...feedback,
+        [item.listingId]: "Unable to remove this item. Please check your connection and try again."
+      }))
+    } finally {
+      setRemovingListingId(null)
+    }
+  }
+
   if (isLoading) {
     return <p>Loading cart...</p>
   }
@@ -185,7 +247,7 @@ function CartPage() {
                 Quantity:
                 <select
                   value={selectedQuantities[item.listingId]}
-                  disabled={updatingListingId !== null}
+                  disabled={updatingListingId !== null || removingListingId !== null}
                   onChange={(event) => {
                     const newQuantity = Number(event.currentTarget.value)
                     setSelectedQuantities((quantities) => ({
@@ -204,6 +266,7 @@ function CartPage() {
                 onClick={() => updateQuantity(item)}
                 disabled={
                   updatingListingId !== null ||
+                  removingListingId !== null ||
                   selectedQuantities[item.listingId] === item.quantity
                 }
               >
@@ -217,6 +280,16 @@ function CartPage() {
             <p role={quantityFeedback[item.listingId] === "Quantity updated." ? "status" : "alert"}>
               {quantityFeedback[item.listingId]}
             </p>
+          )}
+          <button
+            type="button"
+            onClick={() => removeItem(item)}
+            disabled={updatingListingId !== null || removingListingId !== null}
+          >
+            {removingListingId === item.listingId ? "Removing..." : "Remove item"}
+          </button>
+          {removeFeedback[item.listingId] && (
+            <p role="alert">{removeFeedback[item.listingId]}</p>
           )}
         </article>
       ))}
