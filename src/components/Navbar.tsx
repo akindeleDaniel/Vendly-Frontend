@@ -5,7 +5,7 @@ type NavbarProps = {
     userRole: "CONSUMER" | "SELLER" | null
 }
 
-function Navbar ({isLoggedIn}: NavbarProps){
+function Navbar ({isLoggedIn, userRole}: NavbarProps){
 
     const {pathname} = useLocation()
 
@@ -13,7 +13,10 @@ function Navbar ({isLoggedIn}: NavbarProps){
         <nav>
             {
                 isLoggedIn ? (
-                    <Link to={"/seller/myListing"}>Profile</Link>
+                    <>
+                        {userRole === "CONSUMER" && <Link to={"/cart"}>Cart</Link>}
+                        <Link to={"/seller/myListing"}>Profile</Link>
+                    </>
                 ) : (
                     <>
                         {pathname !== "/" && <Link to={"/"}>Home</Link>}

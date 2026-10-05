@@ -8,6 +8,7 @@ import SellerOnboardingPage from "./pages/SellerOnboardingPage"
 import EditSellerProfilePage from "./pages/EditSellerProfilePage"
 import Navbar from "./components/Navbar"
 import ShopPage from "./pages/ShopPage"
+import CartPage from "./pages/CartPage"
 import { useEffect, useState } from "react"
 
 type UserRole = "CONSUMER" | "SELLER"
@@ -75,6 +76,8 @@ function App() {
         <Route path="/seller/myListing" element={<MyListingPage isLoggedIn={isLoggedIn} isLoading={isLoading} userRole={userRole}/>}/>
 
         <Route path="/shop/:slug" element={<ShopPage/>} />
+
+        <Route path="/cart" element={<CartPage />} />
       </Routes>
     </BrowserRouter>
   );
