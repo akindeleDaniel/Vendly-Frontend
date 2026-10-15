@@ -1,8 +1,9 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { Listing, ListingFormData } from "../types/listing"
 import type { UserRole } from "../types/user"
 import { apiFetch } from "../lib/api"
+import { savePendingCartItem } from "../lib/pendingCartItem"
 import { CATEGORIES } from "../data/categories"
 
 type ListingCardProps = {
@@ -20,23 +21,49 @@ type ListingCardProps = {
   handleDelete?: (id: number) => void
   handleSave?: (id: number) => void
   handleCancel?: () => void
+  shopLinkSearch?: string // query string kept on the shop link so the shop page can return to the same search
+  allowAddToCart?: boolean // only storefronts offer Add to Cart; browsing pages just link to the storefront
+  isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [cartFeedback, setCartFeedback] = useState("")
   const [quantity, setQuantity] = useState(1)
   const selectedQuantity = Math.min(quantity, listing.stockQuantity)
 
+  const shopPath = !isEditable && listing.sellerSlug
+    ? `/shop/${encodeURIComponent(listing.sellerSlug)}${shopLinkSearch ? `?${shopLinkSearch}` : ""}`
+    : null
+
   function handleCardClick(){
-    if(!isEditable && listing.sellerSlug){
-      navigate(`/shop/${listing.sellerSlug}`)
+    if(shopPath){
+      navigate(shopPath)
     }
   }
 
   async function handleAddToCart() {
     if (listing.stockQuantity === 0) {
+      return
+    }
+
+    // Browsing is open to everyone. A visitor who is not logged in is sent to log in or register;
+    // the chosen product is remembered, and the storefront adds it once they are back.
+    if (isLoggedOut) {
+      savePendingCartItem({
+        listingId: listing.id,
+        quantity: selectedQuantity,
+        returnTo: `${location.pathname}${location.search}`
+      })
+      navigate("/login")
+      return
+    }
+
+    // The session is still being checked (or the check failed), so the visitor may well be logged in.
+    if (userRole === null || userRole === undefined) {
+      setCartFeedback("We are still checking your session. Please try again in a moment.")
       return
     }
 
@@ -145,10 +172,10 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
           */}
           <div
             onClick={handleCardClick}
-            style={!isEditable && listing.sellerSlug ? { cursor: "pointer" } : undefined}
+            style={shopPath ? { cursor: "pointer" } : undefined}
           >
             {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} width="200" />}
-            <div>{listing.title}</div>
+            <div>{shopPath ? <Link to={shopPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}</div>
             <p>Price: {listing.price}</p>
             <div>{listing.description}</div>
             <div>{listing.category}</div>
@@ -156,7 +183,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
           </div>
           {isEditable && <button onClick={() => handleEditClick!(listing)}>Edit Listing</button>}
           {isEditable && <button onClick={() => handleDelete!(listing.id)}>Delete Listing</button>}
-          {!isEditable && userRole === "CONSUMER" && (
+          {!isEditable && allowAddToCart && userRole !== "SELLER" && (
             <>
               {listing.stockQuantity > 0 ? (
                 <>

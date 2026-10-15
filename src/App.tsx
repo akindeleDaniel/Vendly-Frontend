@@ -12,6 +12,7 @@ import CartPage from "./pages/CartPage"
 import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
+import { clearPendingCartItem } from "./lib/pendingCartItem"
 import type { AuthStatus, UserRole } from "./types/user"
 
 function isUserRole(value: unknown): value is UserRole {
@@ -30,6 +31,9 @@ function App() {
   }, [authStatus])
 
   function handleLogin(role: UserRole) {
+    if (role !== "CONSUMER") {
+      clearPendingCartItem()// only a shopper can complete a remembered add-to-cart
+    }
     setUserRole(role)
     setAuthStatus("authenticated")
     setSessionExpired(false)
@@ -45,6 +49,7 @@ function App() {
       throw new Error(await getErrorMessage(response, `Unable to log out (status ${response.status}).`))
     }
 
+    clearPendingCartItem()// a remembered add-to-cart must not carry over to whoever logs in next
     setAuthStatus("unauthenticated")
     setUserRole(null)
   }
@@ -134,7 +139,7 @@ function App() {
 
         <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
-        <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
+        <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
 
         <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
       </Routes>

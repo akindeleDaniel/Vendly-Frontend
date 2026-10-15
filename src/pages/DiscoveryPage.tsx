@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import ListingCard from "../components/ListingCard"
 import { CATEGORIES } from "../data/categories"
+import { apiFetch, getErrorMessage } from "../lib/api"
 import type { Listing } from "../types/listing"
 import type { ShopSummary } from "../types/seller"
 import type { UserRole } from "../types/user"
-import { apiFetch } from "../lib/api"
 
 type DiscoveryPageProps = {
   userRole: UserRole | null
@@ -26,10 +26,18 @@ type LocationStatus =
 
 type RequestStatus = "idle" | "loading" | "error" | "success"
 
+const SEARCH_DEBOUNCE_MS = 300
+
+// Skeleton of the marketplace "search" page. One route ("/") with three views, chosen by the URL:
+//   1. no category, no search  -> a grid of category tiles
+//   2. a search, no category   -> product results across all categories
+//   3. a category              -> products in that category (optionally searched) and its shops
 function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
+  const search = (searchParams.get("search") ?? "").trim()
+  const [searchText, setSearchText] = useState(search)
   const [products, setProducts] = useState<Listing[]>([])
   const [shops, setShops] = useState<ShopSummary[]>([])
   const [productRequestStatus, setProductRequestStatus] = useState<RequestStatus>("idle")
@@ -40,28 +48,77 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const [shopRetryCount, setShopRetryCount] = useState(0)
   const [consumerLocation, setConsumerLocation] = useState<ConsumerLocation | null>(null)
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("not-requested")
-  const [categorySearch, setCategorySearch] = useState("")
-  const [searchText, setSearchText] = useState("")
-  const search = searchText.trim()
-  const filteredCategories = CATEGORIES.filter((category) =>
-    category.toLowerCase().includes(categorySearch.trim().toLowerCase())
-  )
+  const showProducts = selectedCategory !== null || search !== ""
+  // Results are tagged with the filters they were fetched for, so results from older filters are
+  // never shown as if they matched the current ones (not even for the moment before a new fetch starts).
+  const productsQueryKey = JSON.stringify([selectedCategory, search])
+  const shopsQueryKey = JSON.stringify([selectedCategory, search, consumerLocation])
+  const [productsKey, setProductsKey] = useState("")
+  const [shopsKey, setShopsKey] = useState("")
+  const visibleProductStatus: RequestStatus = productsKey === productsQueryKey ? productRequestStatus : "loading"
+  const visibleShopStatus: RequestStatus = shopsKey === shopsQueryKey ? shopRequestStatus : "loading"
+  const setSearchParamsRef = useRef(setSearchParams)
+  const lastWrittenSearchRef = useRef(search)// the search value this page last put into the URL itself
 
   useEffect(() => {
-    if (!selectedCategory || !search) {
+    setSearchParamsRef.current = setSearchParams
+  }, [setSearchParams])
+
+  // The typed search is copied into the URL shortly after the shopper stops typing, so each
+  // keystroke does not trigger a request and the search survives a visit to a shop and back.
+  // This effect depends only on the typed text: the URL setter changes on every navigation, and
+  // re-running on those would overwrite the URL after the browser's Back button.
+  useEffect(() => {
+    const trimmed = searchText.trim()
+    const timer = window.setTimeout(() => {
+      setSearchParamsRef.current((current) => {
+        if ((current.get("search") ?? "") === trimmed) {
+          return current
+        }
+        lastWrittenSearchRef.current = trimmed
+        const next = new URLSearchParams(current)
+        if (trimmed) {
+          next.set("search", trimmed)
+        } else {
+          next.delete("search")
+        }
+        return next
+      }, { replace: true, preventScrollReset: true })
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [searchText])
+
+  // When the URL's search changes for a reason other than this page's own typing (the browser's
+  // Back or Forward buttons, a link), the search box follows it.
+  useEffect(() => {
+    if (search !== lastWrittenSearchRef.current) {
+      lastWrittenSearchRef.current = search
+      setSearchText(search)
+    }
+  }, [search])
+
+  // Products load for views 2 and 3 only. The backend decides the order (it shuffles the
+  // results), so they are shown exactly as received.
+  useEffect(() => {
+    if (!showProducts) {
       return
     }
 
     const controller = new AbortController()
-    const query = new URLSearchParams({ category: selectedCategory })
+    const query = new URLSearchParams()
+    if (selectedCategory) {
+      query.set("category", selectedCategory)
+    }
     if (search) {
       query.set("search", search)
     }
 
     async function fetchProducts() {
+      setProductsKey(productsQueryKey)
       setProductRequestStatus("loading")
       setProductRequestError(null)
-      setProducts([])
+      setProducts([])// never leave results from an older search on screen
 
       try {
         const response = await apiFetch(`/listings?${query.toString()}`, {
@@ -69,7 +126,12 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
         })
 
         if (!response.ok) {
-          throw new Error(`Product request failed with status ${response.status}`)
+          const message = await getErrorMessage(response, "Unable to load products. Please try again.")
+          if (!controller.signal.aborted) {
+            setProductRequestError(message)
+            setProductRequestStatus("error")
+          }
+          return
         }
 
         const data: Listing[] = await response.json()
@@ -90,8 +152,10 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     fetchProducts()
 
     return () => controller.abort()
-  }, [selectedCategory, search, productRetryCount])
+  }, [showProducts, selectedCategory, search, productsQueryKey, productRetryCount])
 
+  // The shops endpoint requires a category, so shops load for view 3 only.
+  // Location ordering is done by the backend; the list is shown as received.
   useEffect(() => {
     if (!selectedCategory) {
       return
@@ -108,6 +172,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     }
 
     async function fetchShops() {
+      setShopsKey(shopsQueryKey)
       setShopRequestStatus("loading")
       setShopRequestError(null)
       setShops([])
@@ -139,7 +204,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     fetchShops()
 
     return () => controller.abort()
-  }, [selectedCategory, search, consumerLocation, shopRetryCount])
+  }, [selectedCategory, search, consumerLocation, shopsQueryKey, shopRetryCount])
 
   function requestLocation() {
     if (!navigator.geolocation) {
@@ -164,67 +229,87 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     )
   }
 
-  function handleCategoryChange(value: string) {
-    const category = CATEGORIES.find((candidate) => candidate === value)
-    const nextSearchParams = new URLSearchParams()
-    if (category) {
-      nextSearchParams.set("category", category)
-    }
-    setSearchParams(nextSearchParams, { preventScrollReset: true })
+  // Opening a category starts a fresh search inside it; going back returns to the tile grid.
+  function resetSearchAndStatuses() {
     setSearchText("")
     setShops([])
-    setProducts([])
     setShopRequestError(null)
-    setProductRequestError(null)
     setShopRequestStatus("idle")
-    setProductRequestStatus("idle")
-  }
-
-  function handleSearchChange(value: string) {
-    setSearchText(value)
-
-    if (!value.trim()) {
-      setProducts([])
-      setProductRequestError(null)
-      setProductRequestStatus("idle")
-    }
   }
 
   return (
-    <div>
+    <main>
       <h1>Vendly</h1>
 
-      {!selectedCategory ? (
-        <section>
-          <label>
-            Search categories
-            <input
-              type="search"
-              value={categorySearch}
-              onChange={(event) => setCategorySearch(event.currentTarget.value)}
-            />
-          </label>
+      <form role="search" onSubmit={(event) => event.preventDefault()}>
+        <label>
+          {selectedCategory ? `Search in ${selectedCategory}` : "What are you looking for?"}
+          <input
+            type="search"
+            value={searchText}
+            onChange={(event) => setSearchText(event.currentTarget.value)}
+          />
+        </label>
+      </form>
+
+      {selectedCategory && (
+        <Link to="/" onClick={resetSearchAndStatuses}>Back to categories</Link>
+      )}
+
+      {/* View 1: category tiles */}
+      {!showProducts && (
+        <section aria-labelledby="categories-heading">
+          <h2 id="categories-heading">Browse all</h2>
           <ul>
-            {filteredCategories.map((category) => (
+            {CATEGORIES.map((category) => (
               <li key={category}>
-                <button type="button" onClick={() => handleCategoryChange(category)}>
-                  {category}
-                </button>
+                <Link to={`/?${new URLSearchParams({ category }).toString()}`} onClick={resetSearchAndStatuses}>
+                  {/* category image or colour goes here once the design is decided */}
+                  <span>{category}</span>
+                </Link>
               </li>
             ))}
           </ul>
-          {filteredCategories.length === 0 && <p>No matching categories.</p>}
         </section>
-      ) : (
-        <section>
-          <h2>{selectedCategory}</h2>
-          <button
-            type="button"
-            onClick={() => handleCategoryChange("")}
-          >
-            Back to Home
-          </button>
-          <section aria-live="polite">
+      )}
+
+      {/* Views 2 and 3: products */}
+      {showProducts && (
+        <section aria-labelledby="products-heading">
+          <h2 id="products-heading">
+            {selectedCategory ? selectedCategory : "Search results"}
+          </h2>
+          <div aria-live="polite">
+            {visibleProductStatus === "loading" && <p>Loading products...</p>}
+          </div>
+          {visibleProductStatus === "error" && (
+            <div role="alert">
+              <p>{productRequestError}</p>
+              <button type="button" onClick={() => setProductRetryCount((count) => count + 1)}>
+                Retry products
+              </button>
+            </div>
+          )}
+          {visibleProductStatus === "success" && products.length === 0 && (
+            <p>{search ? "No products match your search." : "No products in this category yet."}</p>
+          )}
+          {visibleProductStatus === "success" && products.length > 0 && (
+            <ul>
+              {products.map((product) => (
+                <li key={product.id}>
+                  <ListingCard listing={product} isEditable={false} userRole={userRole} shopLinkSearch={searchParams.toString()} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* View 3: shops */}
+      {selectedCategory && (
+        <section aria-labelledby="shops-heading">
+          <h2 id="shops-heading">Shops</h2>
+          <div aria-live="polite">
             {locationStatus === "not-requested" && (
               <>
                 <p>Use your location to prioritize nearby shops. Location is optional.</p>
@@ -252,74 +337,37 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
                 <button type="button" onClick={requestLocation}>Refresh location</button>
               </>
             )}
-          </section>
-          <label>
-            Search this category
-            <input
-              type="search"
-              value={searchText}
-              onChange={(event) => handleSearchChange(event.currentTarget.value)}
-            />
-          </label>
-          {search && (
-            <section>
-              <h3>Products</h3>
-              {productRequestStatus === "loading" && <p>Loading products...</p>}
-              {productRequestStatus === "error" && (
-                <div role="alert">
-                  <p>{productRequestError}</p>
-                  <button type="button" onClick={() => setProductRetryCount((count) => count + 1)}>
-                    Retry products
-                  </button>
-                </div>
-              )}
-              {productRequestStatus === "success" && products.length === 0 && (
-                <p>No products found in this category.</p>
-              )}
-              {productRequestStatus === "success" && products.length > 0 && (
-                <ul>
-                  {products.map((product) => (
-                    <li key={product.id}>
-                      <ListingCard listing={product} isEditable={false} userRole={userRole} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+          </div>
+          {visibleShopStatus === "loading" && <p>Loading shops...</p>}
+          {visibleShopStatus === "error" && (
+            <div role="alert">
+              <p>{shopRequestError}</p>
+              <button type="button" onClick={() => setShopRetryCount((count) => count + 1)}>
+                Retry shops
+              </button>
+            </div>
           )}
-          <section>
-            <h3>Shops</h3>
-            {shopRequestStatus === "loading" && <p>Loading shops...</p>}
-            {shopRequestStatus === "error" && (
-              <div role="alert">
-                <p>{shopRequestError}</p>
-                <button type="button" onClick={() => setShopRetryCount((count) => count + 1)}>
-                  Retry shops
-                </button>
-              </div>
-            )}
-            {shopRequestStatus === "success" && shops.length === 0 && (
-              <p>No shops found in this category.</p>
-            )}
-            {shopRequestStatus === "success" && shops.length > 0 && (
-              <ul>
-                {shops.map((shop) => (
-                  <li key={shop.id}>
-                    <Link to={`/shop/${shop.slug}?${searchParams.toString()}`}>
-                      {shop.logoUrl && <img src={shop.logoUrl} alt="" width="48" />}
-                      <span>{shop.businessName}</span>
-                      <span>
-                        {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {visibleShopStatus === "success" && shops.length === 0 && (
+            <p>No shops found in this category.</p>
+          )}
+          {visibleShopStatus === "success" && shops.length > 0 && (
+            <ul>
+              {shops.map((shop) => (
+                <li key={shop.id}>
+                  <Link to={`/shop/${encodeURIComponent(shop.slug)}?${searchParams.toString()}`}>
+                    {shop.logoUrl && <img src={shop.logoUrl} alt="" width="48" />}
+                    <span>{shop.businessName}</span>
+                    <span>
+                      {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
-    </div>
+    </main>
   )
 }
 

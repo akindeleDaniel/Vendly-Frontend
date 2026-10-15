@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Navigate } from "react-router-dom"
+import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { AuthStatus, UserRole } from "../types/user"
 
 // Frontend guards only improve the user experience. The backend enforces authentication
@@ -52,6 +53,13 @@ export function RedirectIfAuthenticated({ authStatus, userRole, children }: Omit
     }
 
     if (authStatus === "authenticated") {
+        // A consumer who was asked to log in from a storefront goes back there; the storefront
+        // then adds the product they chose.
+        const pendingCartItem = userRole === "CONSUMER" ? readPendingCartItem() : null
+        if (pendingCartItem) {
+            return <Navigate to={pendingCartItem.returnTo} replace />
+        }
+
         return <Navigate to={homePathForRole(userRole)} replace />
     }
 

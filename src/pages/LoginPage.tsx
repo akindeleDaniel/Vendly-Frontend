@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 
@@ -19,6 +20,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
         email: "",
         password: ""
     })
+    const loginPrompt = readPendingCartItem() ? "Log in or register to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
 
@@ -75,6 +77,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
     return(
         <>
             {sessionExpired && <p role="status">Your session has expired. Please log in again.</p>}
+            {loginPrompt && !sessionExpired && <p role="status">{loginPrompt}</p>}
             <form onSubmit={handleSubmit}>
             <label>
             Email

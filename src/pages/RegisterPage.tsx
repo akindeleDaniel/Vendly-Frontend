@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 
@@ -21,6 +22,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
         email: "",
         password: ""
     })
+    const registerPrompt = role === "CONSUMER" && readPendingCartItem() ? "Create a shopper account to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
 
@@ -69,6 +71,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
 
     return(
         <>
+            {registerPrompt && <p role="status">{registerPrompt}</p>}
             <form onSubmit={handleSubmit}>
             <label>
             Name
