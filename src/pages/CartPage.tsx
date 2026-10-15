@@ -421,6 +421,8 @@ function CartPage() {
           This is an estimate only. Shipping and the final total are not included.
           {hasUnavailableItems && " It also includes items that are not fully available right now."}
         </p>
+        {/* The server decides at checkout whether the items can be bought, so the link is always offered. */}
+        <Link to="/checkout">Proceed to checkout</Link>
       </section>
 
       <button

@@ -9,6 +9,7 @@ import EditSellerProfilePage from "./pages/EditSellerProfilePage"
 import Navbar from "./components/Navbar"
 import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
+import CheckoutPage from "./pages/CheckoutPage"
 import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
@@ -142,6 +143,8 @@ function App() {
         <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
 
         <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
+
+        <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
       </Routes>
     </BrowserRouter>
   );
