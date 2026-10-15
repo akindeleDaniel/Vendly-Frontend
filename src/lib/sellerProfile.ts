@@ -1,9 +1,14 @@
+import { lgas } from "nigerian-states-and-lgas"
 import type { SellerProfile } from "../types/seller"
 
 // Returns an error message for the first invalid field, or null when the form can be submitted.
 export function validateSellerProfile(profile: SellerProfile): string | null {
     if (profile.businessName.trim() === "" || profile.state === "" || profile.lga === "") {
         return "All areas must be filled"
+    }
+
+    if (!lgas(profile.state)?.includes(profile.lga)) {
+        return "The selected local government area does not belong to the selected state"
     }
 
     if (profile.shippingPolicy === "FIXED" && !/^\d+(\.\d{1,2})?$/.test(profile.shippingCost.trim())) {

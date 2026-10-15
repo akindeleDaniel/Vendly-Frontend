@@ -2,9 +2,11 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { uploadImage } from "../lib/uploadImage"
 import type { SellerProfile } from "../types/seller"
-import { apiFetch } from "../lib/api"
+import { apiFetch, getErrorMessage } from "../lib/api"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
 import SellerProfileFields from "../components/SellerProfileFields"
+
+type LoadStatus = "loading" | "ready" | "error"
 
 function EditSellerProfilePage (){
 
@@ -18,24 +20,41 @@ function EditSellerProfilePage (){
         shippingCost: ""
     })
 
-    const [savedProfile, setSavedProfile] = useState<SellerProfile | null>(null)// last values loaded from the server, used to detect edits
+    const [savedProfile, setSavedProfile] = useState<SellerProfile | null>(null)// last values loaded from or saved to the server, used to detect edits
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
     const [logoFile, setLogoFile] = useState<File | null>(null)// only filled if the seller picks a new logo
+    const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading")
+    const [loadAttempt, setLoadAttempt] = useState(0)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState("")
 
     useEffect(() => {
+        const controller = new AbortController()
+
         async function fetchProfile() {
             try{
                 const response = await apiFetch("/seller/profile", {
-                    credentials: "include"
+                    credentials: "include",
+                    signal: controller.signal
                 })
 
-                const data = await response.json()
-
-                if (!response.ok) {
-                    alert(data.message)
+                if (controller.signal.aborted) {
                     return
                 }
 
+                if (response.status === 404) {// no store profile yet, so the seller still has to onboard
+                    navigate("/seller/onboarding", { replace: true })
+                    return
+                }
+
+                if (!response.ok) {
+                    if (response.status !== 401) {// a 401 is handled by the session guard
+                        setLoadStatus("error")
+                    }
+                    return
+                }
+
+                const data = await response.json()
                 const loadedProfile: SellerProfile = {
                     businessName: data.businessName,
                     state: data.state,
@@ -45,20 +64,27 @@ function EditSellerProfilePage (){
                 }
                 setFormData(loadedProfile)
                 setSavedProfile(loadedProfile)
-                setCurrentLogoUrl(data.logoUrl)
+                setCurrentLogoUrl(data.logoUrl ?? "")
+                setLoadStatus("ready")
             }catch {
-                alert("Something went wrong. Please check your connection and try again.")
+                if (!controller.signal.aborted) {
+                    setLoadStatus("error")
+                }
             }
         }
         fetchProfile()
-    }, [])
+
+        return () => controller.abort()
+    }, [navigate, loadAttempt])
+
+    const validationError = validateSellerProfile(formData)
 
     // Save stays disabled until the profile has loaded and something differs from the saved values.
     const hasChanges =
         savedProfile !== null &&
         (
             logoFile !== null ||
-            formData.businessName !== savedProfile.businessName ||
+            formData.businessName.trim() !== savedProfile.businessName.trim() ||
             formData.state !== savedProfile.state ||
             formData.lga !== savedProfile.lga ||
             formData.shippingPolicy !== savedProfile.shippingPolicy ||
@@ -68,11 +94,17 @@ function EditSellerProfilePage (){
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        const validationError = validateSellerProfile(formData)
-        if (validationError !== null) {
-            alert(validationError)
+        if (isSubmitting || !hasChanges) {
             return
         }
+
+        if (validationError !== null) {
+            setError(validationError)
+            return
+        }
+
+        setIsSubmitting(true)
+        setError("")
 
         try{
             let logoUrl = currentLogoUrl// keeps the old logo unless a new one was picked
@@ -80,7 +112,7 @@ function EditSellerProfilePage (){
             if (logoFile !== null) {
                 const uploadedUrl = await uploadImage(logoFile)
                 if (uploadedUrl === null) {
-                    alert("Image upload failed")
+                    setError("Image upload failed")
                     return
                 }
                 logoUrl = uploadedUrl
@@ -95,17 +127,37 @@ function EditSellerProfilePage (){
                 credentials: "include"
             })
 
-            const data = await response.json()
-
             if (!response.ok) {
-                alert(data.message)
+                setError(await getErrorMessage(response, `Unable to save your store (status ${response.status}).`))
                 return
             }
 
+            // Only now are the submitted values the new baseline.
+            setSavedProfile(formData)
+            setCurrentLogoUrl(logoUrl)
+            setLogoFile(null)
             navigate("/seller/myListing")
         }catch {
-            alert("Something went wrong. Please check your connection and try again.")
+            setError("Something went wrong. Please check your connection and try again.")
+        }finally{
+            setIsSubmitting(false)
         }
+    }
+
+    if (loadStatus === "loading") {
+        return <p role="status">Loading your store...</p>
+    }
+
+    if (loadStatus === "error") {
+        return (
+            <div role="alert">
+                <p>We could not load your store details. Please check your connection and try again.</p>
+                <button type="button" onClick={() => {
+                    setLoadStatus("loading")
+                    setLoadAttempt((attempt) => attempt + 1)
+                }}>Try again</button>
+            </div>
+        )
     }
 
     return(
@@ -123,7 +175,11 @@ function EditSellerProfilePage (){
                         onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                     />
                 </label>
-                <button type="submit" disabled={!hasChanges}>Save changes</button>
+                {hasChanges && validationError && <p role="alert">{validationError}</p>}
+                {error && <p role="alert">{error}</p>}
+                <button type="submit" disabled={!hasChanges || validationError !== null || isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Save changes"}
+                </button>
             </form>
         </div>
     )
