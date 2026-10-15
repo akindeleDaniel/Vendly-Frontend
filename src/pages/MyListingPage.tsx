@@ -4,16 +4,9 @@ import type {ListingFormData, Listing} from "../types/listing"
 import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { uploadImage } from "../lib/uploadImage"
-import { apiFetch } from "../lib/api"
-import type { UserRole } from "../types/user"
+import { apiFetch, getErrorMessage } from "../lib/api"
 
-type MyListingsPageProps = {
-    isLoggedIn: boolean
-    isLoading: boolean
-    userRole: UserRole | null
-}
-
-function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
+function MyListingsPage() {
     const navigate = useNavigate()
 
     const [listings, setListings] = useState<Listing[]>([])
@@ -24,6 +17,10 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
     const [formKey, setFormKey] = useState(0)
     const [linkCopied, setLinkCopied] = useState(false)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState("")
+    const [loadAttempt, setLoadAttempt] = useState(0)
     
     const [formData, setFormData] =useState<CreateListingFormData>({
     title: "",
@@ -139,6 +136,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
     function handleEditClick(listing: Listing){
     setEditingId(listing.id)
     setEditImageFile(null)
+    setSaveError("")
     setEditFormData({
       title: listing.title,
       description: listing.description,
@@ -161,20 +159,27 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
   }
 
    async function handleSave(id: number) {
+    if (isSaving) {
+      return
+    }
+
     if(editFormData.title === "" || editFormData.category === "" || editFormData.price === "" || editFormData.stockQuantity === "" || editFormData.description === ""){
-      alert("This cannot be blank")
+      setSaveError("This cannot be blank")
       return
     }
 
     if (isNaN(Number(editFormData.price)) === true || Number(editFormData.price) <= 0){
-      alert("Price must be a number greater than 0")
+      setSaveError("Price must be a number greater than 0")
       return
     }
 
     if (!Number.isInteger(Number(editFormData.stockQuantity)) || Number(editFormData.stockQuantity) < 0) {
-      alert("Stock quantity must be a whole number greater than or equal to 0")
+      setSaveError("Stock quantity must be a whole number greater than or equal to 0")
       return
     }
+
+    setIsSaving(true)
+    setSaveError("")
 
     try{
       let imageUrl: string | undefined = undefined
@@ -182,7 +187,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
       if (editImageFile !== null) {
         const uploadedUrl = await uploadImage(editImageFile)
         if (uploadedUrl === null) {
-          alert("Image upload failed")
+          setSaveError("Image upload failed")
           return
         }
         imageUrl = uploadedUrl
@@ -202,65 +207,93 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         credentials:"include"
       })
 
-      const data = await response.json()
-
       if(!response.ok){
-        alert(data.message)
+        // Shows the backend's own message, for example the reserved-stock conflict returned with HTTP 409.
+        setSaveError(await getErrorMessage(response, `Unable to save this listing (status ${response.status}).`))
         return
-      }       
+      }
 
-      setListings(
-        listings.map((listing) =>
-          listing.id === id ? data : listing
+      const savedListing: Listing = await response.json()
+
+      // The saved listing becomes the new baseline for the dirty-state check.
+      setListings((currentListings) =>
+        currentListings.map((listing) =>
+          listing.id === id ? savedListing : listing
         )
       );
       setEditingId(null);
       setEditImageFile(null)
     }catch {
-      alert("Something went wrong. Please check your connection and try again.")
+      setSaveError("Something went wrong. Please check your connection and try again.")
+    }finally{
+      setIsSaving(false)
     }
   }
 
     function handleCancel() {
+      setSaveError("")
       setEditingId(null);
       setEditImageFile(null)
     }
 
     useEffect(() => {
-        if (!isLoggedIn && !isLoading) {
-            navigate("/login")
-        }
-    }, [isLoggedIn, isLoading, navigate])
-    
-    useEffect(() => {
-        async function fetchMyListings() {
-            const response = await apiFetch("/listings/Mylisting", {
-                credentials: "include"
-            })
-            const data = await response.json()
-            if (response.ok) {
-                setListings(data)
+        const controller = new AbortController()
+
+        async function loadStore() {
+            setLoadError(null)
+
+            try {
+                const [profileResponse, listingsResponse] = await Promise.all([
+                    apiFetch("/seller/profile", { credentials: "include", signal: controller.signal }),
+                    apiFetch("/listings/Mylisting", { credentials: "include", signal: controller.signal })
+                ])
+
+                if (controller.signal.aborted) {
+                    return
+                }
+
+                if (profileResponse.status === 404) {// no store profile yet, so the seller still has to onboard
+                    navigate("/seller/onboarding", { replace: true })
+                    return
+                }
+
+                if (profileResponse.status === 401 || listingsResponse.status === 401) {
+                    return// the session guard handles an expired session
+                }
+
+                if (!profileResponse.ok || !listingsResponse.ok) {
+                    setLoadError("We could not load your store. Please try again.")
+                    return
+                }
+
+                const profile = await profileResponse.json()
+                const myListings = await listingsResponse.json()
+                if (controller.signal.aborted) {
+                    return
+                }
+                setStoreLogoUrl(profile.logoUrl)
+                setStoreName(profile.businessName)
+                setStoreSlug(profile.slug)
+                setListings(myListings)
+            } catch {
+                if (!controller.signal.aborted) {
+                    setLoadError("We could not load your store. Please check your connection and try again.")
+                }
             }
         }
 
-        async function fetchStoreProfile() {
-            const response = await apiFetch("/seller/profile", {
-                credentials: "include"
-            })
-            const data = await response.json()
-            if (response.ok) {
-                setStoreLogoUrl(data.logoUrl)
-                setStoreName(data.businessName)
-                setStoreSlug(data.slug)
-            }
-        }
-
-        fetchMyListings()
-        fetchStoreProfile()
-    }, [])
+        loadStore()
+        return () => controller.abort()
+    }, [navigate, loadAttempt])
     
     return (
         <div>
+            {loadError && (
+              <div role="alert">
+                <p>{loadError}</p>
+                <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+              </div>
+            )}
             {storeLogoUrl && <img src={storeLogoUrl} alt={storeName || "Store logo"} width="80" />}
             {storeName && <h1>{storeName}</h1>}
             {storeName && <Link to="/seller/profile/edit">Edit store details</Link>}
@@ -290,6 +323,8 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
                         editingId={editingId}
                         editFormData={editFormData}
                         hasChanges={listing.id === editingId && hasListingChanges(listing)}
+                        isSaving={isSaving}
+                        saveError={listing.id === editingId ? saveError : ""}
                         setEditFormData={setEditFormData}
                         setEditImageFile={setEditImageFile}
                         handleEditClick={handleEditClick}

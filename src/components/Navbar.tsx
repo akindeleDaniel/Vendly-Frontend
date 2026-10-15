@@ -1,14 +1,14 @@
 import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import type { UserRole } from "../types/user"
+import type { AuthStatus, UserRole } from "../types/user"
 
 type NavbarProps = {
-    isLoggedIn : boolean
+    authStatus: AuthStatus
     userRole: UserRole | null
     onLogout: () => Promise<void>
 }
 
-function Navbar ({isLoggedIn, userRole, onLogout}: NavbarProps){
+function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
 
     const {pathname} = useLocation()
     const navigate = useNavigate()
@@ -33,13 +33,19 @@ function Navbar ({isLoggedIn, userRole, onLogout}: NavbarProps){
         }
     }
 
+    // Account links are not shown until the session check has finished, so the wrong links never flash.
+    if (authStatus === "loading") {
+        return <nav aria-busy="true" />
+    }
+
     return(
         <nav>
+            {pathname !== "/" && <Link to={"/"}>Home</Link>}
             {
-                isLoggedIn ? (
+                authStatus === "authenticated" ? (
                     <>
                         {userRole === "CONSUMER" && pathname !== "/cart" && <Link to={"/cart"}>Cart</Link>}
-                        <Link to={"/seller/myListing"}>Profile</Link>
+                        {userRole === "SELLER" && pathname !== "/seller/myListing" && <Link to={"/seller/myListing"}>My store</Link>}
                         <button type="button" onClick={handleLogout} disabled={isLoggingOut}>
                             {isLoggingOut ? "Logging out..." : "Logout"}
                         </button>
@@ -47,7 +53,6 @@ function Navbar ({isLoggedIn, userRole, onLogout}: NavbarProps){
                     </>
                 ) : (
                     <>
-                        {pathname !== "/" && <Link to={"/"}>Home</Link>}
                         {pathname !== "/register" && <Link to={"/register"}>Register</Link>}
                         {pathname !== "/login" && <Link to={"/login"}>Login</Link>}
                     </>

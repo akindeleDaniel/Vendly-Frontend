@@ -50,10 +50,16 @@ There is no automated test suite yet.
 - `src/App.tsx`: routes, session check and logout.
 - `src/pages/`: route-level pages.
 - `src/components/`: shared components.
-- `src/lib/api.ts`: `apiFetch`, which builds backend URLs from `VITE_API_BASE_URL`. Use it for every backend request instead of calling `fetch` with a hard-coded URL.
+- `src/lib/api.ts`: `apiFetch`, which builds backend URLs from `VITE_API_BASE_URL`, plus `getErrorMessage`. Use `apiFetch` for every backend request instead of calling `fetch` with a hard-coded URL.
 - `src/lib/uploadImage.ts`: direct browser upload to Cloudinary.
 - `src/types/`: shared TypeScript types (`UserRole`, `Listing`, `SellerProfile` and others).
 
 ## Authentication
 
-The backend sets a session cookie. Requests that need it must pass `credentials: "include"`; `apiFetch` forwards request options unchanged and does not add it for you. Frontend route checks only improve the user experience. The backend enforces authorization.
+The backend sets a session cookie, and the app learns who is signed in from `GET /users/check` when it starts (`src/App.tsx`). That check has four outcomes: loading, authenticated, unauthenticated (a 401), and error (a network or server failure, which is not treated as being logged out and offers a retry).
+
+- `src/components/RouteGuards.tsx` redirects logged-out users and users with the wrong role away from seller and cart routes, and sends signed-in users away from the login and registration pages.
+- `apiFetch` forwards request options unchanged and does not add `credentials: "include"` for you. Requests that need the session must pass it. If one of those requests is answered with 401 (other than login, register and the session check), the app marks the session as expired and the guards redirect to the login page.
+- `getErrorMessage` in `src/lib/api.ts` reads the backend's error message, which is either JSON or plain text.
+
+Frontend route checks only improve the user experience. The backend enforces authentication and authorization.

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import RolePage from "./pages/RolePage"
@@ -9,19 +9,31 @@ import EditSellerProfilePage from "./pages/EditSellerProfilePage"
 import Navbar from "./components/Navbar"
 import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
-import { useEffect, useState } from "react"
-
-import type { UserRole } from "./types/user"
-import { apiFetch } from "./lib/api"
+import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
+import type { AuthStatus, UserRole } from "./types/user"
 
 function isUserRole(value: unknown): value is UserRole {
   return value === "CONSUMER" || value === "SELLER"
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("loading")// starts as loading since the session is still being checked
   const [userRole, setUserRole] = useState<UserRole | null>(null)
-  const [isLoading, setIsLoading] = useState(true)// starts with true since it is still checking
+  const [sessionExpired, setSessionExpired] = useState(false)
+  const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
+  const authStatusRef = useRef<AuthStatus>("loading")
+
+  useEffect(() => {
+    authStatusRef.current = authStatus
+  }, [authStatus])
+
+  function handleLogin(role: UserRole) {
+    setUserRole(role)
+    setAuthStatus("authenticated")
+    setSessionExpired(false)
+  }
 
   async function handleLogout() {
     const response = await apiFetch("/users/logout", {
@@ -30,87 +42,101 @@ function App() {
     })
 
     if (!response.ok) {
-      const data: unknown = await response.json().catch(() => null)
-      const message =
-        typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
-          ? data.message
-          : `Unable to log out (status ${response.status}).`
-      throw new Error(message)
+      throw new Error(await getErrorMessage(response, `Unable to log out (status ${response.status}).`))
     }
 
-    setIsLoggedIn(false)
+    setAuthStatus("unauthenticated")
     setUserRole(null)
   }
 
+  const retryAuthCheck = useCallback(() => {
+    setAuthStatus("loading")
+    setAuthCheckAttempt((attempt) => attempt + 1)
+  }, [])
+
+  // An authenticated request rejected with 401 means the session is gone (for example it expired).
+  useEffect(() => {
+    return setUnauthorizedHandler(() => {
+      if (authStatusRef.current !== "authenticated") {
+        return
+      }
+      setSessionExpired(true)
+      setAuthStatus("unauthenticated")
+      setUserRole(null)
+    })
+  }, [])
+
   useEffect(() => { // the reason we have a function in the use effect is because useEffect doesn't allow the use of async in it so we havve to create a function that accepts it
+    const controller = new AbortController()
+
     async function checkAuth() {
       try {
         const response = await apiFetch("/users/check", {
-          credentials: "include"
+          credentials: "include",
+          signal: controller.signal
         })
 
-        if (!response.ok) {
-          setIsLoggedIn(false)
+        if (controller.signal.aborted) {
+          return
+        }
+
+        if (response.status === 401) {
+          setAuthStatus("unauthenticated")
           setUserRole(null)
+          return
+        }
+
+        if (!response.ok) {
+          // A server error says nothing about whether the user is logged in.
+          setAuthStatus("error")
           return
         }
 
         const data: unknown = await response.json()
         if (typeof data === "object" && data !== null && "role" in data && isUserRole(data.role)) {
-          setIsLoggedIn(true)
           setUserRole(data.role)
+          setAuthStatus("authenticated")
         } else {
-          setIsLoggedIn(false)
-          setUserRole(null)
+          setAuthStatus("error")
         }
       } catch (error) {
-        console.error("Unable to check authentication:", error)
-        setIsLoggedIn(false)
-        setUserRole(null)
-      } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) {
+          console.error("Unable to check authentication:", error)
+          setAuthStatus("error")
+        }
       }
     }
     checkAuth()
-  }, [] //this empty array bracket says that the function should run just once when the frontend renders starts
+
+    return () => controller.abort()
+  }, [authCheckAttempt] // runs once when the app starts, and again when the user retries a failed check
   )
+
+  const guardProps = { authStatus, userRole, onRetry: retryAuthCheck }
 
   return (
     <BrowserRouter>
-      <Navbar isLoggedIn={isLoggedIn} userRole={userRole} onLogout={handleLogout} />
+      <Navbar authStatus={authStatus} userRole={userRole} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
 
-        <Route path="/register" element={<RolePage />} />
+        <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
 
-        <Route path="/consumer/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} role="CONSUMER"/>} />
+        <Route path="/consumer/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="CONSUMER"/></RedirectIfAuthenticated>} />
 
-        <Route path="/seller/register" element={<RegisterPage setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} role="SELLER"/>} />
+        <Route path="/seller/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
-        <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole}/>} />
+        <Route path="/login" element={<RedirectIfAuthenticated {...guardProps}><LoginPage onLogin={handleLogin} sessionExpired={sessionExpired}/></RedirectIfAuthenticated>} />
 
-        <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
+        <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
-        <Route path="/seller/profile/edit" element={<EditSellerProfilePage />} />
+        <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
 
-        <Route
-          path="/seller/myListing"
-          element={
-            isLoading ? (
-              <p>Checking authentication...</p>
-            ) : !isLoggedIn ? (
-              <Navigate to="/login" replace />
-            ) : userRole !== "SELLER" ? (
-              <Navigate to="/" replace />
-            ) : (
-              <MyListingPage isLoggedIn={isLoggedIn} isLoading={isLoading} userRole={userRole} />
-            )
-          }
-        />
+        <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
         <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
 
-        <Route path="/cart" element={<CartPage />} />
+        <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
       </Routes>
     </BrowserRouter>
   );

@@ -12,6 +12,8 @@ type ListingCardProps = {
   editingId?: number | null
   editFormData?: ListingFormData
   hasChanges?: boolean
+  isSaving?: boolean
+  saveError?: string
   setEditFormData?: (data: ListingFormData) => void
   setEditImageFile?: (file: File | null) => void
   handleEditClick?: (listing: Listing) => void
@@ -20,7 +22,7 @@ type ListingCardProps = {
   handleCancel?: () => void
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [cartFeedback, setCartFeedback] = useState("")
@@ -128,8 +130,9 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, s
               onChange={(e) => setEditImageFile!(e.target.files?.[0] || null)}
             />
           </label>
-          {isEditable && <button onClick={() => handleSave!(listing.id)} disabled={!hasChanges}>Save</button>}
-          {isEditable && <button onClick={handleCancel}>Cancel</button>}
+          {saveError && <p role="alert">{saveError}</p>}
+          {isEditable && <button onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
+          {isEditable && <button onClick={handleCancel} disabled={isSaving}>Cancel</button>}
         </>
       ) : (
         <>

@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { Link } from "react-router-dom"
 import type { UserRole } from "../types/user"
-import { apiFetch } from "../lib/api"
+import { apiFetch, getErrorMessage } from "../lib/api"
 
 type ExistingUser = {
     email: string
@@ -9,26 +9,33 @@ type ExistingUser = {
 }
 
 type LoginPageProps = {
-    setIsLoggedIn : (value: boolean) => void
-    setUserRole: (value: UserRole | null) => void
+    onLogin: (role: UserRole) => void
+    sessionExpired: boolean
 }
 
-function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
-
-    const navigate = useNavigate()
+function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
 
     const [formData, setFormData] = useState<ExistingUser>({
         email: "",
         password: ""
     })
-    
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState("")
+
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        if (formData.email === "" || formData.password === "") {
-            alert("All areas must be filled")
+        if (isSubmitting) {
             return
         }
+
+        if (formData.email === "" || formData.password === "") {
+            setError("All areas must be filled")
+            return
+        }
+
+        setIsSubmitting(true)
+        setError("")
 
         try{
             const response = await apiFetch("/users/login", {
@@ -41,55 +48,39 @@ function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
                 }),
                 credentials:"include"
             })
-    
-            const data = await response.json()
 
-            
             if (!response.ok) {
-                alert(data.message) 
+                setError(await getErrorMessage(response, `Unable to log in (status ${response.status}).`))
                 return
             }
 
-            if(data.role !== "CONSUMER" && data.role !== "SELLER") {
-                alert("Unable to determine account role. Please try again.")
+            const data: unknown = await response.json().catch(() => null)
+            const role = typeof data === "object" && data !== null && "role" in data ? data.role : null
+
+            if(role !== "CONSUMER" && role !== "SELLER") {
+                setError("Unable to determine account role. Please try again.")
                 return
             }
-            
-            setFormData({
-                email: "",
-                password: ""
-            })
-            setIsLoggedIn(true)
-            setUserRole(data.role)
-                        
-            if(data.role === "CONSUMER"){
-                navigate("/")
-            }else if(data.role === "SELLER"){
-                const profileResponse = await apiFetch("/seller/profile", {
-                    credentials: "include"
-                })
 
-                if (profileResponse.ok){
-                    navigate("/seller/myListing")
-                }else if(profileResponse.status === 404){
-                    navigate("/seller/onboarding")
-                }else{
-                    alert("You are logged in, but we could not load your store details. Please try logging in again.")
-                    return
-                }              
-            }
-            
+            // Updating the session state is enough: the route guard sends the user to their home page,
+            // and sellers without a store profile are sent on to onboarding from there.
+            onLogin(role)
         }catch {
-            alert("Something went wrong. Please check your connection and try again.")
+            setError("Something went wrong. Please check your connection and try again.")
+        }finally{
+            setIsSubmitting(false)
         }
     }
 
     return(
         <>
+            {sessionExpired && <p role="status">Your session has expired. Please log in again.</p>}
             <form onSubmit={handleSubmit}>
             <label>
             Email
             <input name="email"
+            type="email"
+            autoComplete="email"
             value={formData.email}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
@@ -98,11 +89,13 @@ function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
             Password
             <input name="password"
             type="password"
+            autoComplete="current-password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
             </label>
-            <button type="submit">Login</button>
+            {error && <p role="alert">{error}</p>}
+            <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Login"}</button>
         </form>
         <p>Don't have an account? <Link to={"/register"}>Register</Link></p>
         </>

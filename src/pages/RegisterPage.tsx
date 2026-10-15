@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { Link } from "react-router-dom"
 import type { UserRole } from "../types/user"
-import { apiFetch } from "../lib/api"
+import { apiFetch, getErrorMessage } from "../lib/api"
 
 type User = {
     name: string
@@ -10,29 +10,34 @@ type User = {
 }
 
 type RegisterPageProps = {
-    setIsLoggedIn : (value: boolean) => void
-    setUserRole: (value: UserRole | null) => void
+    onLogin: (role: UserRole) => void
     role: UserRole
 }
 
-function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
-
-    const navigate = useNavigate()
-
+function RegisterPage ({onLogin, role}: RegisterPageProps){
 
     const [formData, setFormData] = useState<User>({
         name:"",
         email: "",
         password: ""
     })
-    
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState("")
+
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        if (formData.name === "" || formData.email === "" || formData.password === "") {
-            alert("All areas must be filled")
+        if (isSubmitting) {
             return
         }
+
+        if (formData.name === "" || formData.email === "" || formData.password === "") {
+            setError("All areas must be filled")
+            return
+        }
+
+        setIsSubmitting(true)
+        setError("")
 
         try{
             const response = await apiFetch("/users/register", {
@@ -46,30 +51,19 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
                 }),
                 credentials: "include"
             })
-    
-            const data = await response.json()
-    
+
             if (!response.ok) {
-                alert(data.message) 
+                setError(await getErrorMessage(response, `Unable to register (status ${response.status}).`))
                 return
             }
-    
-            setFormData({
-                name: "",
-                email: "",
-                password: ""
-            })
 
-            if(role === "SELLER"){
-                navigate("/seller/onboarding")
-            }else{
-                navigate("/")
-            }
-            setIsLoggedIn(true)
-            setUserRole(role)
-
-        }catch {
-             alert("Something went wrong. Please check your connection and try again.")
+            // Registration logs the user in. The route guard then sends consumers to the home page
+            // and sellers to their store page, which starts onboarding when no store profile exists.
+            onLogin(role)
+        }catch{
+             setError("Something went wrong. Please check your connection and try again.")
+        }finally{
+            setIsSubmitting(false)
         }
     }
 
@@ -79,6 +73,7 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
             <label>
             Name
             <input name="name"
+                autoComplete="name"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
@@ -86,6 +81,8 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
             <label>
             Email
             <input name="email"
+            type="email"
+            autoComplete="email"
             value={formData.email}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
@@ -94,11 +91,13 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
             Password
             <input name="password"
             type="password"
+            autoComplete="new-password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
             </label>
-            <button type="submit">Register</button>
+            {error && <p role="alert">{error}</p>}
+            <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Register"}</button>
         </form>
         <p>Already have an account? <Link to={"/login"}>Login</Link></p>
         </>
