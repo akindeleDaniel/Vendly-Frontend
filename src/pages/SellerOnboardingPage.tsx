@@ -1,11 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { uploadImage } from "../lib/uploadImage"
-
-type SellerProfile = {
-    businessName: string
-    location: string
-}
+import type { SellerProfile } from "../types/seller"
+import { apiFetch } from "../lib/api"
+import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
+import SellerProfileFields from "../components/SellerProfileFields"
 
 function SellerOnboardingPage (){
 
@@ -13,7 +12,10 @@ function SellerOnboardingPage (){
 
     const [formData, setFormData] = useState<SellerProfile>({
         businessName: "",
-        location: ""
+        state: "",
+        lga: "",
+        shippingPolicy: "FREE",
+        shippingCost: ""
     })
 
     const [logoFile, setLogoFile] = useState<File | null>(null)// separate from formData because a file is not a string
@@ -21,8 +23,9 @@ function SellerOnboardingPage (){
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        if (formData.businessName === "" || formData.location === "" || logoFile === null) {
-            alert("All areas must be filled")
+        const validationError = validateSellerProfile(formData)
+        if (validationError !== null || logoFile === null) {
+            alert(validationError ?? "All areas must be filled")
             return
         }
 
@@ -33,15 +36,12 @@ function SellerOnboardingPage (){
                 return
             }
 
-            const response = await fetch("http://localhost:3000/seller/profile", {
+            const response = await apiFetch("/seller/profile", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    ...formData,
-                    logoUrl
-                }),
+                body: JSON.stringify(buildSellerProfileBody(formData, logoUrl)),
                 credentials: "include"
             })
 
@@ -53,7 +53,7 @@ function SellerOnboardingPage (){
             }
 
             navigate("/seller/myListing")
-        }catch(error){
+        }catch {
             alert("Something went wrong. Please check your connection and try again.")
         }
     }
@@ -62,20 +62,7 @@ function SellerOnboardingPage (){
         <div>
             <h1>Set up your store</h1>
             <form onSubmit={handleSubmit}>
-                <label>
-                    Business name
-                    <input name="businessName"
-                        value={formData.businessName}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <label>
-                    Location
-                    <input name="location"
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
+                <SellerProfileFields formData={formData} setFormData={setFormData} />
                 <label>
                     Logo
                     <input type="file" accept="image/*"

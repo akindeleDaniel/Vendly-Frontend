@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { uploadImage } from "../lib/uploadImage"
-
-type SellerProfile = {
-    businessName: string
-    location: string
-}
+import type { SellerProfile } from "../types/seller"
+import { apiFetch } from "../lib/api"
+import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
+import SellerProfileFields from "../components/SellerProfileFields"
 
 function EditSellerProfilePage (){
 
@@ -13,16 +12,20 @@ function EditSellerProfilePage (){
 
     const [formData, setFormData] = useState<SellerProfile>({
         businessName: "",
-        location: ""
+        state: "",
+        lga: "",
+        shippingPolicy: "FREE",
+        shippingCost: ""
     })
 
+    const [savedProfile, setSavedProfile] = useState<SellerProfile | null>(null)// last values loaded from the server, used to detect edits
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
     const [logoFile, setLogoFile] = useState<File | null>(null)// only filled if the seller picks a new logo
 
     useEffect(() => {
         async function fetchProfile() {
             try{
-                const response = await fetch("http://localhost:3000/seller/profile", {
+                const response = await apiFetch("/seller/profile", {
                     credentials: "include"
                 })
 
@@ -33,23 +36,41 @@ function EditSellerProfilePage (){
                     return
                 }
 
-                setFormData({
+                const loadedProfile: SellerProfile = {
                     businessName: data.businessName,
-                    location: data.location
-                })
+                    state: data.state,
+                    lga: data.lga,
+                    shippingPolicy: data.shippingPolicy === "FIXED" ? "FIXED" : "FREE",
+                    shippingCost: data.shippingCost === null || data.shippingCost === undefined ? "" : String(data.shippingCost)
+                }
+                setFormData(loadedProfile)
+                setSavedProfile(loadedProfile)
                 setCurrentLogoUrl(data.logoUrl)
-            }catch(error){
+            }catch {
                 alert("Something went wrong. Please check your connection and try again.")
             }
         }
         fetchProfile()
     }, [])
 
+    // Save stays disabled until the profile has loaded and something differs from the saved values.
+    const hasChanges =
+        savedProfile !== null &&
+        (
+            logoFile !== null ||
+            formData.businessName !== savedProfile.businessName ||
+            formData.state !== savedProfile.state ||
+            formData.lga !== savedProfile.lga ||
+            formData.shippingPolicy !== savedProfile.shippingPolicy ||
+            (formData.shippingPolicy === "FIXED" && Number(formData.shippingCost) !== Number(savedProfile.shippingCost))
+        )
+
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        if (formData.businessName === "" || formData.location === "") {
-            alert("All areas must be filled")
+        const validationError = validateSellerProfile(formData)
+        if (validationError !== null) {
+            alert(validationError)
             return
         }
 
@@ -65,15 +86,12 @@ function EditSellerProfilePage (){
                 logoUrl = uploadedUrl
             }
 
-            const response = await fetch("http://localhost:3000/seller/profile", {
+            const response = await apiFetch("/seller/profile", {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    ...formData,
-                    logoUrl
-                }),
+                body: JSON.stringify(buildSellerProfileBody(formData, logoUrl)),
                 credentials: "include"
             })
 
@@ -85,7 +103,7 @@ function EditSellerProfilePage (){
             }
 
             navigate("/seller/myListing")
-        }catch(error){
+        }catch {
             alert("Something went wrong. Please check your connection and try again.")
         }
     }
@@ -94,20 +112,7 @@ function EditSellerProfilePage (){
         <div>
             <h1>Edit your store</h1>
             <form onSubmit={handleSubmit}>
-                <label>
-                    Business name
-                    <input name="businessName"
-                        value={formData.businessName}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <label>
-                    Location
-                    <input name="location"
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
+                <SellerProfileFields formData={formData} setFormData={setFormData} />
                 <div>
                     <p>Current logo</p>
                     {currentLogoUrl && <img src={currentLogoUrl} alt="Current logo" width="100" />}
@@ -118,7 +123,7 @@ function EditSellerProfilePage (){
                         onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                     />
                 </label>
-                <button type="submit">Save changes</button>
+                <button type="submit" disabled={!hasChanges}>Save changes</button>
             </form>
         </div>
     )

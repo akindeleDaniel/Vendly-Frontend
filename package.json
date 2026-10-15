@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "cors": "^2.8.6",
+    "nigerian-states-and-lgas": "^1.0.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"
