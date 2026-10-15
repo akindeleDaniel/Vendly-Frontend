@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import type { Listing } from "../pages/DiscoveryPage"
+import type { Listing } from "../types/listing"
+import type { UserRole } from "../types/user"
 import ListingCard from "../components/ListingCard"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { apiFetch } from "../lib/api"
 
 type ShopProfile = {
     businessName: string
@@ -12,7 +14,7 @@ type ShopProfile = {
 }
 
 type ShopPageProps = {
-    userRole: "CONSUMER" | "SELLER" | null
+    userRole: UserRole | null
 }
 
 function ShopPage ({ userRole }: ShopPageProps) {
@@ -65,8 +67,8 @@ function ShopPage ({ userRole }: ShopPageProps) {
                     query.set("search", search)
                 }
                 const queryString = query.toString()
-                const response = await fetch(
-                    `http://localhost:3000/seller/shop/${encodeURIComponent(shopSlug)}${queryString ? `?${queryString}` : ""}`,
+                const response = await apiFetch(
+                    `/seller/shop/${encodeURIComponent(shopSlug)}${queryString ? `?${queryString}` : ""}`,
                     { signal: controller.signal }
                 )
                 const data = await response.json()

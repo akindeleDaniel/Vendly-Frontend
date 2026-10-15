@@ -22,7 +22,7 @@ export async function uploadImage(file: File): Promise<string | null> {
         }
 
         return data.secure_url
-    } catch (error) {
+    } catch {
         return null
     }
 }

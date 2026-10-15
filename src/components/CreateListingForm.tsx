@@ -1,10 +1,8 @@
-import type { FormData } from "../pages/DiscoveryPage"
+import type { ListingFormData } from "../types/listing"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "../data/categories"
 
-export type CreateListingFormData = FormData & {
-    stockQuantity: string
-}
+export type CreateListingFormData = ListingFormData
 
 type CreateListingFormProps = {
     formData: CreateListingFormData

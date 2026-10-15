@@ -11,7 +11,8 @@ import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
 import { useEffect, useState } from "react"
 
-type UserRole = "CONSUMER" | "SELLER"
+import type { UserRole } from "./types/user"
+import { apiFetch } from "./lib/api"
 
 function isUserRole(value: unknown): value is UserRole {
   return value === "CONSUMER" || value === "SELLER"
@@ -23,7 +24,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)// starts with true since it is still checking
 
   async function handleLogout() {
-    const response = await fetch("http://localhost:3000/users/logout", {
+    const response = await apiFetch("/users/logout", {
       method: "POST",
       credentials: "include"
     })
@@ -44,7 +45,7 @@ function App() {
   useEffect(() => { // the reason we have a function in the use effect is because useEffect doesn't allow the use of async in it so we havve to create a function that accepts it
     async function checkAuth() {
       try {
-        const response = await fetch("http://localhost:3000/users/check", {
+        const response = await apiFetch("/users/check", {
           credentials: "include"
         })
 

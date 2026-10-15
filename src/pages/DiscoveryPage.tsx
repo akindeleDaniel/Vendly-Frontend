@@ -2,39 +2,13 @@ import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import ListingCard from "../components/ListingCard"
 import { CATEGORIES } from "../data/categories"
-
-export type Listing = {
-id: number;
-title: string;
-description: string;
-price: number;
-category: string;
-imageUrl: string;
-createdAt: string;// date is a string because when coming from express or json, it comes as a string(stringify)
-stockQuantity: number;
-sellerSlug?: string | null;
-sellerName?: string | null;
-};
+import type { Listing } from "../types/listing"
+import type { ShopSummary } from "../types/seller"
+import type { UserRole } from "../types/user"
+import { apiFetch } from "../lib/api"
 
 type DiscoveryPageProps = {
-  userRole: "CONSUMER" | "SELLER" | null
-}
-
-export type FormData = {
-  title: string
-  description: string
-  price: string
-  category: string
-}
-
-type ShopSummary = {
-  id: number | string
-  businessName: string
-  state?: string | null
-  lga?: string | null
-  location?: string | null
-  logoUrl?: string | null
-  slug: string
+  userRole: UserRole | null
 }
 
 type ConsumerLocation = {
@@ -90,7 +64,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
       setProducts([])
 
       try {
-        const response = await fetch(`http://localhost:3000/listings?${query.toString()}`, {
+        const response = await apiFetch(`/listings?${query.toString()}`, {
           signal: controller.signal
         })
 
@@ -139,7 +113,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
       setShops([])
 
       try {
-        const response = await fetch(`http://localhost:3000/seller/shops?${query.toString()}`, {
+        const response = await apiFetch(`/seller/shops?${query.toString()}`, {
           signal: controller.signal
         })
 

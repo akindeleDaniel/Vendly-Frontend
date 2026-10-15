@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { apiFetch } from "../lib/api"
 
 type CartItem = {
   listingId: number
@@ -45,7 +46,7 @@ function CartPage() {
 
     async function fetchCart() {
       try {
-        const response = await fetch("http://localhost:3000/cart", {
+        const response = await apiFetch("/cart", {
           credentials: "include",
           signal: controller.signal
         })
@@ -106,8 +107,8 @@ function CartPage() {
     setQuantityFeedback((feedback) => ({ ...feedback, [item.listingId]: "" }))
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/cart/items/${encodeURIComponent(String(item.listingId))}`,
+      const response = await apiFetch(
+        `/cart/items/${encodeURIComponent(String(item.listingId))}`,
         {
           method: "PATCH",
           headers: {
@@ -161,8 +162,8 @@ function CartPage() {
     setRemoveFeedback((feedback) => ({ ...feedback, [item.listingId]: "" }))
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/cart/items/${encodeURIComponent(String(item.listingId))}`,
+      const response = await apiFetch(
+        `/cart/items/${encodeURIComponent(String(item.listingId))}`,
         {
           method: "DELETE",
           credentials: "include"
@@ -229,7 +230,7 @@ function CartPage() {
     setClearCartError(null)
 
     try {
-      const response = await fetch("http://localhost:3000/cart", {
+      const response = await apiFetch("/cart", {
         method: "DELETE",
         credentials: "include"
       })

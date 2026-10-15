@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import type { Listing, FormData } from "./DiscoveryPage"
+import { Link, useNavigate } from "react-router-dom"
+import type {ListingFormData, Listing} from "../types/listing"
 import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { uploadImage } from "../lib/uploadImage"
+import { apiFetch } from "../lib/api"
+import type { UserRole } from "../types/user"
 
 type MyListingsPageProps = {
     isLoggedIn: boolean
     isLoading: boolean
-    userRole: "CONSUMER" | "SELLER" | null
+    userRole: UserRole | null
 }
 
 function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
@@ -32,11 +34,12 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
   })
 
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editFormData, setEditFormData] = useState<FormData>({
+  const [editFormData, setEditFormData] = useState<ListingFormData>({
     title: "",
     description: "",
     price: "",
-    category: ""
+    category: "",
+    stockQuantity: ""
   })
 
   const handleCopyShopLink = async () => {
@@ -81,7 +84,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         return
       }
 
-      const response = await fetch("http://localhost:3000/listings", {
+      const response = await apiFetch("/listings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,14 +110,14 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
       setFormData({ title: "", description: "", price: "", category: "", stockQuantity: "" })
       setImageFile(null)
       setFormKey(formKey + 1)
-    }catch(error){
+    }catch {
       alert("Something went wrong. Please check your connection and try again.")
     }
   }
 
   async function handleDelete(id: number){
       try{
-        const response = await fetch(`http://localhost:3000/listings/${id}`,{
+        const response = await apiFetch(`/listings/${id}`,{
           method: "DELETE",
           credentials:"include"
         })
@@ -128,7 +131,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         
           setListings(listings.filter((listing) => listing.id !== id))
 
-      }catch(error){
+      }catch {
         alert("Something went wrong. Please check your connection and try again.")
       }
     }
@@ -140,18 +143,36 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
       title: listing.title,
       description: listing.description,
       price: String(listing.price),
-      category: listing.category
+      category: listing.category,
+      stockQuantity: String(listing.stockQuantity)
     })
   }
 
+  // The Save button stays disabled until the edit form differs from the saved listing or a new photo is chosen.
+  function hasListingChanges(listing: Listing) {
+    return (
+      editImageFile !== null ||
+      editFormData.title !== listing.title ||
+      editFormData.description !== listing.description ||
+      editFormData.category !== listing.category ||
+      Number(editFormData.price) !== listing.price ||
+      Number(editFormData.stockQuantity) !== listing.stockQuantity
+    )
+  }
+
    async function handleSave(id: number) {
-    if(editFormData.title === "" || editFormData.category === "" || editFormData.price === "" || editFormData.description === ""){
+    if(editFormData.title === "" || editFormData.category === "" || editFormData.price === "" || editFormData.stockQuantity === "" || editFormData.description === ""){
       alert("This cannot be blank")
       return
     }
 
     if (isNaN(Number(editFormData.price)) === true || Number(editFormData.price) <= 0){
       alert("Price must be a number greater than 0")
+      return
+    }
+
+    if (!Number.isInteger(Number(editFormData.stockQuantity)) || Number(editFormData.stockQuantity) < 0) {
+      alert("Stock quantity must be a whole number greater than or equal to 0")
       return
     }
 
@@ -167,7 +188,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         imageUrl = uploadedUrl
       }
 
-      const response = await fetch(`http://localhost:3000/listings/${id}`, {
+      const response = await apiFetch(`/listings/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -175,6 +196,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         body: JSON.stringify({
           ...editFormData,
           price: Number(editFormData.price),
+          stockQuantity: Number(editFormData.stockQuantity),
           imageUrl
         }),
         credentials:"include"
@@ -194,7 +216,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
       );
       setEditingId(null);
       setEditImageFile(null)
-    }catch(error){
+    }catch {
       alert("Something went wrong. Please check your connection and try again.")
     }
   }
@@ -208,11 +230,11 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         if (!isLoggedIn && !isLoading) {
             navigate("/login")
         }
-    }, [isLoggedIn, isLoading])
+    }, [isLoggedIn, isLoading, navigate])
     
     useEffect(() => {
         async function fetchMyListings() {
-            const response = await fetch("http://localhost:3000/listings/Mylisting", {
+            const response = await apiFetch("/listings/Mylisting", {
                 credentials: "include"
             })
             const data = await response.json()
@@ -222,7 +244,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         }
 
         async function fetchStoreProfile() {
-            const response = await fetch("http://localhost:3000/seller/profile", {
+            const response = await apiFetch("/seller/profile", {
                 credentials: "include"
             })
             const data = await response.json()
@@ -241,6 +263,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
         <div>
             {storeLogoUrl && <img src={storeLogoUrl} alt={storeName || "Store logo"} width="80" />}
             {storeName && <h1>{storeName}</h1>}
+            {storeName && <Link to="/seller/profile/edit">Edit store details</Link>}
             {storeSlug && (
               <div>
                   <p>Your shop link: /shop/{storeSlug}</p>
@@ -266,6 +289,7 @@ function MyListingsPage({ isLoggedIn, isLoading }: MyListingsPageProps) {
                         listing={listing}
                         editingId={editingId}
                         editFormData={editFormData}
+                        hasChanges={listing.id === editingId && hasListingChanges(listing)}
                         setEditFormData={setEditFormData}
                         setEditImageFile={setEditImageFile}
                         handleEditClick={handleEditClick}

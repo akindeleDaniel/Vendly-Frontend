@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import type { UserRole } from "../types/user"
+import { apiFetch } from "../lib/api"
 
 type User = {
     name: string
@@ -9,8 +11,8 @@ type User = {
 
 type RegisterPageProps = {
     setIsLoggedIn : (value: boolean) => void
-    setUserRole: (value: "CONSUMER" | "SELLER" | null) => void
-    role: "CONSUMER" | "SELLER"
+    setUserRole: (value: UserRole | null) => void
+    role: UserRole
 }
 
 function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
@@ -33,7 +35,7 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
         }
 
         try{
-            const response = await fetch("http://localhost:3000/users/register", {
+            const response = await apiFetch("/users/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -66,7 +68,7 @@ function RegisterPage ({setIsLoggedIn, setUserRole, role}: RegisterPageProps){
             setIsLoggedIn(true)
             setUserRole(role)
 
-        }catch(error){
+        }catch {
              alert("Something went wrong. Please check your connection and try again.")
         }
     }

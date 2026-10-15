@@ -1,15 +1,18 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import type {FormData, Listing} from "../pages/DiscoveryPage"
+import type { Listing, ListingFormData } from "../types/listing"
+import type { UserRole } from "../types/user"
+import { apiFetch } from "../lib/api"
 import { CATEGORIES } from "../data/categories"
 
 type ListingCardProps = {
   listing: Listing
   isEditable: boolean
-  userRole?: "CONSUMER" | "SELLER" | null
+  userRole?: UserRole | null
   editingId?: number | null
-  editFormData?: FormData
-  setEditFormData?: (data: FormData) => void
+  editFormData?: ListingFormData
+  hasChanges?: boolean
+  setEditFormData?: (data: ListingFormData) => void
   setEditImageFile?: (file: File | null) => void
   handleEditClick?: (listing: Listing) => void
   handleDelete?: (id: number) => void
@@ -17,7 +20,7 @@ type ListingCardProps = {
   handleCancel?: () => void
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [cartFeedback, setCartFeedback] = useState("")
@@ -39,7 +42,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, setEditFormDa
     setCartFeedback("")
 
     try {
-      const response = await fetch("http://localhost:3000/cart/items", {
+      const response = await apiFetch("/cart/items", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -100,6 +103,13 @@ function ListingCard({ listing, userRole, editingId, editFormData, setEditFormDa
             />
           </label>
           <label>
+            Stock Quantity
+            <input type="number" min="0" step="1" required name="stockQuantity"
+              value={editFormData!.stockQuantity}
+              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
+            />
+          </label>
+          <label>
             Category
             <select
               name="category"
@@ -118,7 +128,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, setEditFormDa
               onChange={(e) => setEditImageFile!(e.target.files?.[0] || null)}
             />
           </label>
-          {isEditable && <button onClick={() => handleSave!(listing.id)}>Save</button>}
+          {isEditable && <button onClick={() => handleSave!(listing.id)} disabled={!hasChanges}>Save</button>}
           {isEditable && <button onClick={handleCancel}>Cancel</button>}
         </>
       ) : (

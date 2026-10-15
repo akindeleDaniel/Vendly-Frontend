@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import type { UserRole } from "../types/user"
+import { apiFetch } from "../lib/api"
 
 type ExistingUser = {
     email: string
@@ -8,7 +10,7 @@ type ExistingUser = {
 
 type LoginPageProps = {
     setIsLoggedIn : (value: boolean) => void
-    setUserRole: (value: "CONSUMER" | "SELLER" | null) => void
+    setUserRole: (value: UserRole | null) => void
 }
 
 function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
@@ -29,7 +31,7 @@ function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
         }
 
         try{
-            const response = await fetch("http://localhost:3000/users/login", {
+            const response = await apiFetch("/users/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -63,7 +65,7 @@ function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
             if(data.role === "CONSUMER"){
                 navigate("/")
             }else if(data.role === "SELLER"){
-                const profileResponse = await fetch("http://localhost:3000/seller/profile", {
+                const profileResponse = await apiFetch("/seller/profile", {
                     credentials: "include"
                 })
 
@@ -77,7 +79,7 @@ function LoginPage ({setIsLoggedIn, setUserRole}: LoginPageProps){
                 }              
             }
             
-        }catch(error){
+        }catch {
             alert("Something went wrong. Please check your connection and try again.")
         }
     }

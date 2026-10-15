@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import type { UserRole } from "../types/user"
 
 type NavbarProps = {
     isLoggedIn : boolean
-    userRole: "CONSUMER" | "SELLER" | null
+    userRole: UserRole | null
     onLogout: () => Promise<void>
 }
 
