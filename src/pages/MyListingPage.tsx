@@ -317,26 +317,28 @@ function MyListingsPage() {
               setImageFile={setImageFile}
             />
 
-            {listings.map((listing) => {
-                return(
-                    <ListingCard 
-                        isEditable={true}
-                        listing={listing}
-                        editingId={editingId}
-                        editFormData={editFormData}
-                        hasChanges={listing.id === editingId && hasListingChanges(listing)}
-                        isSaving={isSaving}
-                        saveError={listing.id === editingId ? saveError : ""}
-                        setEditFormData={setEditFormData}
-                        setEditImageFile={setEditImageFile}
-                        handleEditClick={handleEditClick}
-                        handleDelete={handleDelete}
-                        handleCancel={handleCancel}
-                        handleSave={handleSave}
-                        key={listing.id}
-                    />
-                )})
-            }
+            <div className="product-grid">
+                {listings.map((listing) => {
+                    return(
+                        <ListingCard 
+                            isEditable={true}
+                            listing={listing}
+                            editingId={editingId}
+                            editFormData={editFormData}
+                            hasChanges={listing.id === editingId && hasListingChanges(listing)}
+                            isSaving={isSaving}
+                            saveError={listing.id === editingId ? saveError : ""}
+                            setEditFormData={setEditFormData}
+                            setEditImageFile={setEditImageFile}
+                            handleEditClick={handleEditClick}
+                            handleDelete={handleDelete}
+                            handleCancel={handleCancel}
+                            handleSave={handleSave}
+                            key={listing.id}
+                        />
+                    )})
+                }
+            </div>
         </div>
     )
 }

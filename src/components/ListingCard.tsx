@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { Listing, ListingFormData } from "../types/listing"
 import type { UserRole } from "../types/user"
 import { apiFetch } from "../lib/api"
+import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { savePendingCartItem } from "../lib/pendingCartItem"
 import { CATEGORIES } from "../data/categories"
 
@@ -26,13 +27,24 @@ type ListingCardProps = {
   isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
 }
 
+type CartFeedback = {
+  text: string
+  kind: "success" | "error" | "info"
+}
+
+// At or below this many in stock, the card says "Only N left".
+const LOW_STOCK_THRESHOLD = 3
+
 function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
-  const [cartFeedback, setCartFeedback] = useState("")
+  const [cartFeedback, setCartFeedback] = useState<CartFeedback | null>(null)
   const [quantity, setQuantity] = useState(1)
   const selectedQuantity = Math.min(quantity, listing.stockQuantity)
+  const isSoldOut = listing.stockQuantity === 0
+  const isLowStock = !isSoldOut && listing.stockQuantity <= LOW_STOCK_THRESHOLD
+  const showCartControls = !isEditable && allowAddToCart && userRole !== "SELLER"
 
   const shopPath = !isEditable && listing.sellerSlug
     ? `/shop/${encodeURIComponent(listing.sellerSlug)}${shopLinkSearch ? `?${shopLinkSearch}` : ""}`
@@ -63,12 +75,12 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
 
     // The session is still being checked (or the check failed), so the visitor may well be logged in.
     if (userRole === null || userRole === undefined) {
-      setCartFeedback("We are still checking your session. Please try again in a moment.")
+      setCartFeedback({ text: "We are still checking your session. Please try again in a moment.", kind: "info" })
       return
     }
 
     setIsAddingToCart(true)
-    setCartFeedback("")
+    setCartFeedback(null)
 
     try {
       const response = await apiFetch("/cart/items", {
@@ -96,23 +108,28 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
             : response.status === 409
               ? "This listing is sold out or does not have enough stock."
               : `Unable to add this listing to your cart (status ${response.status}).`
-        window.alert(message)
+        setCartFeedback({ text: message, kind: "error" })
         return
       }
 
-      setCartFeedback("Added to cart.")
+      setCartFeedback({ text: "Added to cart.", kind: "success" })
     } catch {
-      window.alert("Unable to add this listing to your cart. Please check your connection and try again.")
+      setCartFeedback({
+        text: "Unable to add this listing to your cart. Please check your connection and try again.",
+        kind: "error"
+      })
     } finally {
       setIsAddingToCart(false)
     }
   }
 
+  const isEditing = listing.id === editingId
+
   return (
-    <div>
-      {listing.id === editingId ? (
+    <div className={`product-card${isEditing ? " product-card-editing" : ""}`}>
+      {isEditing ? (
         <>
-          {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} width="200" />}
+          {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} />}
           <label>
             Title
             <input name="title" value={editFormData!.title}
@@ -157,60 +174,81 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               onChange={(e) => setEditImageFile!(e.target.files?.[0] || null)}
             />
           </label>
-          {saveError && <p role="alert">{saveError}</p>}
-          {isEditable && <button onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
-          {isEditable && <button onClick={handleCancel} disabled={isSaving}>Cancel</button>}
+          {saveError && <p role="alert" className="alert alert-error">{saveError}</p>}
+          {isEditable && <button type="button" className="btn btn-primary" onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
+          {isEditable && <button type="button" onClick={handleCancel} disabled={isSaving}>Cancel</button>}
         </>
       ) : (
         <>
-        {/*
-            cursor: pointer here is just a visual hint to the user that this
-            card can be clicked, since there's no visible link text anymore.
-            This inline style is temporary — once real CSS/styling is set up
-            for this project, this should move into a proper class instead
-            of living directly on the element like this.
-          */}
+          {/* The whole card opens the shop (pointer cursor); the title is a real link so keyboard users can too. */}
           <div
+            className={`product-link-area${shopPath ? " is-clickable" : ""}`}
             onClick={handleCardClick}
-            style={shopPath ? { cursor: "pointer" } : undefined}
           >
-            {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} width="200" />}
-            <div>{shopPath ? <Link to={shopPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}</div>
-            <p>Price: {listing.price}</p>
-            <div>{listing.description}</div>
-            <div>{listing.category}</div>
-            <p>Available stock: {listing.stockQuantity}</p>
+            <div className="product-media">
+              {listing.imageUrl
+                ? <img src={listing.imageUrl} alt={listing.title} loading="lazy" />
+                : <span role="img" aria-label="No photo available">No photo</span>}
+              {isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
+            </div>
+            <div className="product-body">
+              <h3 className="product-title">
+                {shopPath ? <Link to={shopPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}
+              </h3>
+              <p className="product-price">{formatMinorUnits(toMinorUnits(listing.price))}</p>
+              {!isEditable && !allowAddToCart && listing.sellerName && (
+                <p className="product-meta">Sold by {listing.sellerName}</p>
+              )}
+              {(isEditable || allowAddToCart) && listing.description && (
+                <p className="product-description">{listing.description}</p>
+              )}
+              {isEditable && <p className="product-meta">{listing.category}</p>}
+              {(isEditable || allowAddToCart) && (
+                <p className={isLowStock ? "product-meta product-meta-warning" : "product-meta"}>
+                  {isEditable
+                    ? `Stock: ${listing.stockQuantity}`
+                    : isSoldOut
+                      ? "Not available right now"
+                      : isLowStock
+                        ? `Only ${listing.stockQuantity} left`
+                        : `${listing.stockQuantity} available`}
+                </p>
+              )}
+            </div>
           </div>
-          {isEditable && <button onClick={() => handleEditClick!(listing)}>Edit Listing</button>}
-          {isEditable && <button onClick={() => handleDelete!(listing.id)}>Delete Listing</button>}
-          {!isEditable && allowAddToCart && userRole !== "SELLER" && (
-            <>
-              {listing.stockQuantity > 0 ? (
-                <>
-                  <label>
-                    Quantity:
-                    <select
-                      value={selectedQuantity}
-                      onChange={(event) => setQuantity(Number(event.currentTarget.value))}
-                    >
-                      {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                </>
-              ) : (
-                <p>Sold out</p>
+          {isEditable && (
+            <div className="product-actions">
+              <button type="button" onClick={() => handleEditClick!(listing)}>Edit Listing</button>
+              <button type="button" className="btn btn-danger" onClick={() => handleDelete!(listing.id)}>Delete Listing</button>
+            </div>
+          )}
+          {showCartControls && (
+            <div className="product-actions">
+              {!isSoldOut && (
+                <select
+                  aria-label={`Quantity for ${listing.title}`}
+                  value={selectedQuantity}
+                  onChange={(event) => setQuantity(Number(event.currentTarget.value))}
+                >
+                  {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
+                    <option key={option} value={option}>Quantity: {option}</option>
+                  ))}
+                </select>
               )}
               <button
                 type="button"
+                className={isSoldOut ? undefined : "btn btn-primary"}
                 onClick={handleAddToCart}
-                disabled={isAddingToCart || listing.stockQuantity === 0}
+                disabled={isAddingToCart || isSoldOut}
               >
-                {isAddingToCart ? "Adding..." : "Add to Cart"}
+                {isSoldOut ? "Sold out" : isAddingToCart ? "Adding..." : "Add to cart"}
               </button>
-              {cartFeedback && <p role="status">{cartFeedback}</p>}
-            </>
+              {cartFeedback && (
+                <p role="status" className={`alert alert-${cartFeedback.kind === "success" ? "success" : cartFeedback.kind === "error" ? "error" : "info"}`}>
+                  {cartFeedback.text}
+                </p>
+              )}
+            </div>
           )}
         </>
       )}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import ListingCard from "../components/ListingCard"
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "../components/Icons"
 import { CATEGORIES } from "../data/categories"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import type { Listing } from "../types/listing"
@@ -28,6 +29,13 @@ type LocationStatus =
 type RequestStatus = "idle" | "loading" | "error" | "success"
 
 const SEARCH_DEBOUNCE_MS = 300
+
+// Tile colours, in category order. Neighbouring tiles never share a tint at 2, 3 or 6 columns.
+const TILE_TINTS = [
+  "forest", "sand", "amber", "sage", "clay", "stone",
+  "sand", "forest", "sage", "amber", "stone", "clay",
+  "forest", "amber", "sand", "stone", "sage", "forest"
+] as const
 
 // Skeleton of the marketplace "search" page. One route ("/") with three views, chosen by the URL:
 //   1. no category, no search  -> a grid of category tiles
@@ -239,35 +247,46 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     setShopRequestStatus("idle")
   }
 
+  const searchLabel = selectedCategory ? `Search in ${selectedCategory}` : "Search products"
+
   return (
     <div>
-      <h1>Vendly</h1>
+      {selectedCategory && (
+        <Link to="/" className="back-link" onClick={resetSearchAndStatuses}>
+          <ChevronLeftIcon />
+          All categories
+        </Link>
+      )}
 
-      <form role="search" onSubmit={(event) => event.preventDefault()}>
-        <label>
-          {selectedCategory ? `Search in ${selectedCategory}` : "What are you looking for?"}
+      <h1>{selectedCategory ?? (search ? "Search results" : "What are you looking for?")}</h1>
+
+      <form role="search" className="search-form" onSubmit={(event) => event.preventDefault()}>
+        <label className="search-field">
+          <span className="visually-hidden">{searchLabel}</span>
+          <SearchIcon />
           <input
             type="search"
+            placeholder={searchLabel}
             value={searchText}
             onChange={(event) => setSearchText(event.currentTarget.value)}
           />
         </label>
       </form>
 
-      {selectedCategory && (
-        <Link to="/" onClick={resetSearchAndStatuses}>Back to categories</Link>
-      )}
-
       {/* View 1: category tiles */}
       {!showProducts && (
         <section aria-labelledby="categories-heading">
           <h2 id="categories-heading">Browse all</h2>
-          <ul>
-            {CATEGORIES.map((category) => (
+          <ul className="tile-grid">
+            {CATEGORIES.map((category, index) => (
               <li key={category}>
-                <Link to={`/?${new URLSearchParams({ category }).toString()}`} onClick={resetSearchAndStatuses}>
-                  {/* category image or colour goes here once the design is decided */}
+                <Link
+                  className={`tile tile-${TILE_TINTS[index % TILE_TINTS.length]}`}
+                  to={`/?${new URLSearchParams({ category }).toString()}`}
+                  onClick={resetSearchAndStatuses}
+                >
                   <span>{category}</span>
+                  <ChevronRightIcon />
                 </Link>
               </li>
             ))}
@@ -278,14 +297,12 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
       {/* Views 2 and 3: products */}
       {showProducts && (
         <section aria-labelledby="products-heading">
-          <h2 id="products-heading">
-            {selectedCategory ? selectedCategory : "Search results"}
-          </h2>
+          <h2 id="products-heading">Products</h2>
           <div aria-live="polite">
             {visibleProductStatus === "loading" && <p>Loading products...</p>}
           </div>
           {visibleProductStatus === "error" && (
-            <div role="alert">
+            <div role="alert" className="alert alert-error">
               <p>{productRequestError}</p>
               <button type="button" onClick={() => setProductRetryCount((count) => count + 1)}>
                 Retry products
@@ -296,7 +313,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
             <p>{search ? "No products match your search." : "No products in this category yet."}</p>
           )}
           {visibleProductStatus === "success" && products.length > 0 && (
-            <ul>
+            <ul className="product-grid">
               {products.map((product) => (
                 <li key={product.id}>
                   <ListingCard listing={product} isEditable={false} userRole={userRole} shopLinkSearch={searchParams.toString()} />
@@ -310,11 +327,11 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
       {/* View 3: shops */}
       {selectedCategory && (
         <section aria-labelledby="shops-heading">
-          <h2 id="shops-heading">Shops</h2>
-          <div aria-live="polite">
+          <h2 id="shops-heading">Shops that sell {selectedCategory}</h2>
+          <div className="card location-panel" aria-live="polite">
             {locationStatus === "not-requested" && (
               <>
-                <p>Use your location to prioritize nearby shops. Location is optional.</p>
+                <p>Use your location to see nearby shops first. This is optional.</p>
                 <button type="button" onClick={requestLocation}>Use my location</button>
               </>
             )}
@@ -323,7 +340,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
             )}
             {locationStatus === "available" && (
               <>
-                <p>Nearby shops are prioritized. All matching shops remain available.</p>
+                <p>Nearby shops are shown first. All matching shops remain available.</p>
                 <button type="button" onClick={requestLocation}>Refresh location</button>
               </>
             )}
@@ -342,7 +359,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
           </div>
           {visibleShopStatus === "loading" && <p>Loading shops...</p>}
           {visibleShopStatus === "error" && (
-            <div role="alert">
+            <div role="alert" className="alert alert-error">
               <p>{shopRequestError}</p>
               <button type="button" onClick={() => setShopRetryCount((count) => count + 1)}>
                 Retry shops
@@ -353,15 +370,20 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
             <p>No shops found in this category.</p>
           )}
           {visibleShopStatus === "success" && shops.length > 0 && (
-            <ul>
+            <ul className="shop-list">
               {shops.map((shop) => (
                 <li key={shop.id}>
-                  <Link to={`/shop/${encodeURIComponent(shop.slug)}?${searchParams.toString()}`}>
-                    {shop.logoUrl && <img src={shop.logoUrl} alt="" width="48" />}
-                    <span>{shop.businessName}</span>
-                    <span>
-                      {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
+                  <Link className="shop-row" to={`/shop/${encodeURIComponent(shop.slug)}?${searchParams.toString()}`}>
+                    {shop.logoUrl
+                      ? <img className="avatar" src={shop.logoUrl} alt="" />
+                      : <span className="avatar avatar-initial" aria-hidden="true">{shop.businessName.charAt(0).toUpperCase()}</span>}
+                    <span className="shop-row-text">
+                      <span className="shop-row-name">{shop.businessName}</span>
+                      <span className="shop-row-meta">
+                        {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
+                      </span>
                     </span>
+                    <ChevronRightIcon />
                   </Link>
                 </li>
               ))}
@@ -372,6 +394,5 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     </div>
   )
 }
-
 
 export default DiscoveryPage

@@ -5,7 +5,8 @@ import { useParams } from "react-router-dom"
 import type { Listing } from "../types/listing"
 import type { AuthStatus, UserRole } from "../types/user"
 import ListingCard from "../components/ListingCard"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
@@ -168,6 +169,8 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
         return (
             <div>
                 <h1>Store not found</h1>
+                <p>We could not find that shop. It may have been renamed or removed.</p>
+                <Link to="/">Keep browsing</Link>
             </div>
         )
     }
@@ -175,47 +178,75 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
     if(!profile || profileSlug !== slug){
         return (
             <div>
-                <p>Loading...</p>
+                <p role="status">Loading...</p>
             </div>
         )
     }
 
     return (
         <div>
-            <button
-                type="button"
-                onClick={handleBackToCategory}
-                >
-                Back to Search
+            <button type="button" className="back-link" onClick={handleBackToCategory}>
+                <ChevronLeftIcon />
+                Back to search
             </button>
-            {profile.logoUrl && <img src={profile.logoUrl} alt={profile.businessName} width="80" />}
-            <h1>{profile.businessName}</h1>
+
             {pendingCartResult && (
-                <p role={pendingCartResult.isError ? "alert" : "status"}>{pendingCartResult.text}</p>
+                <p role={pendingCartResult.isError ? "alert" : "status"} className={`alert ${pendingCartResult.isError ? "alert-error" : "alert-success"}`}>
+                    {pendingCartResult.text}
+                    {!pendingCartResult.isError && <>{" "}<Link to="/cart">View cart</Link></>}
+                </p>
             )}
-            <p>{profile.location}</p>
-            <label>
-                Search this shop
-                <input
-                    type="search"
-                    value={searchText}
-                    onChange={(event) => setSearchText(event.currentTarget.value)}
-                />
-            </label>
-            {isLoading && <p>Loading products...</p>}
-            {!isLoading && listings.length === 0 && (
-                <p>{search ? "No products match your search." : "This shop has no products yet."}</p>
-            )}
-            {!isLoading && listings.map((listing) => (
-                <ListingCard
-                    isEditable={false}
-                    allowAddToCart
-                    isLoggedOut={authStatus === "unauthenticated"}
-                    listing={listing}
-                    userRole={userRole}
-                    key={listing.id}
-                />
-            ))}
+
+            <section aria-labelledby="shop-name" className="card shop-header">
+                {profile.logoUrl
+                    ? <img className="avatar avatar-lg" src={profile.logoUrl} alt="" />
+                    : <span className="avatar avatar-lg avatar-initial" aria-hidden="true">{profile.businessName.charAt(0).toUpperCase()}</span>}
+                <div>
+                    <h1 id="shop-name">{profile.businessName}</h1>
+                    {profile.location && (
+                        <p className="shop-location">
+                            <MapPinIcon />
+                            {profile.location}
+                        </p>
+                    )}
+                </div>
+            </section>
+
+            <form role="search" className="search-form" onSubmit={(event) => event.preventDefault()}>
+                <label className="search-field">
+                    <span className="visually-hidden">Search this shop</span>
+                    <SearchIcon />
+                    <input
+                        type="search"
+                        placeholder="Search this shop"
+                        value={searchText}
+                        onChange={(event) => setSearchText(event.currentTarget.value)}
+                    />
+                </label>
+            </form>
+
+            <section aria-labelledby="shop-products">
+                <h2 id="shop-products">Products</h2>
+                {isLoading && <p role="status">Loading products...</p>}
+                {!isLoading && listings.length === 0 && (
+                    <p>{search ? "No products match your search." : "This shop has no products yet."}</p>
+                )}
+                {!isLoading && listings.length > 0 && (
+                    <ul className="product-grid">
+                        {listings.map((listing) => (
+                            <li key={listing.id}>
+                                <ListingCard
+                                    isEditable={false}
+                                    allowAddToCart
+                                    isLoggedOut={authStatus === "unauthenticated"}
+                                    listing={listing}
+                                    userRole={userRole}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
         </div>
     )
 }
