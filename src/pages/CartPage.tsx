@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type CartItem = {
   listingId: number
@@ -52,6 +53,7 @@ function isCartItem(value: unknown): value is CartItem {
 }
 
 function CartPage() {
+  useDocumentTitle("Your cart")
   const navigate = useNavigate()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading")
@@ -297,24 +299,24 @@ function CartPage() {
 
   if (loadStatus === "error") {
     return (
-      <main>
+      <div>
         <h1>Your Cart</h1>
         <div role="alert">
           <p>Unable to load your cart. Please check your connection and try again.</p>
           <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (cartItems.length === 0) {
     return (
-      <main>
+      <div>
         <h1>Your Cart</h1>
         {notice && <p role={notice.isError ? "alert" : "status"}>{notice.text}</p>}
         <p>Your cart is empty.</p>
         <Link to="/">Keep browsing</Link>
-      </main>
+      </div>
     )
   }
 
@@ -327,7 +329,7 @@ function CartPage() {
   const hasUnavailableItems = cartItems.some((item) => item.quantity > item.availableQuantity)
 
   return (
-    <main>
+    <div>
       <h1>Your Cart</h1>
       {notice && <p role={notice.isError ? "alert" : "status"}>{notice.text}</p>}
 
@@ -432,7 +434,7 @@ function CartPage() {
       >
         {isClearing ? "Clearing..." : "Clear Cart"}
       </button>
-    </main>
+    </div>
   )
 }
 

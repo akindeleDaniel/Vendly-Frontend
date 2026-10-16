@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type ExistingUser = {
     email: string
@@ -20,6 +21,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
         email: "",
         password: ""
     })
+    useDocumentTitle("Log in")
     const loginPrompt = readPendingCartItem() ? "Log in or register to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")

@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
 import { clearPendingCartItem } from "./lib/pendingCartItem"
 import type { AuthStatus, UserRole } from "./types/user"
+import { ScrollToTop, SkipLink } from "./components/PageShell"
 
 function isUserRole(value: unknown): value is UserRole {
   return value === "CONSUMER" || value === "SELLER"
@@ -122,30 +123,34 @@ function App() {
 
   return (
     <BrowserRouter>
+      <SkipLink />
+      <ScrollToTop />
       <Navbar authStatus={authStatus} userRole={userRole} onLogout={handleLogout} />
-      <Routes>
-        <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
+      <main id="main" tabIndex={-1}>
+        <Routes>
+          <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
 
-        <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
+          <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
 
-        <Route path="/consumer/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="CONSUMER"/></RedirectIfAuthenticated>} />
+          <Route path="/consumer/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="CONSUMER"/></RedirectIfAuthenticated>} />
 
-        <Route path="/seller/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
+          <Route path="/seller/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
-        <Route path="/login" element={<RedirectIfAuthenticated {...guardProps}><LoginPage onLogin={handleLogin} sessionExpired={sessionExpired}/></RedirectIfAuthenticated>} />
+          <Route path="/login" element={<RedirectIfAuthenticated {...guardProps}><LoginPage onLogin={handleLogin} sessionExpired={sessionExpired}/></RedirectIfAuthenticated>} />
 
-        <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
+          <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
-        <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
+          <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
 
-        <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
+          <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
-        <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
+          <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
 
-        <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
+          <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
 
-        <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
-      </Routes>
+          <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
+        </Routes>
+      </main>
     </BrowserRouter>
   );
 }

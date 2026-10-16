@@ -5,9 +5,11 @@ import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { uploadImage } from "../lib/uploadImage"
 import { apiFetch, getErrorMessage } from "../lib/api"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 function MyListingsPage() {
     const navigate = useNavigate()
+    useDocumentTitle("My store")
 
     const [listings, setListings] = useState<Listing[]>([])
     const [storeLogoUrl, setStoreLogoUrl] = useState<string>("")

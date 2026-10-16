@@ -5,12 +5,14 @@ import type { SellerProfile } from "../types/seller"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
 import SellerProfileFields from "../components/SellerProfileFields"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type ProfileCheckStatus = "checking" | "needs-onboarding" | "error"
 
 function SellerOnboardingPage (){
 
     const navigate = useNavigate()
+    useDocumentTitle("Set up your store")
 
     const [formData, setFormData] = useState<SellerProfile>({
         businessName: "",

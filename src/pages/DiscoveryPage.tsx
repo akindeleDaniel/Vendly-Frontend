@@ -6,6 +6,7 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import type { Listing } from "../types/listing"
 import type { ShopSummary } from "../types/seller"
 import type { UserRole } from "../types/user"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type DiscoveryPageProps = {
   userRole: UserRole | null
@@ -38,6 +39,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
   const search = (searchParams.get("search") ?? "").trim()
   const [searchText, setSearchText] = useState(search)
+  useDocumentTitle(selectedCategory ?? (search ? "Search results" : null))
   const [products, setProducts] = useState<Listing[]>([])
   const [shops, setShops] = useState<ShopSummary[]>([])
   const [productRequestStatus, setProductRequestStatus] = useState<RequestStatus>("idle")
@@ -238,7 +240,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   }
 
   return (
-    <main>
+    <div>
       <h1>Vendly</h1>
 
       <form role="search" onSubmit={(event) => event.preventDefault()}>
@@ -367,7 +369,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
           )}
         </section>
       )}
-    </main>
+    </div>
   )
 }
 

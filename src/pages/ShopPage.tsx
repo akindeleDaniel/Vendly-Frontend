@@ -7,6 +7,7 @@ import type { AuthStatus, UserRole } from "../types/user"
 import ListingCard from "../components/ListingCard"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { apiFetch } from "../lib/api"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type ShopProfile = {
     businessName: string
@@ -46,6 +47,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
     const { slug } = useParams()
     const [profile, setProfile] = useState<ShopProfile | null>(null)
     const [profileSlug, setProfileSlug] = useState<string | null>(null)
+    useDocumentTitle(profile ? profile.businessName : "Shop")
     const [listings, setListings] = useState<Listing[]>([])
     const [notFoundSlug, setNotFoundSlug] = useState<string | null>(null)
     const [pendingCartResult, setPendingCartResult] = useState<{ text: string, isError: boolean } | null>(null)

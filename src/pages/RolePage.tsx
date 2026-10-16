@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 function RolePage(){
     const navigate = useNavigate()
+    useDocumentTitle("Choose an account type")
     function handleConsumerClick(){
         navigate("/consumer/register")
     }

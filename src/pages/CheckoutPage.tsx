@@ -4,6 +4,7 @@ import DeliveryFields from "../components/DeliveryFields"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "error"
 
@@ -97,7 +98,7 @@ function ReviewSummary({ review }: { review: CheckoutReview }) {
 
 function CheckoutSuccess({ result }: { result: CheckoutResult }) {
   return (
-    <main>
+    <div>
       <h1>Checkout created</h1>
       <p role="status">
         Your checkout has been created, but payment has not been completed and payment is not available yet.
@@ -144,11 +145,12 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
       <Link to="/cart">Back to cart</Link>
       {" "}
       <Link to="/">Keep browsing</Link>
-    </main>
+    </div>
   )
 }
 
 function CheckoutPage() {
+  useDocumentTitle("Checkout")
   const [previewStatus, setPreviewStatus] = useState<PreviewStatus>("loading")
   const [previewMessage, setPreviewMessage] = useState("")
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -363,30 +365,30 @@ function CheckoutPage() {
 
   if (previewStatus === "error") {
     return (
-      <main>
+      <div>
         <h1>Checkout</h1>
         <div role="alert">
           <p>{previewMessage}</p>
           <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
         </div>
         <Link to="/cart">Back to cart</Link>
-      </main>
+      </div>
     )
   }
 
   if (previewStatus === "empty") {
     return (
-      <main>
+      <div>
         <h1>Checkout</h1>
         <p>Your cart is empty, so there is nothing to check out.</p>
         <Link to="/">Keep browsing</Link>
-      </main>
+      </div>
     )
   }
 
   if (previewStatus === "blocked") {
     return (
-      <main>
+      <div>
         <h1>Checkout</h1>
         <div role="alert">
           <p>
@@ -400,7 +402,7 @@ function CheckoutPage() {
         <button type="button" onClick={() => refreshPreview("check-again")} disabled={isRefreshing}>
           {isRefreshing ? "Checking..." : "Check again"}
         </button>
-      </main>
+      </div>
     )
   }
 
@@ -409,7 +411,7 @@ function CheckoutPage() {
   }
 
   return (
-    <main>
+    <div>
       <h1>Checkout</h1>
       <p>
         Creating a checkout reserves your items for a short time. It does not take payment, and payment is not available yet.
@@ -498,7 +500,7 @@ function CheckoutPage() {
 
       {/* Not offered while a request is in flight, so the shopper cannot walk away from an unseen outcome. */}
       {!isSubmitting && <Link to="/cart">Back to cart</Link>}
-    </main>
+    </div>
   )
 }
 
