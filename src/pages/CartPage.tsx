@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
+import Notice from "../components/Notice"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type CartItem = {
@@ -300,11 +301,11 @@ function CartPage() {
   if (loadStatus === "error") {
     return (
       <div>
-        <h1>Your Cart</h1>
-        <div role="alert">
+        <h1>Your cart</h1>
+        <Notice kind="error">
           <p>Unable to load your cart. Please check your connection and try again.</p>
           <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
-        </div>
+        </Notice>
       </div>
     )
   }
@@ -312,10 +313,10 @@ function CartPage() {
   if (cartItems.length === 0) {
     return (
       <div>
-        <h1>Your Cart</h1>
-        {notice && <p role={notice.isError ? "alert" : "status"}>{notice.text}</p>}
+        <h1>Your cart</h1>
+        {notice && <Notice kind={notice.isError ? "error" : "success"}>{notice.text}</Notice>}
         <p>Your cart is empty.</p>
-        <Link to="/">Keep browsing</Link>
+        <Link to="/" className="btn btn-primary">Keep browsing</Link>
       </div>
     )
   }
@@ -330,110 +331,130 @@ function CartPage() {
 
   return (
     <div>
-      <h1>Your Cart</h1>
-      {notice && <p role={notice.isError ? "alert" : "status"}>{notice.text}</p>}
+      <h1>Your cart</h1>
+      {notice && <Notice kind={notice.isError ? "error" : "success"}>{notice.text}</Notice>}
 
-      {cartItems.map((item) => {
-        const sellerProfile = item.listing.user.sellerProfile
-        const isUpdating = pendingAction?.listingId === item.listingId && pendingAction.type === "updating"
-        const isRemoving = pendingAction?.listingId === item.listingId && pendingAction.type === "removing"
-        const message = itemMessages[item.listingId]
-        const noneAvailable = item.availableQuantity === 0
-        const exceedsAvailable = !noneAvailable && item.quantity > item.availableQuantity
-        // Choices go up to what is available now. A quantity above that is kept as the current
-        // value, so it is shown exactly as the shopper chose it and is never changed for them.
-        const quantityOptions = Array.from({ length: item.availableQuantity }, (_, index) => index + 1)
+      <div className="cart-layout">
+        <ul className="cart-items">
+          {cartItems.map((item) => {
+            const sellerProfile = item.listing.user.sellerProfile
+            const isUpdating = pendingAction?.listingId === item.listingId && pendingAction.type === "updating"
+            const isRemoving = pendingAction?.listingId === item.listingId && pendingAction.type === "removing"
+            const message = itemMessages[item.listingId]
+            const noneAvailable = item.availableQuantity === 0
+            const exceedsAvailable = !noneAvailable && item.quantity > item.availableQuantity
+            // Choices go up to what is available now. A quantity above that is kept as the current
+            // value, so it is shown exactly as the shopper chose it and is never changed for them.
+            const quantityOptions = Array.from({ length: item.availableQuantity }, (_, index) => index + 1)
 
-        return (
-          <article key={item.listingId}>
-            {item.listing.imageUrl && (
-              <img
-                src={item.listing.imageUrl}
-                alt={item.listing.title}
-                width="200"
-              />
-            )}
-            <h2>{item.listing.title}</h2>
-            <p>
-              Seller: {sellerProfile
-                ? <Link to={`/shop/${encodeURIComponent(sellerProfile.slug)}`}>{sellerProfile.businessName}</Link>
-                : "Unknown seller"}
-            </p>
-            <p>Price: {formatMinorUnits(toMinorUnits(item.listing.price))}</p>
-            <p>Available now: {item.availableQuantity}</p>
+            return (
+              <li key={item.listingId}>
+                <article className="card cart-item">
+                  <div className="cart-item-main">
+                    {item.listing.imageUrl
+                      ? <img className="cart-item-photo" src={item.listing.imageUrl} alt={item.listing.title} loading="lazy" />
+                      : <span className="cart-item-photo" role="img" aria-label="No photo available">Photo</span>}
+                    <div className="cart-item-info">
+                      <h2 className="cart-item-title">{item.listing.title}</h2>
+                      <p className="cart-item-meta">
+                        Seller: {sellerProfile
+                          ? <Link to={`/shop/${encodeURIComponent(sellerProfile.slug)}`}>{sellerProfile.businessName}</Link>
+                          : "Unknown seller"}
+                      </p>
+                      <p className="cart-item-meta">Price: {formatMinorUnits(toMinorUnits(item.listing.price))}</p>
+                      <p className="cart-item-meta">Available now: {item.availableQuantity}</p>
+                    </div>
+                  </div>
 
-            {noneAvailable ? (
-              <>
-                <p>Quantity in your cart: {item.quantity}</p>
-                <p role="alert">
-                  None of this item is available right now. It may be sold out or held by other shoppers.
-                  You can remove it from your cart, or keep it and check back later.
-                </p>
-              </>
-            ) : (
-              <>
-                <label>
-                  Quantity:
-                  <select
-                    value={item.quantity}
-                    disabled={isBusy}
-                    onChange={(event) => updateQuantity(item, Number(event.currentTarget.value))}
-                  >
-                    {exceedsAvailable && (
-                      <option value={item.quantity}>{item.quantity} (more than available)</option>
+                  {noneAvailable && (
+                    <Notice kind="error">
+                      None of this item is available right now. It may be sold out or held by other shoppers.
+                      You can remove it from your cart, or keep it and check back later.
+                    </Notice>
+                  )}
+                  {exceedsAvailable && (
+                    <Notice kind="warning">
+                      Stock for this item has been reduced. You have {item.quantity} in your cart but only{" "}
+                      {item.availableQuantity} {item.availableQuantity === 1 ? "is" : "are"} available now.
+                      Choose {item.availableQuantity} or fewer, or remove the item.
+                    </Notice>
+                  )}
+
+                  <div className="cart-item-controls">
+                    {noneAvailable ? (
+                      <p className="cart-item-qty-text">Quantity in your cart: {item.quantity}</p>
+                    ) : (
+                      <label>
+                        Quantity
+                        <select
+                          value={item.quantity}
+                          disabled={isBusy}
+                          onChange={(event) => updateQuantity(item, Number(event.currentTarget.value))}
+                        >
+                          {exceedsAvailable && (
+                            <option value={item.quantity}>{item.quantity} (more than available)</option>
+                          )}
+                          {quantityOptions.map((quantity) => (
+                            <option key={quantity} value={quantity}>{quantity}</option>
+                          ))}
+                        </select>
+                      </label>
                     )}
-                    {quantityOptions.map((quantity) => (
-                      <option key={quantity} value={quantity}>{quantity}</option>
-                    ))}
-                  </select>
-                </label>
-                {isUpdating && <span role="status"> Updating...</span>}
-                {exceedsAvailable && (
-                  <p role="alert">
-                    Stock for this item has been reduced. You have {item.quantity} in your cart but only{" "}
-                    {item.availableQuantity} {item.availableQuantity === 1 ? "is" : "are"} available now.
-                    Choose {item.availableQuantity} or fewer, or remove the item.
-                  </p>
-                )}
-              </>
-            )}
+                    <div className="cart-line">
+                      <span className="line-amount">{formatMinorUnits(toMinorUnits(item.listing.price) * item.quantity)}</span>
+                      <span className="line-caption">Line subtotal</span>
+                    </div>
+                  </div>
 
-            <p>Line subtotal: {formatMinorUnits(toMinorUnits(item.listing.price) * item.quantity)}</p>
+                  {isUpdating && <p role="status" className="cart-item-meta">Updating...</p>}
+                  {message && (
+                    <Notice kind={message.isError ? "error" : "success"}>{message.text}</Notice>
+                  )}
 
-            {message && (
-              <p role={message.isError ? "alert" : "status"}>{message.text}</p>
-            )}
-            <button
-              type="button"
-              onClick={() => removeItem(item)}
-              disabled={isBusy}
-            >
-              {isRemoving ? "Removing..." : "Remove item"}
-            </button>
-          </article>
-        )
-      })}
+                  <div className="cart-item-footer">
+                    <button
+                      type="button"
+                      className={noneAvailable ? "btn btn-danger" : "btn-link-danger"}
+                      onClick={() => removeItem(item)}
+                      disabled={isBusy}
+                    >
+                      {isRemoving ? "Removing..." : "Remove item"}
+                    </button>
+                  </div>
+                </article>
+              </li>
+            )
+          })}
+        </ul>
 
-      <section aria-labelledby="cart-summary-heading">
-        <h2 id="cart-summary-heading">Cart summary</h2>
-        <p>Items: {cartItems.length}</p>
-        <p>Total units: {totalUnits}</p>
-        <p>Estimated subtotal (excludes shipping): {formatMinorUnits(estimatedSubtotal)}</p>
-        <p>
-          This is an estimate only. Shipping and the final total are not included.
-          {hasUnavailableItems && " It also includes items that are not fully available right now."}
-        </p>
-        {/* The server decides at checkout whether the items can be bought, so the link is always offered. */}
-        <Link to="/checkout">Proceed to checkout</Link>
-      </section>
+        <div className="cart-aside">
+          <section aria-labelledby="cart-summary-heading" className="card cart-summary">
+            <h2 id="cart-summary-heading">Cart summary</h2>
+            <div className="summary-row"><span>Items</span><span>{cartItems.length}</span></div>
+            <div className="summary-row"><span>Total units</span><span>{totalUnits}</span></div>
+            <hr className="summary-divider" />
+            <div className="summary-row summary-row-total">
+              <span>Estimated subtotal<small>excludes shipping</small></span>
+              <span className="summary-total-amount">{formatMinorUnits(estimatedSubtotal)}</span>
+            </div>
+            <p className="summary-note">
+              This is an estimate only. Shipping and the final total are not included.
+              {hasUnavailableItems && " It also includes items that are not fully available right now."}
+            </p>
+            {/* The server decides at checkout whether the items can be bought, so the link is always offered. */}
+            <Link to="/checkout" className="btn btn-primary btn-lg btn-block">Proceed to checkout</Link>
+          </section>
 
-      <button
-        type="button"
-        onClick={clearCart}
-        disabled={isBusy}
-      >
-        {isClearing ? "Clearing..." : "Clear Cart"}
-      </button>
+          <button
+            type="button"
+            className="btn-quiet"
+            onClick={clearCart}
+            disabled={isBusy}
+          >
+            {isClearing ? "Clearing..." : "Clear cart"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

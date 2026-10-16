@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import DeliveryFields from "../components/DeliveryFields"
+import Notice from "../components/Notice"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
@@ -67,31 +68,39 @@ function formatStatus(status: string): string {
 // Every amount here is a string calculated by the server and is shown exactly as received.
 function ReviewSummary({ review }: { review: CheckoutReview }) {
   return (
-    <section aria-labelledby="order-summary-heading">
+    <section aria-labelledby="order-summary-heading" className="checkout-summary">
       <h2 id="order-summary-heading">Order summary</h2>
       {review.sellers.map((group) => (
-        <article key={group.seller.slug}>
+        <article key={group.seller.slug} className="card summary-card">
           <h3>
             <Link to={`/shop/${encodeURIComponent(group.seller.slug)}`}>{group.seller.businessName}</Link>
           </h3>
-          <ul>
+          <ul className="order-lines">
             {group.items.map((item) => (
-              <li key={item.listingId}>
-                <p>{item.title}</p>
-                <p>Unit price: {item.unitPrice}</p>
-                <p>Quantity: {item.quantity}</p>
-                <p>Line subtotal: {item.lineSubtotal}</p>
+              <li key={item.listingId} className="order-line">
+                <div>
+                  <p className="order-line-title">{item.title}</p>
+                  <p className="order-line-meta">{item.unitPrice} × {item.quantity}</p>
+                </div>
+                <span className="order-line-amount">{item.lineSubtotal}</span>
               </li>
             ))}
           </ul>
-          <p>Seller subtotal: {group.subtotal}</p>
-          <p>Shipping: {group.shipping}</p>
-          <p>Seller total: {group.total}</p>
+          <hr className="summary-divider" />
+          <div className="summary-row"><span>Seller subtotal</span><span>{group.subtotal}</span></div>
+          <div className="summary-row"><span>Shipping</span><span>{group.shipping}</span></div>
+          <div className="summary-row summary-row-total"><span>Seller total</span><span>{group.total}</span></div>
         </article>
       ))}
-      <p>Subtotal: {review.subtotal}</p>
-      <p>Shipping: {review.shipping}</p>
-      <p>Total: {review.total}</p>
+      <div className="card summary-card">
+        <div className="summary-row"><span>Subtotal</span><span>{review.subtotal}</span></div>
+        <div className="summary-row"><span>Shipping</span><span>{review.shipping}</span></div>
+        <hr className="summary-divider" />
+        <div className="summary-row summary-row-total">
+          <span>Total</span>
+          <span className="summary-total-amount">{review.total}</span>
+        </div>
+      </div>
     </section>
   )
 }
@@ -100,51 +109,58 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
   return (
     <div>
       <h1>Checkout created</h1>
-      <p role="status">
+      <Notice kind="success">
         Your checkout has been created, but payment has not been completed and payment is not available yet.
         Nothing has been charged.
-      </p>
+      </Notice>
       {result.code === "CHECKOUT_REUSED" && (
         <p>You already had an identical checkout, so it has been kept as it was.</p>
       )}
       {result.code === "CHECKOUT_REPLACED" && (
         <p>Your earlier pending checkout was replaced by this one.</p>
       )}
-      <p>Checkout reference: {result.checkout.id}</p>
-      <p>Status: {formatStatus(result.checkout.status)}</p>
-      <p>Expires: {formatTime(result.checkout.expiresAt)}</p>
-      <p>
+      <dl className="card status-list">
+        <div><dt>Checkout reference</dt><dd>{result.checkout.id}</dd></div>
+        <div><dt>Status</dt><dd><span className="badge">{formatStatus(result.checkout.status)}</span></dd></div>
+        <div><dt>Expires</dt><dd>{formatTime(result.checkout.expiresAt)}</dd></div>
+      </dl>
+      <p className="summary-note">
         Your items are held for you until then. After that, this checkout expires and you would need to create a new one.
       </p>
 
       <section aria-labelledby="orders-heading">
         <h2 id="orders-heading">Orders</h2>
         {result.orders.map((order) => (
-          <article key={order.id}>
-            <h3>{order.seller ? order.seller.businessName : "Seller"}</h3>
-            <p>Order reference: {order.id}</p>
-            <p>Status: {formatStatus(order.status)}</p>
-            <ul>
+          <article key={order.id} className="card summary-card">
+            <div className="order-header">
+              <h3>{order.seller ? order.seller.businessName : "Seller"}</h3>
+              <span className="badge">{formatStatus(order.status)}</span>
+            </div>
+            <p className="order-line-meta">Order reference: {order.id}</p>
+            <ul className="order-lines">
               {order.items.map((item) => (
-                <li key={item.listingId}>
-                  {item.title}: {item.quantity} × {item.unitPrice}
+                <li key={item.listingId} className="order-line">
+                  <span>{item.title}: {item.quantity} × {item.unitPrice}</span>
                 </li>
               ))}
             </ul>
-            <p>Subtotal: {order.subtotal}</p>
-            <p>Shipping: {order.shipping}</p>
-            <p>Order total: {order.total}</p>
+            <hr className="summary-divider" />
+            <div className="summary-row"><span>Subtotal</span><span>{order.subtotal}</span></div>
+            <div className="summary-row"><span>Shipping</span><span>{order.shipping}</span></div>
+            <div className="summary-row summary-row-total"><span>Order total</span><span>{order.total}</span></div>
           </article>
         ))}
-        <p>Subtotal: {result.subtotal}</p>
-        <p>Shipping: {result.shipping}</p>
-        <p>Total: {result.total}</p>
+        <div className="summary-row summary-row-total">
+          <span>Total</span>
+          <span className="summary-total-amount">{result.total}</span>
+        </div>
       </section>
 
-      <p>Your cart has not been changed.</p>
-      <Link to="/cart">Back to cart</Link>
-      {" "}
-      <Link to="/">Keep browsing</Link>
+      <p className="summary-note">Your cart has not been changed.</p>
+      <div className="action-row">
+        <Link to="/cart" className="btn">Back to cart</Link>
+        <Link to="/">Keep browsing</Link>
+      </div>
     </div>
   )
 }
@@ -367,10 +383,10 @@ function CheckoutPage() {
     return (
       <div>
         <h1>Checkout</h1>
-        <div role="alert">
+        <Notice kind="error">
           <p>{previewMessage}</p>
           <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
-        </div>
+        </Notice>
         <Link to="/cart">Back to cart</Link>
       </div>
     )
@@ -381,7 +397,7 @@ function CheckoutPage() {
       <div>
         <h1>Checkout</h1>
         <p>Your cart is empty, so there is nothing to check out.</p>
-        <Link to="/">Keep browsing</Link>
+        <Link to="/" className="btn btn-primary">Keep browsing</Link>
       </div>
     )
   }
@@ -390,18 +406,19 @@ function CheckoutPage() {
     return (
       <div>
         <h1>Checkout</h1>
-        <div role="alert">
+        <Notice kind="error">
           <p>
             One or more items in your cart cannot be checked out right now, for example because there is not enough stock.
             Please review your cart.
           </p>
           {(issue?.type === "items-unavailable" || issue?.type === "error") && <p>{issue.message}</p>}
+        </Notice>
+        <div className="action-row">
+          <Link to="/cart" className="btn">Back to cart</Link>
+          <button type="button" onClick={() => refreshPreview("check-again")} disabled={isRefreshing}>
+            {isRefreshing ? "Checking..." : "Check again"}
+          </button>
         </div>
-        <Link to="/cart">Back to cart</Link>
-        {" "}
-        <button type="button" onClick={() => refreshPreview("check-again")} disabled={isRefreshing}>
-          {isRefreshing ? "Checking..." : "Check again"}
-        </button>
       </div>
     )
   }
@@ -413,93 +430,98 @@ function CheckoutPage() {
   return (
     <div>
       <h1>Checkout</h1>
-      <p>
+      <Notice kind="info" role="none">
         Creating a checkout reserves your items for a short time. It does not take payment, and payment is not available yet.
-      </p>
+      </Notice>
 
-      <ReviewSummary review={review} />
+      <div className="checkout-layout">
+        <ReviewSummary review={review} />
 
-      {reviewNotice && (
-        <div role="alert" ref={noticeRef} tabIndex={-1}>
-          <p>{reviewNotice.message}</p>
-          {reviewNotice.previousTotal !== null && (
-            <p>Previous total: {reviewNotice.previousTotal}. New total: {review.total}.</p>
+        <div className="checkout-main">
+          {reviewNotice && (
+            <Notice kind="warning" ref={noticeRef} tabIndex={-1}>
+              <p>{reviewNotice.message}</p>
+              {reviewNotice.previousTotal !== null && (
+                <p><strong>Previous total: {reviewNotice.previousTotal}. New total: {review.total}.</strong></p>
+              )}
+              <button type="button" className="btn btn-primary" onClick={() => setReviewNotice(null)}>
+                I've reviewed the updated totals
+              </button>
+            </Notice>
           )}
-          <button type="button" onClick={() => setReviewNotice(null)}>
-            I've reviewed the updated totals
-          </button>
-        </div>
-      )}
 
-      <form onSubmit={handleSubmit}>
-        <h2>Delivery details</h2>
-        <DeliveryFields
-          formData={delivery}
-          setFormData={updateDelivery}
-          disabled={isSubmitting}
-          invalidField={validationError?.field}
-          errorId="delivery-error"
-        />
+          <form onSubmit={handleSubmit} className="checkout-form">
+            <h2>Delivery details</h2>
+            <DeliveryFields
+              formData={delivery}
+              setFormData={updateDelivery}
+              disabled={isSubmitting}
+              invalidField={validationError?.field}
+              errorId="delivery-error"
+            />
 
-        {validationError && <p role="alert" id="delivery-error">{validationError.message}</p>}
+            {validationError && <Notice kind="error" id="delivery-error">{validationError.message}</Notice>}
 
-        {issue?.type === "items-unavailable" && (
-          <div role="alert">
-            <p>
-              {issue.itemTitle
-                ? `"${issue.itemTitle}" cannot be checked out right now (for example, there is not enough stock).`
-                : "An item in your cart cannot be checked out right now (for example, there is not enough stock)."}
-              {" "}Your checkout was not created. Please review your cart.
-            </p>
-            <Link to="/cart">Back to cart</Link>
-          </div>
-        )}
-        {issue?.type === "locked" && (
-          <div role="alert">
-            <p>
-              You already have a checkout that cannot be replaced right now, so a new one was not created.
-              {" "}{issue.message}.
-            </p>
-            {issue.checkout && (
-              <p>
-                Existing checkout {issue.checkout.id}: status {formatStatus(issue.checkout.status)}, expires {formatTime(issue.checkout.expiresAt)}.
-              </p>
+            {issue?.type === "items-unavailable" && (
+              <Notice kind="error">
+                <p>
+                  {issue.itemTitle
+                    ? `"${issue.itemTitle}" cannot be checked out right now (for example, there is not enough stock).`
+                    : "An item in your cart cannot be checked out right now (for example, there is not enough stock)."}
+                  {" "}Your checkout was not created. Please review your cart.
+                </p>
+                <Link to="/cart" className="btn">Back to cart</Link>
+              </Notice>
             )}
-            <p>You can try again after it expires.</p>
-          </div>
-        )}
-        {issue?.type === "conflict" && <p role="alert">{issue.message}</p>}
-        {issue?.type === "invalid" && (
-          <p role="alert">
-            The server did not accept your delivery details. Please check each field and try again.
-          </p>
-        )}
-        {issue?.type === "unconfirmed" && (
-          <p role="alert">
-            We could not confirm whether your checkout was created. It may or may not have gone through.
-            You can try again with the same details: if it already exists, it will be kept rather than duplicated.
-          </p>
-        )}
-        {issue?.type === "error" && <p role="alert">{issue.message}</p>}
+            {issue?.type === "locked" && (
+              <Notice kind="warning">
+                <p>
+                  You already have a checkout that cannot be replaced right now, so a new one was not created.
+                  {" "}{issue.message}.
+                </p>
+                {issue.checkout && (
+                  <p>
+                    Existing checkout {issue.checkout.id}: status {formatStatus(issue.checkout.status)}, expires {formatTime(issue.checkout.expiresAt)}.
+                  </p>
+                )}
+                <p>You can try again after it expires.</p>
+              </Notice>
+            )}
+            {issue?.type === "conflict" && <Notice kind="warning">{issue.message}</Notice>}
+            {issue?.type === "invalid" && (
+              <Notice kind="error">
+                The server did not accept your delivery details. Please check each field and try again.
+              </Notice>
+            )}
+            {issue?.type === "unconfirmed" && (
+              <Notice kind="warning">
+                We could not confirm whether your checkout was created. It may or may not have gone through.
+                You can try again with the same details: if it already exists, it will be kept rather than duplicated.
+              </Notice>
+            )}
+            {issue?.type === "error" && <Notice kind="error">{issue.message}</Notice>}
 
-        {isBlocked ? (
-          <button type="button" onClick={() => refreshPreview(issue?.type === "conflict" ? "conflict" : "check-again")} disabled={isRefreshing}>
-            {isRefreshing ? "Checking..." : "Check again"}
-          </button>
-        ) : (
-          <button type="submit" disabled={isSubmitting || isRefreshing || reviewNotice !== null}>
-            {isSubmitting
-              ? "Creating checkout..."
-              : issue?.type === "unconfirmed" ? "Try again with the same details" : "Create checkout"}
-          </button>
-        )}
-        {reviewNotice !== null && (
-          <p>Confirm the updated totals above to continue.</p>
-        )}
-      </form>
+            {isBlocked ? (
+              <button type="button" className="btn-block btn-lg" onClick={() => refreshPreview(issue?.type === "conflict" ? "conflict" : "check-again")} disabled={isRefreshing}>
+                {isRefreshing ? "Checking..." : "Check again"}
+              </button>
+            ) : (
+              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null}>
+                {isSubmitting
+                  ? "Creating checkout..."
+                  : issue?.type === "unconfirmed" ? "Try again with the same details" : "Create checkout"}
+              </button>
+            )}
+            {reviewNotice !== null && (
+              <p className="form-hint">Confirm the updated totals above to continue.</p>
+            )}
+            <p className="form-hint">Nothing is charged. Payment is not available yet.</p>
+          </form>
 
-      {/* Not offered while a request is in flight, so the shopper cannot walk away from an unseen outcome. */}
-      {!isSubmitting && <Link to="/cart">Back to cart</Link>}
+          {/* Not offered while a request is in flight, so the shopper cannot walk away from an unseen outcome. */}
+          {!isSubmitting && <Link to="/cart" className="page-link-center">Back to cart</Link>}
+        </div>
+      </div>
     </div>
   )
 }
