@@ -142,6 +142,116 @@ textarea {
   resize: vertical;
 }
 
+/* Dropdown lists: the closed box matches the other fields, with a chevron instead of the browser's
+   arrow. The list that opens is drawn by the browser, so only its colours and font can be set. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23174B3A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+select:hover:not(:disabled) {
+  border-color: var(--color-charcoal);
+}
+
+select:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-cream);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+option {
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+  font: inherit;
+}
+
+/* The open list. Browsers that support customizable selects (Chrome, Edge and other Chromium
+   browsers) draw our own list below; everywhere else the browser's normal list is used, which
+   keeps working exactly as before. It is still the real <select>, so keyboard use, screen
+   readers and the phone's own picker are unaffected. */
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  /* Hide the browser's own triangle; the green chevron drawn on the box above is kept instead. */
+  select::picker-icon {
+    display: none;
+  }
+
+  /* No "display" here on purpose: the browser hides the closed list with it, and overriding it
+     leaves every list stuck open. */
+  select::picker(select) {
+    margin-top: var(--space-1);
+    padding: var(--space-1);
+    max-height: min(20rem, 60vh);
+    overflow-y: auto;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: 0 8px 24px rgba(36, 41, 35, 0.14);
+  }
+
+  select option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-size);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--color-charcoal);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  select option + option {
+    margin-top: 2px;
+  }
+
+  select option:hover {
+    background: var(--color-forest-tint);
+  }
+
+  select option:focus-visible {
+    background: var(--color-forest-tint);
+    outline: 2px solid var(--color-forest);
+    outline-offset: -2px;
+  }
+
+  select option:checked {
+    background: var(--color-forest-tint);
+    color: var(--color-forest);
+    font-weight: 700;
+  }
+
+  select option::checkmark {
+    color: var(--color-forest);
+  }
+
+  select option:disabled {
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+  }
+
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--color-text-muted);
