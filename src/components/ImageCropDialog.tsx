@@ -311,13 +311,13 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
                     <button type="button" onClick={onCancel} disabled={isSaving}>Cancel</button>
                     <button
                         type="button"
-                        className="icon-button"
+                        className="icon-text-button"
                         onClick={handleRotate}
                         disabled={!image || isSaving}
-                        aria-label="Rotate 90 degrees"
-                        title="Rotate"
+                        title="Rotate the photo 90 degrees"
                     >
-                        <RotateIcon size={22} />
+                        <RotateIcon size={20} />
+                        Rotate
                     </button>
                     <button type="button" className="btn btn-primary" onClick={handleDone} disabled={!image || isSaving}>
                         {isSaving ? "Saving..." : "Done"}

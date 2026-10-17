@@ -257,12 +257,11 @@
   gap: var(--space-3);
 }
 
-.icon-button {
+.icon-text-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--tap-size);
-  padding: 0;
+  gap: var(--space-2);
 }
 
 @media (max-width: 640px) {
