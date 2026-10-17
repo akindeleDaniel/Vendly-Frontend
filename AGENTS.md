@@ -17,6 +17,7 @@ Vendly is a multi-vendor marketplace that helps sellers present listings and sho
 - Follow the existing routing structure and conventions, with routes defined centrally in `src/App.tsx`.
 - Preserve responsive behavior and established UI patterns unless the task specifically calls for a change.
 - Where relevant, handle loading, error, empty, and success states deliberately.
+- Style with the design tokens in `src/styles/tokens.css` instead of hard-coded colours or sizes, keep tappable controls at least 44px tall, and show messages with the `Notice` component rather than `alert()`. See the README's "Styling" section.
 
 ## API And Security
 

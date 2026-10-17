@@ -6,6 +6,7 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 import Logo from "../components/Logo"
+import { ChevronLeftIcon } from "../components/Icons"
 
 type User = {
     name: string
@@ -109,6 +110,9 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Create account"}</button>
             </form>
             <p className="form-footer">Already have an account? <Link to={"/login"}>Log in</Link></p>
+            <p className="form-footer">
+                <Link to="/" className="back-link"><ChevronLeftIcon /> Back to home</Link>
+            </p>
         </div>
     )
 }

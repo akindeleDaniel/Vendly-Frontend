@@ -6,6 +6,7 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 import Logo from "../components/Logo"
+import { ChevronLeftIcon } from "../components/Icons"
 
 type ExistingUser = {
     email: string
@@ -107,6 +108,9 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Log in"}</button>
             </form>
             <p className="form-footer">Don't have an account? <Link to={"/register"}>Register</Link></p>
+            <p className="form-footer">
+                <Link to="/" className="back-link"><ChevronLeftIcon /> Back to home</Link>
+            </p>
         </div>
     )
 }

@@ -49,10 +49,38 @@ There is no automated test suite yet.
 
 - `src/App.tsx`: routes, session check and logout.
 - `src/pages/`: route-level pages.
-- `src/components/`: shared components.
+- `src/components/`: shared components (`Logo`, `Navbar`, `Notice`, `ImagePicker`, `ListingCard`, route guards and others).
+- `src/styles/`: the design system. See "Styling" below.
 - `src/lib/api.ts`: `apiFetch`, which builds backend URLs from `VITE_API_BASE_URL`, plus `getErrorMessage`. Use `apiFetch` for every backend request instead of calling `fetch` with a hard-coded URL.
-- `src/lib/uploadImage.ts`: direct browser upload to Cloudinary.
+- `src/lib/uploadImage.ts`: direct browser upload to Cloudinary. `src/lib/imageFile.ts` checks a chosen image first (JPG, PNG, WebP or GIF, at most 10 MB).
+- `src/lib/money.ts`: display arithmetic for prices, in whole minor units.
+- `src/lib/useDocumentTitle.ts`: sets the browser tab title for a page.
 - `src/types/`: shared TypeScript types (`UserRole`, `Listing`, `SellerProfile` and others).
+
+## Styling
+
+Vendly uses plain CSS with no styling library. `src/index.css` imports these files in order:
+
+| File | What it holds |
+|---|---|
+| `styles/tokens.css` | Every colour, font size, spacing step, radius and layout value as a CSS variable. Change a value here and it changes everywhere. |
+| `styles/base.css` | The look of plain HTML elements (headings, links, forms, buttons, dropdown lists), the focus ring, and reduced-motion handling. |
+| `styles/components.css` | Shared classes: buttons, cards, messages, badges, the site header, the skip link. |
+| `styles/browse.css` | Search field, category tiles, product cards, shop rows, storefront header. |
+| `styles/cart.css` | Cart and checkout cards, money rows, summary columns. |
+| `styles/forms.css` | Login, registration and seller pages, the account-type cards, the image picker. |
+
+Rules for new screens:
+
+- Use the variables in `tokens.css`. Do not write colours or sizes directly in a component or page.
+- Anything tappable is at least 44px tall (`--tap-size`). Text is at least 16px, except small captions.
+- Show every message with the `Notice` component, which pairs an icon with words so colour is never the only signal. Do not use `alert()`.
+- Amber (`--color-amber`) is for badges and accents with charcoal text on it. Never use it as text colour; use `--color-amber-text`.
+- Layouts are mobile first: one or two columns by default, with wider layouts added in `@media (min-width: ...)` blocks (about 640px, 900px and 1024px).
+- Check contrast when adding a colour pair: 4.5:1 for text, 3:1 for input borders and graphics.
+- The open dropdown list uses the browser's customizable-select feature where available (Chrome and Edge) and falls back to the browser's own list elsewhere.
+
+Sign-in pages (`/login`, `/register`, `/consumer/register`, `/seller/register`) hide the site header and show a centred logo instead; the list is `AUTH_PATHS` in `Navbar.tsx`.
 
 ## Authentication
 

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Logo from "../components/Logo"
+import { ChevronLeftIcon } from "../components/Icons"
 
 function RolePage(){
     const navigate = useNavigate()
@@ -28,6 +29,9 @@ function RolePage(){
                 </button>
             </div>
             <p className="form-footer">Already have an account? <Link to="/login">Log in</Link></p>
+            <p className="form-footer">
+                <Link to="/" className="back-link"><ChevronLeftIcon /> Back to home</Link>
+            </p>
         </div>
     )
 }
