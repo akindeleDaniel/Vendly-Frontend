@@ -4,6 +4,7 @@ import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Notice from "../components/Notice"
 
 type ExistingUser = {
     email: string
@@ -77,33 +78,34 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
     }
 
     return(
-        <>
-            {sessionExpired && <p role="status">Your session has expired. Please log in again.</p>}
-            {loginPrompt && !sessionExpired && <p role="status">{loginPrompt}</p>}
-            <form onSubmit={handleSubmit}>
-            <label>
-            Email
-            <input name="email"
-            type="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-            </label>
-            <label>
-            Password
-            <input name="password"
-            type="password"
-            autoComplete="current-password"
-            value={formData.password}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-            </label>
-            {error && <p role="alert">{error}</p>}
-            <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Login"}</button>
-        </form>
-        <p>Don't have an account? <Link to={"/register"}>Register</Link></p>
-        </>
+        <div className="form-page">
+            <h1>Log in</h1>
+            {sessionExpired && <Notice kind="info">Your session has expired. Please log in again.</Notice>}
+            {loginPrompt && !sessionExpired && <Notice kind="info">{loginPrompt}</Notice>}
+            <form onSubmit={handleSubmit} className="card form-card">
+                <label>
+                    Email
+                    <input name="email"
+                        type="email"
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                    />
+                </label>
+                <label>
+                    Password
+                    <input name="password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                    />
+                </label>
+                {error && <Notice kind="error">{error}</Notice>}
+                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Log in"}</button>
+            </form>
+            <p className="form-footer">Don't have an account? <Link to={"/register"}>Register</Link></p>
+        </div>
     )
 }
 

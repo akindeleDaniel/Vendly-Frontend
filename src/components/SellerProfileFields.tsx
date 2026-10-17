@@ -20,6 +20,7 @@ function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps
                     onChange={(e) => setFormData({...formData, businessName: e.target.value})}
                 />
             </label>
+            <div className="form-row">
             <label>
                 State
                 <select name="state"
@@ -45,6 +46,7 @@ function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps
                     ))}
                 </select>
             </label>
+            </div>
             <label>
                 Shipping
                 <select name="shippingPolicy"

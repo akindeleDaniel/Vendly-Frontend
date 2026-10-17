@@ -6,6 +6,7 @@ import { apiFetch } from "../lib/api"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { savePendingCartItem } from "../lib/pendingCartItem"
 import { CATEGORIES } from "../data/categories"
+import ImagePicker from "./ImagePicker"
 
 type ListingCardProps = {
   listing: Listing
@@ -168,12 +169,11 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               ))}
             </select>
           </label>
-          <label>
-            Change photo (optional)
-            <input type="file" accept="image/*"
-              onChange={(e) => setEditImageFile!(e.target.files?.[0] || null)}
-            />
-          </label>
+          <ImagePicker
+            label="Change photo (optional)"
+            onChange={(file) => setEditImageFile!(file)}
+            disabled={isSaving}
+          />
           {saveError && <p role="alert" className="alert alert-error">{saveError}</p>}
           {isEditable && <button type="button" className="btn btn-primary" onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {isEditable && <button type="button" onClick={handleCancel} disabled={isSaving}>Cancel</button>}

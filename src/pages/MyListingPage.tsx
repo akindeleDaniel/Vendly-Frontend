@@ -6,6 +6,7 @@ import CreateListingForm, { type CreateListingFormData } from "../components/Cre
 import { uploadImage } from "../lib/uploadImage"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Notice from "../components/Notice"
 
 function MyListingsPage() {
     const navigate = useNavigate()
@@ -20,6 +21,9 @@ function MyListingsPage() {
     const [formKey, setFormKey] = useState(0)
     const [linkCopied, setLinkCopied] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
+    const [isCreating, setIsCreating] = useState(false)
+    const [createError, setCreateError] = useState("")
+    const [deleteError, setDeleteError] = useState("")
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
@@ -62,24 +66,35 @@ function MyListingsPage() {
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
    {
     e.preventDefault();
-    
-    if(formData.title === "" || formData.category === "" || formData.price === "" || formData.stockQuantity === "" || formData.description === "" || imageFile === null){
-      alert("This cannot be blank")
+
+    if (isCreating) {
+      return
+    }
+
+    if(formData.title === "" || formData.category === "" || formData.price === "" || formData.stockQuantity === "" || formData.description === ""){
+      setCreateError("Please fill in every field.")
+      return
+    }
+    if (imageFile === null) {
+      setCreateError("Please choose a photo.")
       return
     }
     if (!Number.isFinite(Number(formData.price)) || Number(formData.price) <= 0){
-      alert("Price must be a number greater than 0")
+      setCreateError("Price must be a number greater than 0")
       return
     }
     if (!Number.isInteger(Number(formData.stockQuantity)) || Number(formData.stockQuantity) < 0) {
-      alert("Stock quantity must be a whole number greater than or equal to 0")
+      setCreateError("Stock quantity must be a whole number greater than or equal to 0")
       return
     }
+
+    setIsCreating(true)
+    setCreateError("")
 
     try{
       const imageUrl = await uploadImage(imageFile)
       if (imageUrl === null) {
-        alert("Image upload failed")
+        setCreateError("Image upload failed. Please check your connection and try again.")
         return
       }
 
@@ -96,44 +111,48 @@ function MyListingsPage() {
         }),
         credentials:"include"
       })
-  
-      const data = await response.json()
-  
+
       if(!response.ok){
-        alert(data.message)
+        setCreateError(await getErrorMessage(response, `Unable to create this listing (status ${response.status}).`))
         return
       }
-        
-        
-      setListings([...listings, data]);
+
+      const createdListing: Listing = await response.json()
+      setListings((currentListings) => [...currentListings, createdListing]);
       setFormData({ title: "", description: "", price: "", category: "", stockQuantity: "" })
       setImageFile(null)
-      setFormKey(formKey + 1)
+      setFormKey(formKey + 1)// starts the form (and its photo picker) afresh
     }catch {
-      alert("Something went wrong. Please check your connection and try again.")
+      setCreateError("Something went wrong. Please check your connection and try again.")
+    }finally{
+      setIsCreating(false)
     }
   }
 
   async function handleDelete(id: number){
-      try{
-        const response = await apiFetch(`/listings/${id}`,{
-          method: "DELETE",
-          credentials:"include"
-        })
-  
-        const data = await response.json()
-  
-        if(!response.ok){
-          alert(data.message)
-          return
-        }
-        
-          setListings(listings.filter((listing) => listing.id !== id))
-
-      }catch {
-        alert("Something went wrong. Please check your connection and try again.")
-      }
+    const listing = listings.find((candidate) => candidate.id === id)
+    if (!window.confirm(`Delete "${listing?.title ?? "this listing"}"? This cannot be undone.`)) {
+      return
     }
+
+    setDeleteError("")
+
+    try{
+      const response = await apiFetch(`/listings/${id}`,{
+        method: "DELETE",
+        credentials:"include"
+      })
+
+      if(!response.ok){
+        setDeleteError(await getErrorMessage(response, `Unable to delete this listing (status ${response.status}).`))
+        return
+      }
+
+      setListings((currentListings) => currentListings.filter((candidate) => candidate.id !== id))
+    }catch{
+      setDeleteError("Something went wrong. Please check your connection and try again.")
+    }
+  }
 
     function handleEditClick(listing: Listing){
     setEditingId(listing.id)
@@ -291,54 +310,75 @@ function MyListingsPage() {
     return (
         <div>
             {loadError && (
-              <div role="alert">
+              <Notice kind="error">
                 <p>{loadError}</p>
                 <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
-              </div>
+              </Notice>
             )}
-            {storeLogoUrl && <img src={storeLogoUrl} alt={storeName || "Store logo"} width="80" />}
-            {storeName && <h1>{storeName}</h1>}
-            {storeName && <Link to="/seller/profile/edit">Edit store details</Link>}
-            {storeSlug && (
+
+            <section aria-labelledby="store-heading" className="card shop-header store-header">
+              {storeLogoUrl
+                ? <img className="avatar avatar-lg" src={storeLogoUrl} alt="" />
+                : <span className="avatar avatar-lg avatar-initial" aria-hidden="true">{(storeName || "S").charAt(0).toUpperCase()}</span>}
               <div>
-                  <p>Your shop link: /shop/{storeSlug}</p>
-
-                  <button type="button" onClick={handleCopyShopLink}>
+                <h1 id="store-heading">{storeName || "My store"}</h1>
+                {storeSlug && (
+                  <p className="shop-location">
+                    Your shop link: <Link to={`/shop/${storeSlug}`}>/shop/{storeSlug}</Link>
+                  </p>
+                )}
+                <div className="action-row">
+                  {storeName && <Link to="/seller/profile/edit" className="btn">Edit store details</Link>}
+                  {storeSlug && (
+                    <button type="button" onClick={handleCopyShopLink}>
                       {linkCopied ? "Copied!" : "Copy shop link"}
-                  </button>
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
+            </section>
 
-            <CreateListingForm 
-              key={formKey}
-              formData={formData}
-              handleSubmit={handleSubmit}
-              setFormData={setFormData}
-              setImageFile={setImageFile}
-            />
+            <section aria-labelledby="add-listing-heading" className="card form-card store-section">
+              <h2 id="add-listing-heading">Add a listing</h2>
+              {createError && <Notice kind="error">{createError}</Notice>}
+              <CreateListingForm
+                key={formKey}
+                formData={formData}
+                handleSubmit={handleSubmit}
+                setFormData={setFormData}
+                setImageFile={setImageFile}
+                isCreating={isCreating}
+              />
+            </section>
 
-            <div className="product-grid">
-                {listings.map((listing) => {
-                    return(
-                        <ListingCard 
-                            isEditable={true}
-                            listing={listing}
-                            editingId={editingId}
-                            editFormData={editFormData}
-                            hasChanges={listing.id === editingId && hasListingChanges(listing)}
-                            isSaving={isSaving}
-                            saveError={listing.id === editingId ? saveError : ""}
-                            setEditFormData={setEditFormData}
-                            setEditImageFile={setEditImageFile}
-                            handleEditClick={handleEditClick}
-                            handleDelete={handleDelete}
-                            handleCancel={handleCancel}
-                            handleSave={handleSave}
-                            key={listing.id}
-                        />
-                    )})
-                }
-            </div>
+            <section aria-labelledby="listings-heading">
+              <h2 id="listings-heading">Your listings</h2>
+              {deleteError && <Notice kind="error">{deleteError}</Notice>}
+              {listings.length === 0 ? (
+                <p>You have no listings yet. Add your first one above.</p>
+              ) : (
+                <div className="product-grid">
+                  {listings.map((listing) => (
+                    <ListingCard
+                      isEditable={true}
+                      listing={listing}
+                      editingId={editingId}
+                      editFormData={editFormData}
+                      hasChanges={listing.id === editingId && hasListingChanges(listing)}
+                      isSaving={isSaving}
+                      saveError={listing.id === editingId ? saveError : ""}
+                      setEditFormData={setEditFormData}
+                      setEditImageFile={setEditImageFile}
+                      handleEditClick={handleEditClick}
+                      handleDelete={handleDelete}
+                      handleCancel={handleCancel}
+                      handleSave={handleSave}
+                      key={listing.id}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
         </div>
     )
 }

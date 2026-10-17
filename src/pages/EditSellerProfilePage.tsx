@@ -6,6 +6,8 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
 import SellerProfileFields from "../components/SellerProfileFields"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Notice from "../components/Notice"
+import ImagePicker from "../components/ImagePicker"
 
 type LoadStatus = "loading" | "ready" | "error"
 
@@ -152,34 +154,33 @@ function EditSellerProfilePage (){
 
     if (loadStatus === "error") {
         return (
-            <div role="alert">
-                <p>We could not load your store details. Please check your connection and try again.</p>
-                <button type="button" onClick={() => {
-                    setLoadStatus("loading")
-                    setLoadAttempt((attempt) => attempt + 1)
-                }}>Try again</button>
+            <div className="form-page-wide">
+                <h1>Edit your store</h1>
+                <Notice kind="error">
+                    <p>We could not load your store details. Please check your connection and try again.</p>
+                    <button type="button" onClick={() => {
+                        setLoadStatus("loading")
+                        setLoadAttempt((attempt) => attempt + 1)
+                    }}>Try again</button>
+                </Notice>
             </div>
         )
     }
 
     return(
-        <div>
+        <div className="form-page-wide">
             <h1>Edit your store</h1>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="card form-card">
                 <SellerProfileFields formData={formData} setFormData={setFormData} />
-                <div>
-                    <p>Current logo</p>
-                    {currentLogoUrl && <img src={currentLogoUrl} alt="Current logo" width="100" />}
-                </div>
-                <label>
-                    Change logo (optional)
-                    <input type="file" accept="image/*"
-                        onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    />
-                </label>
-                {hasChanges && validationError && <p role="alert">{validationError}</p>}
-                {error && <p role="alert">{error}</p>}
-                <button type="submit" disabled={!hasChanges || validationError !== null || isSubmitting}>
+                <ImagePicker
+                    label="Change logo (optional)"
+                    currentUrl={currentLogoUrl || undefined}
+                    onChange={setLogoFile}
+                    disabled={isSubmitting}
+                />
+                {hasChanges && validationError && <Notice kind="error">{validationError}</Notice>}
+                {error && <Notice kind="error">{error}</Notice>}
+                <button type="submit" className="btn-block btn-lg" disabled={!hasChanges || validationError !== null || isSubmitting}>
                     {isSubmitting ? "Saving..." : "Save changes"}
                 </button>
             </form>

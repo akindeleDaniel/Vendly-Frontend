@@ -6,6 +6,7 @@ import type { Listing } from "../types/listing"
 import type { AuthStatus, UserRole } from "../types/user"
 import ListingCard from "../components/ListingCard"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import Notice from "../components/Notice"
 import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -53,6 +54,8 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
     const [notFoundSlug, setNotFoundSlug] = useState<string | null>(null)
     const [pendingCartResult, setPendingCartResult] = useState<{ text: string, isError: boolean } | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [loadError, setLoadError] = useState("")
+    const [loadAttempt, setLoadAttempt] = useState(0)
     const [searchText, setSearchText] = useState("")
     const search = searchText.trim()
 
@@ -67,6 +70,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
         async function fetchShop() {
             setIsLoading(true)
             setNotFoundSlug(null)
+            setLoadError("")
 
             try{
                 const query = new URLSearchParams()
@@ -78,14 +82,18 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                     `/seller/shop/${encodeURIComponent(shopSlug)}${queryString ? `?${queryString}` : ""}`,
                     { signal: controller.signal }
                 )
-                const data = await response.json()
-
                 if(!response.ok){
                     if (!controller.signal.aborted) {
-                        setNotFoundSlug(shopSlug)
+                        if (response.status === 404) {
+                            setNotFoundSlug(shopSlug)
+                        } else {
+                            setLoadError("We could not load this shop right now. Please try again.")
+                        }
                     }
                     return
                 }
+
+                const data = await response.json()
 
                 if (controller.signal.aborted) {
                     return
@@ -95,7 +103,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                 setListings(data.listings)
             }catch{
                 if (!controller.signal.aborted) {
-                    alert("Something went wrong. Please check your connection and try again.")
+                    setLoadError("We could not load this shop. Please check your connection and try again.")
                 }
             }finally{
                 if (!controller.signal.aborted) {
@@ -106,7 +114,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
 
         fetchShop()
         return () => controller.abort()
-    }, [slug, search])
+    }, [slug, search, loadAttempt])
 
     // A shopper who was sent to log in or register from this storefront returns here, and the
     // product they chose is added to their cart now.
@@ -176,6 +184,19 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
     }
 
     if(!profile || profileSlug !== slug){
+        if (loadError) {
+            return (
+                <div>
+                    <h1>Shop</h1>
+                    <Notice kind="error">
+                        <p>{loadError}</p>
+                        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+                    </Notice>
+                    <Link to="/">Keep browsing</Link>
+                </div>
+            )
+        }
+
         return (
             <div>
                 <p role="status">Loading...</p>
@@ -227,6 +248,12 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
 
             <section aria-labelledby="shop-products">
                 <h2 id="shop-products">Products</h2>
+                {loadError && (
+                    <Notice kind="error">
+                        <p>{loadError}</p>
+                        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+                    </Notice>
+                )}
                 {isLoading && <p role="status">Loading products...</p>}
                 {!isLoading && listings.length === 0 && (
                     <p>{search ? "No products match your search." : "This shop has no products yet."}</p>

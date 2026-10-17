@@ -1,0 +1,153 @@
+/* Login, registration, seller setup and the seller's own listings page. */
+
+.form-page {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.form-page-wide {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.form-card {
+  padding: var(--space-5) var(--space-4);
+}
+
+.form-card form {
+  margin: 0;
+}
+
+.form-card > h2 {
+  margin-top: 0;
+}
+
+.form-footer {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--space-3);
+}
+
+/* Account type choice */
+.role-options {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-height: 88px;
+  padding: var(--space-4);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.role-card:hover:not(:disabled) {
+  border-color: var(--color-forest);
+  background: var(--color-forest-tint);
+}
+
+.role-card-title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--color-charcoal);
+}
+
+.role-card-text {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* Image picker */
+.image-picker {
+  margin-bottom: var(--space-3);
+}
+
+.image-picker-label {
+  margin-bottom: 0.375rem;
+}
+
+.image-picker-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.image-preview {
+  flex: none;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-md);
+  background: #ede8df;
+  object-fit: cover;
+}
+
+.image-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.image-picker-help {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.image-picker .alert {
+  margin: var(--space-2) 0 0;
+}
+
+input[type="file"] {
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+input[type="file"]::file-selector-button {
+  min-height: var(--tap-size);
+  margin-right: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The seller's store page */
+.store-header {
+  flex-wrap: wrap;
+}
+
+.store-header .action-row {
+  margin-top: var(--space-2);
+}
+
+.store-section {
+  margin-bottom: var(--space-5);
+}
+
+@media (min-width: 640px) {
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

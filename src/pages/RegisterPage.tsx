@@ -4,6 +4,7 @@ import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Notice from "../components/Notice"
 
 type User = {
     name: string
@@ -72,40 +73,41 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
     }
 
     return(
-        <>
-            {registerPrompt && <p role="status">{registerPrompt}</p>}
-            <form onSubmit={handleSubmit}>
-            <label>
-            Name
-            <input name="name"
-                autoComplete="name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-            </label>
-            <label>
-            Email
-            <input name="email"
-            type="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-            </label>
-            <label>
-            Password
-            <input name="password"
-            type="password"
-            autoComplete="new-password"
-            value={formData.password}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-            </label>
-            {error && <p role="alert">{error}</p>}
-            <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Register"}</button>
-        </form>
-        <p>Already have an account? <Link to={"/login"}>Login</Link></p>
-        </>
+        <div className="form-page">
+            <h1>{role === "SELLER" ? "Create a seller account" : "Create a shopper account"}</h1>
+            {registerPrompt && <Notice kind="info">{registerPrompt}</Notice>}
+            <form onSubmit={handleSubmit} className="card form-card">
+                <label>
+                    Name
+                    <input name="name"
+                        autoComplete="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                    />
+                </label>
+                <label>
+                    Email
+                    <input name="email"
+                        type="email"
+                        autoComplete="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                    />
+                </label>
+                <label>
+                    Password
+                    <input name="password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                    />
+                </label>
+                {error && <Notice kind="error">{error}</Notice>}
+                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Create account"}</button>
+            </form>
+            <p className="form-footer">Already have an account? <Link to={"/login"}>Log in</Link></p>
+        </div>
     )
 }
 

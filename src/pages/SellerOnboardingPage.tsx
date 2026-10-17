@@ -6,6 +6,8 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
 import SellerProfileFields from "../components/SellerProfileFields"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Notice from "../components/Notice"
+import ImagePicker from "../components/ImagePicker"
 
 type ProfileCheckStatus = "checking" | "needs-onboarding" | "error"
 
@@ -116,29 +118,28 @@ function SellerOnboardingPage (){
 
     if (checkStatus === "error") {
         return (
-            <div role="alert">
-                <p>We could not check your store details. Please check your connection and try again.</p>
-                <button type="button" onClick={() => {
-                    setCheckStatus("checking")
-                    setCheckAttempt((attempt) => attempt + 1)
-                }}>Try again</button>
+            <div className="form-page-wide">
+                <h1>Set up your store</h1>
+                <Notice kind="error">
+                    <p>We could not check your store details. Please check your connection and try again.</p>
+                    <button type="button" onClick={() => {
+                        setCheckStatus("checking")
+                        setCheckAttempt((attempt) => attempt + 1)
+                    }}>Try again</button>
+                </Notice>
             </div>
         )
     }
 
     return(
-        <div>
+        <div className="form-page-wide">
             <h1>Set up your store</h1>
-            <form onSubmit={handleSubmit}>
+            <p>Tell shoppers about your shop. You can change any of this later.</p>
+            <form onSubmit={handleSubmit} className="card form-card">
                 <SellerProfileFields formData={formData} setFormData={setFormData} />
-                <label>
-                    Logo
-                    <input type="file" accept="image/*"
-                        onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    />
-                </label>
-                {error && <p role="alert">{error}</p>}
-                <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save store"}</button>
+                <ImagePicker label="Logo" onChange={setLogoFile} disabled={isSubmitting} />
+                {error && <Notice kind="error">{error}</Notice>}
+                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save store"}</button>
             </form>
         </div>
     )
