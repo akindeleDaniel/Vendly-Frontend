@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import Logo from "../components/Logo"
 
 function RolePage(){
     const navigate = useNavigate()
@@ -13,6 +14,7 @@ function RolePage(){
 
     return(
         <div className="form-page">
+            <div className="auth-brand"><Logo size="large" /></div>
             <h1>Create an account</h1>
             <p>How would you like to use Vendly?</p>
             <div className="role-options">

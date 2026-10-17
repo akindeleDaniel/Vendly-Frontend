@@ -5,6 +5,7 @@ import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
+import Logo from "../components/Logo"
 
 type User = {
     name: string
@@ -74,6 +75,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
 
     return(
         <div className="form-page">
+            <div className="auth-brand"><Logo size="large" /></div>
             <h1>{role === "SELLER" ? "Create a seller account" : "Create a shopper account"}</h1>
             {registerPrompt && <Notice kind="info">{registerPrompt}</Notice>}
             <form onSubmit={handleSubmit} className="card form-card">

@@ -4,6 +4,9 @@ import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
 import { HomeIcon } from "./Icons"
 
+// Login and registration pages show a centred logo above the form instead of the header.
+const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register"]
+
 type NavbarProps = {
     authStatus: AuthStatus
     userRole: UserRole | null
@@ -33,6 +36,10 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
         } finally {
             setIsLoggingOut(false)
         }
+    }
+
+    if (AUTH_PATHS.includes(pathname)) {
+        return null
     }
 
     return(

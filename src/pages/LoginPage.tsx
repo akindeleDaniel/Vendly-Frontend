@@ -5,6 +5,7 @@ import type { UserRole } from "../types/user"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
+import Logo from "../components/Logo"
 
 type ExistingUser = {
     email: string
@@ -79,6 +80,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
 
     return(
         <div className="form-page">
+            <div className="auth-brand"><Logo size="large" /></div>
             <h1>Log in</h1>
             {sessionExpired && <Notice kind="info">Your session has expired. Please log in again.</Notice>}
             {loginPrompt && !sessionExpired && <Notice kind="info">{loginPrompt}</Notice>}
