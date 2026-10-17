@@ -52,7 +52,7 @@ There is no automated test suite yet.
 - `src/components/`: shared components (`Logo`, `Navbar`, `Notice`, `ImagePicker`, `ListingCard`, route guards and others).
 - `src/styles/`: the design system. See "Styling" below.
 - `src/lib/api.ts`: `apiFetch`, which builds backend URLs from `VITE_API_BASE_URL`, plus `getErrorMessage`. Use `apiFetch` for every backend request instead of calling `fetch` with a hard-coded URL.
-- `src/lib/uploadImage.ts`: direct browser upload to Cloudinary. `src/lib/imageFile.ts` checks a chosen image first (JPG, PNG, WebP or GIF, at most 10 MB).
+- `src/lib/uploadImage.ts`: direct browser upload to Cloudinary. `src/lib/imageFile.ts` checks a chosen image first (JPG, PNG, WebP or GIF, at most 10 MB). `ImagePicker` then opens `ImageCropDialog` (a square crop with drag, zoom and rotate, no extra package) and uploads only the cropped copy, saved as a JPEG, or a PNG when the original was a PNG or GIF.
 - `src/lib/money.ts`: display arithmetic for prices, in whole minor units.
 - `src/lib/useDocumentTitle.ts`: sets the browser tab title for a page.
 - `src/types/`: shared TypeScript types (`UserRole`, `Listing`, `SellerProfile` and others).
