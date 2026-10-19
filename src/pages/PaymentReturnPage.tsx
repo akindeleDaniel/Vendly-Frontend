@@ -10,18 +10,20 @@ import type { Payment } from "../types/payment"
 const POLL_INTERVAL_MS = 4000
 const MAX_POLLS = 30
 
+const providerNames = { PAYSTACK: "Paystack", FLUTTERWAVE: "Flutterwave" } as const
+
 type LoadState =
     | { kind: "loading" }
     | { kind: "ready", payment: Payment }
     | { kind: "missing" }// no reference in the address, or not one of this shopper's payments
     | { kind: "error", message: string }
 
-// Paystack sends the shopper back here with ?reference=... . The address alone proves nothing:
-// the page only shows what the backend confirms after checking with Paystack.
+// Paystack sends the shopper back here with ?reference=..., Flutterwave with ?tx_ref=... . The address
+// alone proves nothing: the page only shows what the backend confirms after checking with the provider.
 function PaymentReturnPage() {
     useDocumentTitle("Payment")
     const [searchParams] = useSearchParams()
-    const reference = searchParams.get("reference") ?? searchParams.get("trxref")
+    const reference = searchParams.get("reference") ?? searchParams.get("trxref") ?? searchParams.get("tx_ref")
     const [state, setState] = useState<LoadState>(reference ? { kind: "loading" } : { kind: "missing" })
     const [polls, setPolls] = useState(0)
     const [checkAttempt, setCheckAttempt] = useState(0)
@@ -86,7 +88,7 @@ function PaymentReturnPage() {
     }
 
     if (state.kind === "loading") {
-        return <p role="status">Checking your payment with Paystack...</p>
+        return <p role="status">Checking your payment...</p>
     }
 
     if (state.kind === "missing") {
@@ -112,6 +114,7 @@ function PaymentReturnPage() {
     }
 
     const { payment } = state
+    const providerName = providerNames[payment.provider]
     const checkoutExpired = payment.checkout.status === "EXPIRED"
 
     if (payment.status === "SUCCESS" && payment.checkout.status === "COMPLETED") {
@@ -141,14 +144,14 @@ function PaymentReturnPage() {
                     {payment.status === "SUCCESS"
                         ? "Your payment was received and we are finishing your order."
                         : stoppedPolling
-                            ? "Paystack has not confirmed this payment yet. If you completed it, it will be confirmed automatically; you can check again later."
-                            : "We are waiting for Paystack to confirm your payment. This page updates by itself."}
+                            ? `${providerName} has not confirmed this payment yet. If you completed it, it will be confirmed automatically; you can check again later.`
+                            : `We are waiting for ${providerName} to confirm your payment. This page updates by itself.`}
                 </Notice>
                 <p className="form-hint">Payment reference: {payment.reference}</p>
                 <div className="action-row">
                     {stoppedPolling && <button type="button" className="btn" onClick={checkAgain}>Check again</button>}
                     {payment.status === "PENDING" && payment.authorizationUrl && !checkoutExpired && (
-                        <a href={payment.authorizationUrl} className="btn">Return to Paystack to finish paying</a>
+                        <a href={payment.authorizationUrl} className="btn">Return to {providerName} to finish paying</a>
                     )}
                 </div>
             </div>

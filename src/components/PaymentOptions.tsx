@@ -2,39 +2,41 @@ import { useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import Notice from "./Notice"
 import { startPayment } from "../lib/paymentApi"
+import type { PaymentProvider } from "../types/payment"
 
 type Problem =
     | { kind: "sellers-not-ready", message: string, sellers: string[] }
     | { kind: "expired" | "already-paid" | "try-again" | "error", message: string }
     | { kind: "unconfirmed" }
 
-// Lets the shopper pay for a checkout. Paystack's own page takes the payment; the shopper then
-// returns to /checkout/payment-return, which asks the backend for the confirmed result.
+// Lets the shopper pay for a checkout with Paystack or Flutterwave. The provider's own page takes
+// the payment; the shopper then returns to /checkout/payment-return, which asks the backend for the
+// confirmed result.
 // Asking again is safe: the backend returns the payment already in progress instead of a new one.
 function PaymentOptions({ checkoutId }: { checkoutId: number }) {
-    const [isStarting, setIsStarting] = useState(false)
+    const [startingWith, setStartingWith] = useState<PaymentProvider | null>(null)
     const [problem, setProblem] = useState<Problem | null>(null)
     const startingRef = useRef(false)
 
-    async function payWithPaystack() {
+    async function pay(provider: PaymentProvider) {
         if (startingRef.current) {
             return
         }
 
         startingRef.current = true
-        setIsStarting(true)
+        setStartingWith(provider)
         setProblem(null)
 
-        const outcome = await startPayment(checkoutId, "PAYSTACK")
+        const outcome = await startPayment(checkoutId, provider)
 
         if (outcome.kind === "redirect" && outcome.payment.authorizationUrl) {
-            // Stay in the "starting" state while the browser leaves for Paystack.
+            // Stay in the "starting" state while the browser leaves for the payment page.
             window.location.assign(outcome.payment.authorizationUrl)
             return
         }
 
         startingRef.current = false
-        setIsStarting(false)
+        setStartingWith(null)
 
         if (outcome.kind !== "redirect" && outcome.kind !== "unauthorized") {
             setProblem(outcome)
@@ -46,7 +48,7 @@ function PaymentOptions({ checkoutId }: { checkoutId: number }) {
     return (
         <section aria-labelledby="payment-heading" className="card summary-card">
             <h2 id="payment-heading">Payment</h2>
-            <p>You will pay on Paystack's secure page, then come back here to see your confirmed order.</p>
+            <p>Choose how to pay. You will pay on the provider's secure page, then come back here to see your confirmed order.</p>
 
             {problem?.kind === "sellers-not-ready" && (
                 <Notice kind="error">
@@ -71,15 +73,14 @@ function PaymentOptions({ checkoutId }: { checkoutId: number }) {
 
             {!blocked && (
                 <div className="action-row">
-                    <button type="button" className="btn btn-primary btn-lg" onClick={payWithPaystack} disabled={isStarting}>
-                        {isStarting ? "Opening Paystack..." : "Pay with Paystack"}
+                    <button type="button" className="btn btn-primary btn-lg" onClick={() => pay("PAYSTACK")} disabled={startingWith !== null}>
+                        {startingWith === "PAYSTACK" ? "Opening Paystack..." : "Pay with Paystack"}
                     </button>
-                    <button type="button" className="btn btn-lg" disabled aria-describedby="flutterwave-soon">
-                        Pay with Flutterwave
+                    <button type="button" className="btn btn-primary btn-lg" onClick={() => pay("FLUTTERWAVE")} disabled={startingWith !== null}>
+                        {startingWith === "FLUTTERWAVE" ? "Opening Flutterwave..." : "Pay with Flutterwave"}
                     </button>
                 </div>
             )}
-            <p id="flutterwave-soon" className="form-hint">Flutterwave is coming soon.</p>
         </section>
     )
 }
