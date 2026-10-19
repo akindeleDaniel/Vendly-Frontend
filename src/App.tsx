@@ -6,6 +6,7 @@ import DiscoveryPage from "./pages/DiscoveryPage"
 import MyListingPage from "./pages/MyListingPage"
 import SellerOnboardingPage from "./pages/SellerOnboardingPage"
 import EditSellerProfilePage from "./pages/EditSellerProfilePage"
+import PayoutSettingsPage from "./pages/PayoutSettingsPage"
 import Navbar from "./components/Navbar"
 import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
@@ -141,6 +142,8 @@ function App() {
           <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
           <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
+
+          <Route path="/seller/payouts" element={<RequireRole role="SELLER" {...guardProps}><PayoutSettingsPage /></RequireRole>} />
 
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
