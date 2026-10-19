@@ -11,6 +11,7 @@ import Navbar from "./components/Navbar"
 import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
 import CheckoutPage from "./pages/CheckoutPage"
+import PaymentReturnPage from "./pages/PaymentReturnPage"
 import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
@@ -152,6 +153,8 @@ function App() {
           <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
 
           <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
+
+          <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
         </Routes>
       </main>
     </BrowserRouter>

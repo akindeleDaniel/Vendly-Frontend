@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import DeliveryFields from "../components/DeliveryFields"
 import Notice from "../components/Notice"
+import PaymentOptions from "../components/PaymentOptions"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
@@ -110,8 +111,7 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
     <div>
       <h1>Checkout created</h1>
       <Notice kind="success">
-        Your checkout has been created, but payment has not been completed and payment is not available yet.
-        Nothing has been charged.
+        Your checkout has been created and your items are reserved. Nothing has been charged yet: pay below to complete your order.
       </Notice>
       {result.code === "CHECKOUT_REUSED" && (
         <p>You already had an identical checkout, so it has been kept as it was.</p>
@@ -125,8 +125,11 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
         <div><dt>Expires</dt><dd>{formatTime(result.checkout.expiresAt)}</dd></div>
       </dl>
       <p className="summary-note">
-        Your items are held for you until then. After that, this checkout expires and you would need to create a new one.
+        Your items are held for you until then. Starting payment extends the hold to 30 minutes. After that, this checkout
+        expires and you would need to create a new one.
       </p>
+
+      <PaymentOptions checkoutId={result.checkout.id} />
 
       <section aria-labelledby="orders-heading">
         <h2 id="orders-heading">Orders</h2>
@@ -156,7 +159,7 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
         </div>
       </section>
 
-      <p className="summary-note">Your cart has not been changed.</p>
+      <p className="summary-note">Your cart stays as it is until your payment is confirmed.</p>
       <div className="action-row">
         <Link to="/cart" className="btn">Back to cart</Link>
         <Link to="/">Keep browsing</Link>
@@ -431,7 +434,7 @@ function CheckoutPage() {
     <div>
       <h1>Checkout</h1>
       <Notice kind="info" role="none">
-        Creating a checkout reserves your items for a short time. It does not take payment, and payment is not available yet.
+        Creating a checkout reserves your items for a short time. You will pay with Paystack on the next step.
       </Notice>
 
       <div className="checkout-layout">
@@ -484,9 +487,10 @@ function CheckoutPage() {
                     Existing checkout {issue.checkout.id}: status {formatStatus(issue.checkout.status)}, expires {formatTime(issue.checkout.expiresAt)}.
                   </p>
                 )}
-                <p>You can try again after it expires.</p>
+                <p>You can pay for that checkout below (its items as they were when you created it), or try again after it expires.</p>
               </Notice>
             )}
+            {issue?.type === "locked" && issue.checkout && <PaymentOptions checkoutId={issue.checkout.id} />}
             {issue?.type === "conflict" && <Notice kind="warning">{issue.message}</Notice>}
             {issue?.type === "invalid" && (
               <Notice kind="error">
@@ -515,7 +519,7 @@ function CheckoutPage() {
             {reviewNotice !== null && (
               <p className="form-hint">Confirm the updated totals above to continue.</p>
             )}
-            <p className="form-hint">Nothing is charged. Payment is not available yet.</p>
+            <p className="form-hint">Nothing is charged until you pay on the next step.</p>
           </form>
 
           {/* Not offered while a request is in flight, so the shopper cannot walk away from an unseen outcome. */}
