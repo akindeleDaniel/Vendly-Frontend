@@ -12,6 +12,10 @@ import ShopPage from "./pages/ShopPage"
 import CartPage from "./pages/CartPage"
 import CheckoutPage from "./pages/CheckoutPage"
 import PaymentReturnPage from "./pages/PaymentReturnPage"
+import MyOrdersPage from "./pages/MyOrdersPage"
+import OrderDetailPage from "./pages/OrderDetailPage"
+import SellerOrdersPage from "./pages/SellerOrdersPage"
+import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
 import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
@@ -146,6 +150,10 @@ function App() {
 
           <Route path="/seller/payouts" element={<RequireRole role="SELLER" {...guardProps}><PayoutSettingsPage /></RequireRole>} />
 
+          <Route path="/seller/orders" element={<RequireRole role="SELLER" {...guardProps}><SellerOrdersPage /></RequireRole>} />
+
+          <Route path="/seller/orders/:id" element={<RequireRole role="SELLER" {...guardProps}><SellerOrderDetailPage /></RequireRole>} />
+
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
           <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
@@ -153,6 +161,10 @@ function App() {
           <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
 
           <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
+
+          <Route path="/orders" element={<RequireRole role="CONSUMER" {...guardProps}><MyOrdersPage /></RequireRole>} />
+
+          <Route path="/orders/:id" element={<RequireRole role="CONSUMER" {...guardProps}><OrderDetailPage /></RequireRole>} />
 
           <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
         </Routes>

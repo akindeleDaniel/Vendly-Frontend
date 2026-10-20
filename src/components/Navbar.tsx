@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
 import { HomeIcon } from "./Icons"
+import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 
 // Login and registration pages show a centred logo above the form instead of the header.
 const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register"]
@@ -19,6 +20,24 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
     const navigate = useNavigate()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
     const [logoutError, setLogoutError] = useState("")
+    const [awaitingCount, setAwaitingCount] = useState(0)
+    const isConsumer = authStatus === "authenticated" && userRole === "CONSUMER"
+
+    // Orders the seller has reported delivered that the shopper has not confirmed yet. Checked when
+    // the shopper moves between pages, so the count follows what they confirm.
+    useEffect(() => {
+        if (!isConsumer) {
+            return
+        }
+
+        const controller = new AbortController()
+        fetchAwaitingConfirmationCount(controller.signal).then((count) => {
+            if (!controller.signal.aborted) {
+                setAwaitingCount(count ?? 0)
+            }
+        })
+        return () => controller.abort()
+    }, [isConsumer, pathname])
 
     async function handleLogout() {
         setIsLoggingOut(true)
@@ -52,6 +71,14 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
                         {authStatus === "authenticated" ? (
                             <>
                                 {/* On the cart page the cart icon would point to itself, so a Home icon takes its place. */}
+                                {userRole === "CONSUMER" && pathname !== "/orders" && (
+                                    <Link to="/orders" className="header-link">
+                                        My orders
+                                        {awaitingCount > 0 && (
+                                            <span className="count-badge" aria-label={`${awaitingCount} awaiting your confirmation`}>{awaitingCount}</span>
+                                        )}
+                                    </Link>
+                                )}
                                 {userRole === "CONSUMER" && pathname === "/cart" && (
                                     <Link to="/" className="icon-link" aria-label="Home" title="Home">
                                         <HomeIcon size={24} />
@@ -65,6 +92,9 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
                                             <circle cx="17" cy="19" r="1.3" />
                                         </svg>
                                     </Link>
+                                )}
+                                {userRole === "SELLER" && pathname !== "/seller/orders" && (
+                                    <Link to="/seller/orders" className="header-link">Orders</Link>
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/myListing" && (
                                     <Link to="/seller/myListing" className="header-link">My store</Link>
