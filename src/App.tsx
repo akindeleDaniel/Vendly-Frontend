@@ -17,6 +17,8 @@ import OrderDetailPage from "./pages/OrderDetailPage"
 import SellerOrdersPage from "./pages/SellerOrdersPage"
 import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
 import AdminShell from "./components/AdminShell"
+import NotFoundPage from "./pages/NotFoundPage"
+import ProductPage from "./pages/ProductPage"
 import ChangePasswordPage from "./pages/ChangePasswordPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import AdminLiabilitiesPage from "./pages/AdminLiabilitiesPage"
@@ -214,6 +216,8 @@ function App() {
 
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
+          <Route path="/product/:id" element={<ProductPage userRole={userRole} authStatus={authStatus} />} />
+
           <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
 
           <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
@@ -243,6 +247,8 @@ function App() {
           <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
 
           <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
+
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
     </BrowserRouter>

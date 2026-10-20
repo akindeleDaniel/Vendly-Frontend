@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
-import { clearPendingCartItem, readPendingCartItem } from "../lib/pendingCartItem"
-import { getErrorMessage } from "../lib/api"
+import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import { useParams } from "react-router-dom"
 import type { Listing } from "../types/listing"
 import type { AuthStatus, UserRole } from "../types/user"
@@ -52,7 +51,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
     useDocumentTitle(profile ? profile.businessName : "Shop")
     const [listings, setListings] = useState<Listing[]>([])
     const [notFoundSlug, setNotFoundSlug] = useState<string | null>(null)
-    const [pendingCartResult, setPendingCartResult] = useState<{ text: string, isError: boolean } | null>(null)
+    const pendingCartResult = usePendingCartAdd(userRole)// adds the product a visitor chose before logging in
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
@@ -115,63 +114,6 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
         fetchShop()
         return () => controller.abort()
     }, [slug, search, loadAttempt])
-
-    // A shopper who was sent to log in or register from this storefront returns here, and the
-    // product they chose is added to their cart now.
-    useEffect(() => {
-        if (userRole === null) {
-            return
-        }
-
-        const pending = readPendingCartItem()
-        if (!pending) {
-            return
-        }
-
-        if (userRole !== "CONSUMER") {
-            clearPendingCartItem()
-            return
-        }
-
-        if (pending.returnTo.split("?")[0] !== window.location.pathname) {
-            return
-        }
-
-        clearPendingCartItem()// cleared before the request so the item can never be added twice
-
-        async function addPendingItem() {
-            try {
-                const response = await apiFetch("/cart/items", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        listingId: pending!.listingId,
-                        quantity: pending!.quantity
-                    })
-                })
-
-                if (!response.ok) {
-                    setPendingCartResult({
-                        text: await getErrorMessage(response, "We could not add your chosen item to the cart. Please add it again."),
-                        isError: true
-                    })
-                    return
-                }
-
-                setPendingCartResult({ text: "The item you chose has been added to your cart.", isError: false })
-            } catch {
-                setPendingCartResult({
-                    text: "We could not add your chosen item to the cart. Please check your connection and add it again.",
-                    isError: true
-                })
-            }
-        }
-
-        addPendingItem()
-    }, [userRole])
 
     if(notFoundSlug === slug){
         return (

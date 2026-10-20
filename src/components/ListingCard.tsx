@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import type { Listing, ListingFormData } from "../types/listing"
 import type { UserRole } from "../types/user"
-import { apiFetch } from "../lib/api"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
-import { savePendingCartItem } from "../lib/pendingCartItem"
+import { describeStock } from "../lib/stock"
+import { useAddToCart } from "../lib/useAddToCart"
 import { CATEGORIES } from "../data/categories"
 import ImagePicker from "./ImagePicker"
 
@@ -28,42 +27,18 @@ type ListingCardProps = {
   isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
 }
 
-type CartFeedback = {
-  text: string
-  kind: "success" | "error" | "info"
-}
-
-// How long the message under Add to cart stays before it goes away. Errors stay longer because
-// they take longer to read.
-const FEEDBACK_DURATION_MS: Record<CartFeedback["kind"], number> = {
-  success: 3000,
-  info: 5000,
-  error: 8000
-}
-
-// At or below this many in stock, the card says "Only N left".
-const LOW_STOCK_THRESHOLD = 3
-
 function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const [isAddingToCart, setIsAddingToCart] = useState(false)
-  const [cartFeedback, setCartFeedback] = useState<CartFeedback | null>(null)
-  const [quantity, setQuantity] = useState(1)
-  const selectedQuantity = Math.min(quantity, listing.stockQuantity)
-  const isSoldOut = listing.stockQuantity === 0
-  const isLowStock = !isSoldOut && listing.stockQuantity <= LOW_STOCK_THRESHOLD
-
-  // The message clears itself. Each new message is a new object, so repeating the same one
-  // (adding twice) restarts the timer.
-  useEffect(() => {
-    if (cartFeedback === null) {
-      return
-    }
-
-    const timer = window.setTimeout(() => setCartFeedback(null), FEEDBACK_DURATION_MS[cartFeedback.kind])
-    return () => window.clearTimeout(timer)
-  }, [cartFeedback])
+  const {
+    quantity: selectedQuantity,
+    setQuantity,
+    isAdding: isAddingToCart,
+    feedback: cartFeedback,
+    addToCart: handleAddToCart
+  } = useAddToCart(listing, userRole, isLoggedOut)
+  const stock = describeStock(listing.stockQuantity)
+  const isSoldOut = stock.isSoldOut
+  const isLowStock = stock.isLow
 
   const showCartControls = !isEditable && allowAddToCart && userRole !== "SELLER"
 
@@ -71,76 +46,13 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
     ? `/shop/${encodeURIComponent(listing.sellerSlug)}${shopLinkSearch ? `?${shopLinkSearch}` : ""}`
     : null
 
+  // On a storefront the card opens the product's own page; on the browsing pages it opens the shop.
+  const productPath = !isEditable && allowAddToCart ? `/product/${listing.id}` : null
+  const linkPath = productPath ?? shopPath
+
   function handleCardClick(){
-    if(shopPath){
-      navigate(shopPath)
-    }
-  }
-
-  async function handleAddToCart() {
-    if (listing.stockQuantity === 0) {
-      return
-    }
-
-    // Browsing is open to everyone. A visitor who is not logged in is sent to log in or register;
-    // the chosen product is remembered, and the storefront adds it once they are back.
-    if (isLoggedOut) {
-      savePendingCartItem({
-        listingId: listing.id,
-        quantity: selectedQuantity,
-        returnTo: `${location.pathname}${location.search}`
-      })
-      navigate("/login")
-      return
-    }
-
-    // The session is still being checked (or the check failed), so the visitor may well be logged in.
-    if (userRole === null || userRole === undefined) {
-      setCartFeedback({ text: "We are still checking your session. Please try again in a moment.", kind: "info" })
-      return
-    }
-
-    setIsAddingToCart(true)
-    setCartFeedback(null)
-
-    try {
-      const response = await apiFetch("/cart/items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          listingId: listing.id,
-          quantity: selectedQuantity
-        })
-      })
-
-      if (response.status === 401) {
-        navigate("/login")
-        return
-      }
-
-      if (!response.ok) {
-        const data: unknown = await response.json().catch(() => null)
-        const message =
-          typeof data === "object" && data !== null && "message" in data && typeof data.message === "string"
-            ? data.message
-            : response.status === 409
-              ? "This listing is sold out or does not have enough stock."
-              : `Unable to add this listing to your cart (status ${response.status}).`
-        setCartFeedback({ text: message, kind: "error" })
-        return
-      }
-
-      setCartFeedback({ text: "Added to cart.", kind: "success" })
-    } catch {
-      setCartFeedback({
-        text: "Unable to add this listing to your cart. Please check your connection and try again.",
-        kind: "error"
-      })
-    } finally {
-      setIsAddingToCart(false)
+    if(linkPath){
+      navigate(linkPath)
     }
   }
 
@@ -202,7 +114,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
         <>
           {/* The whole card opens the shop (pointer cursor); the title is a real link so keyboard users can too. */}
           <div
-            className={`product-link-area${shopPath ? " is-clickable" : ""}`}
+            className={`product-link-area${linkPath ? " is-clickable" : ""}`}
             onClick={handleCardClick}
           >
             <div className="product-media">
@@ -213,7 +125,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
             </div>
             <div className="product-body">
               <h3 className="product-title">
-                {shopPath ? <Link to={shopPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}
+                {linkPath ? <Link to={linkPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}
               </h3>
               <p className="product-price">{formatMinorUnits(toMinorUnits(listing.price))}</p>
               {!isEditable && !allowAddToCart && listing.sellerName && (
@@ -225,13 +137,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               {isEditable && <p className="product-meta">{listing.category}</p>}
               {(isEditable || allowAddToCart) && (
                 <p className={isLowStock ? "product-meta product-meta-warning" : "product-meta"}>
-                  {isEditable
-                    ? `Stock: ${listing.stockQuantity}`
-                    : isSoldOut
-                      ? "Not available right now"
-                      : isLowStock
-                        ? `Only ${listing.stockQuantity} left`
-                        : `${listing.stockQuantity} available`}
+                  {isEditable ? `Stock: ${listing.stockQuantity}` : stock.label}
                 </p>
               )}
             </div>
@@ -248,10 +154,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
                 <select
                   aria-label={`Quantity for ${listing.title}`}
                   value={selectedQuantity}
-                  onChange={(event) => {
-                    setQuantity(Number(event.currentTarget.value))
-                    setCartFeedback(null)// a message about the old quantity no longer applies
-                  }}
+                  onChange={(event) => setQuantity(Number(event.currentTarget.value))}
                 >
                   {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
                     <option key={option} value={option}>Quantity: {option}</option>
