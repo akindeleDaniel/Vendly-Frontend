@@ -1,12 +1,13 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
-import { apiFetch, getErrorMessage } from "../lib/api"
+import { logIn } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import AuthShell from "../components/AuthShell"
+import CodeEntryForm from "../components/CodeEntryForm"
 import Notice from "../components/Notice"
-import Logo from "../components/Logo"
-import { ChevronLeftIcon } from "../components/Icons"
+import type { CodePurpose } from "../lib/accountApi"
 
 type ExistingUser = {
     email: string
@@ -18,6 +19,14 @@ type LoginPageProps = {
     sessionExpired: boolean
 }
 
+// After the password is right, the backend may still ask for a code: on a browser it does not know,
+// or for an account whose email was never confirmed.
+type CodeStep = {
+    email: string
+    purpose: CodePurpose
+    notice?: string
+}
+
 function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
 
     const [formData, setFormData] = useState<ExistingUser>({
@@ -25,9 +34,12 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
         password: ""
     })
     useDocumentTitle("Log in")
+    const location = useLocation()
+    const passwordWasReset = typeof location.state === "object" && location.state !== null && "passwordReset" in location.state
     const loginPrompt = readPendingCartItem() ? "Log in or register to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
+    const [codeStep, setCodeStep] = useState<CodeStep | null>(null)
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -44,45 +56,45 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
         setIsSubmitting(true)
         setError("")
 
-        try{
-            const response = await apiFetch("/users/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    ...formData
-                }),
-                credentials:"include"
-            })
+        const outcome = await logIn(formData.email, formData.password)
+        setIsSubmitting(false)
 
-            if (!response.ok) {
-                setError(await getErrorMessage(response, `Unable to log in (status ${response.status}).`))
-                return
-            }
-
-            const data: unknown = await response.json().catch(() => null)
-            const role = typeof data === "object" && data !== null && "role" in data ? data.role : null
-
-            if(role !== "CONSUMER" && role !== "SELLER") {
-                setError("Unable to determine account role. Please try again.")
-                return
-            }
-
-            // Updating the session state is enough: the route guard sends the user to their home page,
-            // and sellers without a store profile are sent on to onboarding from there.
-            onLogin(role)
-        }catch {
-            setError("Something went wrong. Please check your connection and try again.")
-        }finally{
-            setIsSubmitting(false)
+        switch (outcome.kind) {
+            case "logged-in":
+                // Updating the session state is enough: the route guard sends the user to their home page,
+                // and sellers without a store profile are sent on to onboarding from there.
+                onLogin(outcome.role)
+                break
+            case "code-required":
+                setCodeStep({ email: outcome.email, purpose: "LOGIN", notice: "We do not recognise this browser yet, so we need to check it is you." })
+                break
+            case "unverified":
+                setCodeStep({ email: outcome.email, purpose: "VERIFY_EMAIL", notice: "Your email has not been confirmed yet. Enter the code we just sent to finish creating your account." })
+                break
+            case "error":
+                setError(outcome.message)
+                break
         }
     }
 
+    if (codeStep !== null) {
+        return (
+            <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter your code" : "Confirm your email"}>
+                <CodeEntryForm
+                    email={codeStep.email}
+                    purpose={codeStep.purpose}
+                    notice={codeStep.notice}
+                    submitLabel={codeStep.purpose === "LOGIN" ? "Log in" : "Confirm and continue"}
+                    onVerified={onLogin}
+                    onUseDifferentEmail={() => { setCodeStep(null); setFormData({ email: "", password: "" }) }}
+                />
+            </AuthShell>
+        )
+    }
+
     return(
-        <div className="form-page">
-            <div className="auth-brand"><Logo size="large" /></div>
-            <h1>Log in</h1>
+        <AuthShell title="Log in">
+            {passwordWasReset && <Notice kind="success">Your password has been changed. Log in with your new password.</Notice>}
             {sessionExpired && <Notice kind="info">Your session has expired. Please log in again.</Notice>}
             {loginPrompt && !sessionExpired && <Notice kind="info">{loginPrompt}</Notice>}
             <form onSubmit={handleSubmit} className="card form-card">
@@ -106,12 +118,10 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
                 </label>
                 {error && <Notice kind="error">{error}</Notice>}
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Log in"}</button>
+                <p className="form-footer"><Link to="/forgot-password">Forgot your password?</Link></p>
             </form>
             <p className="form-footer">Don't have an account? <Link to={"/register"}>Register</Link></p>
-            <p className="form-footer">
-                <Link to="/" className="back-link"><ChevronLeftIcon /> Back to home</Link>
-            </p>
-        </div>
+        </AuthShell>
     )
 }
 

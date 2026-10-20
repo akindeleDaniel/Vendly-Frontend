@@ -8,7 +8,7 @@ import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 import { fetchComplaintsAwaitingSeller } from "../lib/disputeApi"
 
 // Login and registration pages show a centred logo above the form instead of the header.
-const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register"]
+const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register", "/forgot-password"]
 
 type NavbarProps = {
     authStatus: AuthStatus

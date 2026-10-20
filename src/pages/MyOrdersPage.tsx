@@ -83,7 +83,10 @@ function MyOrdersPage() {
     return (
         <div>
             <h1>My orders</h1>
-            <p><Link to="/disputes">Your complaints</Link></p>
+            <p className="page-links">
+                <Link to="/disputes">Your complaints</Link>
+                <Link to="/change-password">Change password</Link>
+            </p>
             {orders.length === 0 ? (
                 <>
                     <p>You have no paid orders yet.</p>

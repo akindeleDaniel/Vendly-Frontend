@@ -17,6 +17,8 @@ import OrderDetailPage from "./pages/OrderDetailPage"
 import SellerOrdersPage from "./pages/SellerOrdersPage"
 import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
 import AdminShell from "./components/AdminShell"
+import ChangePasswordPage from "./pages/ChangePasswordPage"
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import AdminLiabilitiesPage from "./pages/AdminLiabilitiesPage"
 import AdminRecoveryCasesPage from "./pages/AdminRecoveryCasesPage"
 import AdminRefundsPage from "./pages/AdminRefundsPage"
@@ -25,7 +27,7 @@ import DisputeListPage from "./pages/DisputeListPage"
 import NewDisputePage from "./pages/NewDisputePage"
 import OfferRefundPage from "./pages/OfferRefundPage"
 import SellerLiabilitiesPage from "./pages/SellerLiabilitiesPage"
-import { RedirectIfAuthenticated, RequireAdmin, RequireRole } from "./components/RouteGuards"
+import { RedirectIfAuthenticated, RequireAdmin, RequireRole, RequireSession } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
 import { clearPendingCartItem } from "./lib/pendingCartItem"
@@ -187,6 +189,10 @@ function App() {
           <Route path="/seller/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
           <Route path="/login" element={<RedirectIfAuthenticated {...guardProps}><LoginPage onLogin={handleLogin} sessionExpired={sessionExpired}/></RedirectIfAuthenticated>} />
+
+          <Route path="/forgot-password" element={<RedirectIfAuthenticated {...guardProps}><ForgotPasswordPage /></RedirectIfAuthenticated>} />
+
+          <Route path="/change-password" element={<RequireSession {...guardProps}><ChangePasswordPage backTo={userRole === "SELLER" ? "/seller/myListing" : "/orders"} /></RequireSession>} />
 
           <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 

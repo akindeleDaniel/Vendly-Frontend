@@ -47,6 +47,28 @@ export function RequireRole({ role, authStatus, userRole, onRetry, children }: G
     return <>{children}</>
 }
 
+// Pages for any signed-in person, whatever their role.
+export function RequireSession({ authStatus, onRetry, children }: GuardProps) {
+    if (authStatus === "loading") {
+        return <SessionLoading />
+    }
+
+    if (authStatus === "error") {
+        return (
+            <div role="alert">
+                <p>We could not verify your session. Please check your connection and try again.</p>
+                <button type="button" onClick={onRetry}>Try again</button>
+            </div>
+        )
+    }
+
+    if (authStatus === "unauthenticated") {
+        return <Navigate to="/login" replace />
+    }
+
+    return <>{children}</>
+}
+
 // Administrator pages. Whether someone is an administrator comes from the session check, but only
 // to decide what to show: the backend checks it again on every administrator request.
 export function RequireAdmin({ authStatus, userRole, isAdmin, onRetry, children }: GuardProps) {

@@ -1,12 +1,12 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Link } from "react-router-dom"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
-import { apiFetch, getErrorMessage } from "../lib/api"
+import { checkPassword, registerAccount } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import AuthShell from "../components/AuthShell"
+import CodeEntryForm from "../components/CodeEntryForm"
 import Notice from "../components/Notice"
-import Logo from "../components/Logo"
-import { ChevronLeftIcon } from "../components/Icons"
 
 type User = {
     name: string
@@ -27,9 +27,11 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
         password: ""
     })
     useDocumentTitle(role === "SELLER" ? "Create a seller account" : "Create an account")
+    const passwordHintId = useId()
     const registerPrompt = role === "CONSUMER" && readPendingCartItem() ? "Create a shopper account to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
+    const [codeSentTo, setCodeSentTo] = useState<string | null>(null)// set once the confirmation code has been emailed
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -38,52 +40,56 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
             return
         }
 
-        if (formData.name === "" || formData.email === "" || formData.password === "") {
+        if (formData.name.trim() === "" || formData.email.trim() === "" || formData.password === "") {
             setError("All areas must be filled")
+            return
+        }
+
+        const passwordProblem = checkPassword(formData.password)
+        if (passwordProblem) {
+            setError(passwordProblem)
             return
         }
 
         setIsSubmitting(true)
         setError("")
 
-        try{
-            const response = await apiFetch("/users/register", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    role
-                }),
-                credentials: "include"
-            })
+        const outcome = await registerAccount({ ...formData, role })
+        setIsSubmitting(false)
 
-            if (!response.ok) {
-                setError(await getErrorMessage(response, `Unable to register (status ${response.status}).`))
-                return
-            }
-
-            // Registration logs the user in. The route guard then sends consumers to the home page
-            // and sellers to their store page, which starts onboarding when no store profile exists.
-            onLogin(role)
-        }catch{
-             setError("Something went wrong. Please check your connection and try again.")
-        }finally{
-            setIsSubmitting(false)
+        if (outcome.kind === "error") {
+            setError(outcome.message)
+            return
         }
+
+        // Registering does not log anyone in. A 6-digit code was emailed, and entering it confirms the
+        // account and logs the person in.
+        setCodeSentTo(outcome.email)
+    }
+
+    if (codeSentTo !== null) {
+        return (
+            <AuthShell title="Check your email">
+                <CodeEntryForm
+                    email={codeSentTo}
+                    purpose="VERIFY_EMAIL"
+                    submitLabel="Confirm and continue"
+                    onVerified={onLogin}
+                    onUseDifferentEmail={() => setCodeSentTo(null)}
+                />
+            </AuthShell>
+        )
     }
 
     return(
-        <div className="form-page">
-            <div className="auth-brand"><Logo size="large" /></div>
-            <h1>{role === "SELLER" ? "Create a seller account" : "Create a shopper account"}</h1>
+        <AuthShell title={role === "SELLER" ? "Create a seller account" : "Create a shopper account"}>
             {registerPrompt && <Notice kind="info">{registerPrompt}</Notice>}
             <form onSubmit={handleSubmit} className="card form-card">
                 <label>
                     Name
                     <input name="name"
                         autoComplete="name"
+                        maxLength={80}
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
                     />
@@ -93,6 +99,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                     <input name="email"
                         type="email"
                         autoComplete="email"
+                        maxLength={254}
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
                     />
@@ -102,18 +109,17 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                     <input name="password"
                         type="password"
                         autoComplete="new-password"
+                        aria-describedby={passwordHintId}
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
                     />
                 </label>
+                <p id={passwordHintId} className="field-help">At least 10 characters. Avoid common passwords.</p>
                 {error && <Notice kind="error">{error}</Notice>}
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Create account"}</button>
             </form>
             <p className="form-footer">Already have an account? <Link to={"/login"}>Log in</Link></p>
-            <p className="form-footer">
-                <Link to="/" className="back-link"><ChevronLeftIcon /> Back to home</Link>
-            </p>
-        </div>
+        </AuthShell>
     )
 }
 
