@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { Listing, ListingFormData } from "../types/listing"
 import type { UserRole } from "../types/user"
@@ -33,6 +33,14 @@ type CartFeedback = {
   kind: "success" | "error" | "info"
 }
 
+// How long the message under Add to cart stays before it goes away. Errors stay longer because
+// they take longer to read.
+const FEEDBACK_DURATION_MS: Record<CartFeedback["kind"], number> = {
+  success: 3000,
+  info: 5000,
+  error: 8000
+}
+
 // At or below this many in stock, the card says "Only N left".
 const LOW_STOCK_THRESHOLD = 3
 
@@ -45,6 +53,18 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
   const selectedQuantity = Math.min(quantity, listing.stockQuantity)
   const isSoldOut = listing.stockQuantity === 0
   const isLowStock = !isSoldOut && listing.stockQuantity <= LOW_STOCK_THRESHOLD
+
+  // The message clears itself. Each new message is a new object, so repeating the same one
+  // (adding twice) restarts the timer.
+  useEffect(() => {
+    if (cartFeedback === null) {
+      return
+    }
+
+    const timer = window.setTimeout(() => setCartFeedback(null), FEEDBACK_DURATION_MS[cartFeedback.kind])
+    return () => window.clearTimeout(timer)
+  }, [cartFeedback])
+
   const showCartControls = !isEditable && allowAddToCart && userRole !== "SELLER"
 
   const shopPath = !isEditable && listing.sellerSlug
@@ -228,7 +248,10 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
                 <select
                   aria-label={`Quantity for ${listing.title}`}
                   value={selectedQuantity}
-                  onChange={(event) => setQuantity(Number(event.currentTarget.value))}
+                  onChange={(event) => {
+                    setQuantity(Number(event.currentTarget.value))
+                    setCartFeedback(null)// a message about the old quantity no longer applies
+                  }}
                 >
                   {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
                     <option key={option} value={option}>Quantity: {option}</option>
