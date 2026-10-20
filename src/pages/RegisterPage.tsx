@@ -74,8 +74,9 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                     email={codeSentTo}
                     purpose="VERIFY_EMAIL"
                     submitLabel="Confirm and continue"
+                    backLabel="Use a different email"
                     onVerified={onLogin}
-                    onUseDifferentEmail={() => setCodeSentTo(null)}
+                    onBack={() => setCodeSentTo(null)}
                 />
             </AuthShell>
         )

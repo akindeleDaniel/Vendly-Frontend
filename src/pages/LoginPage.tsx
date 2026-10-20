@@ -79,14 +79,15 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
 
     if (codeStep !== null) {
         return (
-            <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter your code" : "Confirm your email"}>
+            <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter the code we emailed you" : "Confirm your email"}>
                 <CodeEntryForm
                     email={codeStep.email}
                     purpose={codeStep.purpose}
                     notice={codeStep.notice}
                     submitLabel={codeStep.purpose === "LOGIN" ? "Log in" : "Confirm and continue"}
+                    backLabel={codeStep.purpose === "LOGIN" ? "Log in with a different account" : "Use a different email"}
                     onVerified={onLogin}
-                    onUseDifferentEmail={() => { setCodeStep(null); setFormData({ email: "", password: "" }) }}
+                    onBack={() => { setCodeStep(null); setFormData({ email: "", password: "" }) }}
                 />
             </AuthShell>
         )

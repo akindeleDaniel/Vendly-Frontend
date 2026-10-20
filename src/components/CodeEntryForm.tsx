@@ -1,4 +1,6 @@
 import { useId, useState } from "react"
+import CodeInput, { CODE_LENGTH } from "./CodeInput"
+import { RotateIcon } from "./Icons"
 import Notice from "./Notice"
 import { resendCode, verifyCode } from "../lib/accountApi"
 import type { CodePurpose } from "../lib/accountApi"
@@ -6,21 +8,22 @@ import { useCooldown } from "../lib/useCooldown"
 import type { UserRole } from "../types/user"
 
 const RESEND_WAIT_SECONDS = 60
-const CODE_LENGTH = 6
 
 type CodeEntryFormProps = {
     email: string
     purpose: CodePurpose
     submitLabel: string
-    // Shown above the code box, for example why a code is needed.
+    // Shown above the code boxes, for example why a code is needed.
     notice?: string
+    // What the way out says: logging in again with a password, or starting over with another email.
+    backLabel: string
     onVerified: (role: UserRole) => void
-    onUseDifferentEmail: () => void
+    onBack: () => void
 }
 
 // Asks for the 6-digit code that was just emailed. A correct code logs the person in. The backend
-// sends nothing if a new code is asked for within a minute, so the button waits 60 seconds.
-function CodeEntryForm({ email, purpose, submitLabel, notice, onVerified, onUseDifferentEmail }: CodeEntryFormProps) {
+// sends nothing if a new code is asked for within a minute, so the resend button waits 60 seconds.
+function CodeEntryForm({ email, purpose, submitLabel, notice, backLabel, onVerified, onBack }: CodeEntryFormProps) {
     const helpId = useId()
     const [code, setCode] = useState("")
     const [isChecking, setIsChecking] = useState(false)
@@ -63,6 +66,7 @@ function CodeEntryForm({ email, purpose, submitLabel, notice, onVerified, onUseD
 
         if (outcome.kind === "ok") {
             setResendMessage(outcome.message)
+            setCode("")
             restart()
         } else {
             setError(outcome.message)
@@ -70,35 +74,23 @@ function CodeEntryForm({ email, purpose, submitLabel, notice, onVerified, onUseD
     }
 
     return (
-        <form onSubmit={handleSubmit} className="card form-card stack-form">
+        <form onSubmit={handleSubmit} className="card form-card stack-form code-form">
             {notice && <Notice kind="info">{notice}</Notice>}
-            <p id={helpId}>
-                We sent a 6-digit code to <strong>{email}</strong>. It expires in 10 minutes.
+            <p id={helpId} className="code-intro">
+                Sent to <strong>{email}</strong>. It expires in 10 minutes. You may need to check your spam folder.
             </p>
-            <label>
-                Code
-                <input
-                    name="code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={CODE_LENGTH}
-                    aria-describedby={helpId}
-                    value={code}
-                    disabled={isChecking}
-                    autoFocus
-                    onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-                />
-            </label>
+            <CodeInput value={code} onChange={setCode} disabled={isChecking} invalid={error !== ""} describedBy={helpId} />
             {error && <Notice kind="error">{error}</Notice>}
             {resendMessage && <Notice kind="success">{resendMessage}</Notice>}
             <button type="submit" className="btn-block btn-lg" disabled={isChecking || code.length !== CODE_LENGTH}>
                 {isChecking ? "Checking..." : submitLabel}
             </button>
             <div className="code-actions">
-                <button type="button" className="btn-text" disabled={remaining > 0 || isResending || isChecking} onClick={handleResend}>
-                    {remaining > 0 ? `Send a new code in ${remaining}s` : isResending ? "Sending..." : "Send a new code"}
+                <button type="button" className="btn-text icon-text-button" disabled={remaining > 0 || isResending || isChecking} onClick={handleResend}>
+                    <RotateIcon size={18} />
+                    {remaining > 0 ? `Resend code in ${remaining}s` : isResending ? "Sending..." : "Resend code"}
                 </button>
-                <button type="button" className="btn-text" disabled={isChecking} onClick={onUseDifferentEmail}>Use a different email</button>
+                <button type="button" className="btn-text" disabled={isChecking} onClick={onBack}>{backLabel}</button>
             </div>
         </form>
     )

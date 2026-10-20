@@ -515,5 +515,45 @@
 }
 
 .form-card .form-footer {
-  margin-top: 0;
+
+  margin-top: 2;
+}
+
+/* The code boxes: one digit each, like the one-time-code screens people know from other apps */
+.code-form {
+  align-items: stretch;
+  text-align: center;
+}
+
+.code-intro {
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.code-boxes {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.code-box {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 3.25rem;
+  height: 3.5rem;
+  padding: 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  caret-color: var(--color-forest);
+}
+
+.code-box:focus-visible {
+  border-color: var(--color-forest);
+}
+
+.code-actions {
+  flex-direction: column;
+  justify-content: center;
 }

@@ -1,13 +1,13 @@
 import { useId, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import AuthShell from "../components/AuthShell"
+import CodeInput, { CODE_LENGTH } from "../components/CodeInput"
 import Notice from "../components/Notice"
 import { checkPassword, requestPasswordReset, resetPassword } from "../lib/accountApi"
 import { useCooldown } from "../lib/useCooldown"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 const RESEND_WAIT_SECONDS = 60
-const CODE_LENGTH = 6
 
 // Step 1 asks for the email; step 2 takes the emailed code and the new password. The answer to
 // step 1 is the same for every address, so this page never says whether an account exists.
@@ -116,19 +116,7 @@ function ForgotPasswordPage() {
             <form onSubmit={handleReset} className="card form-card stack-form">
                 {notice && <Notice kind="info">{notice}</Notice>}
                 <p>Enter the 6-digit code we emailed to <strong>{email.trim()}</strong>, then your new password. The code expires in 10 minutes.</p>
-                <label>
-                    Code
-                    <input
-                        name="code"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        maxLength={CODE_LENGTH}
-                        value={code}
-                        disabled={isWorking}
-                        autoFocus
-                        onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-                    />
-                </label>
+                <CodeInput value={code} onChange={setCode} disabled={isWorking} invalid={error !== ""} />
                 <label>
                     New password
                     <input
