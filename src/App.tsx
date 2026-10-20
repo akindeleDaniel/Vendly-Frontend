@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import RolePage from "./pages/RolePage"
@@ -16,7 +16,16 @@ import MyOrdersPage from "./pages/MyOrdersPage"
 import OrderDetailPage from "./pages/OrderDetailPage"
 import SellerOrdersPage from "./pages/SellerOrdersPage"
 import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
-import { RedirectIfAuthenticated, RequireRole } from "./components/RouteGuards"
+import AdminShell from "./components/AdminShell"
+import AdminLiabilitiesPage from "./pages/AdminLiabilitiesPage"
+import AdminRecoveryCasesPage from "./pages/AdminRecoveryCasesPage"
+import AdminRefundsPage from "./pages/AdminRefundsPage"
+import DisputeDetailPage from "./pages/DisputeDetailPage"
+import DisputeListPage from "./pages/DisputeListPage"
+import NewDisputePage from "./pages/NewDisputePage"
+import OfferRefundPage from "./pages/OfferRefundPage"
+import SellerLiabilitiesPage from "./pages/SellerLiabilitiesPage"
+import { RedirectIfAuthenticated, RequireAdmin, RequireRole } from "./components/RouteGuards"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
 import { clearPendingCartItem } from "./lib/pendingCartItem"
@@ -30,6 +39,7 @@ function isUserRole(value: unknown): value is UserRole {
 function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>("loading")// starts as loading since the session is still being checked
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)// only decides what to show; the backend checks it on every admin request
   const [sessionExpired, setSessionExpired] = useState(false)
   const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
   const authStatusRef = useRef<AuthStatus>("loading")
@@ -38,6 +48,19 @@ function App() {
     authStatusRef.current = authStatus
   }, [authStatus])
 
+  // The login response does not say whether the person is an administrator, so ask the session check.
+  async function refreshAdminFlag() {
+    try {
+      const response = await apiFetch("/users/check", { credentials: "include" })
+      if (response.ok) {
+        const data: unknown = await response.json()
+        setIsAdmin(typeof data === "object" && data !== null && "isAdmin" in data && data.isAdmin === true)
+      }
+    } catch {
+      // The admin link simply stays hidden.
+    }
+  }
+
   function handleLogin(role: UserRole) {
     if (role !== "CONSUMER") {
       clearPendingCartItem()// only a shopper can complete a remembered add-to-cart
@@ -45,6 +68,7 @@ function App() {
     setUserRole(role)
     setAuthStatus("authenticated")
     setSessionExpired(false)
+    void refreshAdminFlag()
   }
 
   async function handleLogout() {
@@ -60,6 +84,7 @@ function App() {
     clearPendingCartItem()// a remembered add-to-cart must not carry over to whoever logs in next
     setAuthStatus("unauthenticated")
     setUserRole(null)
+    setIsAdmin(false)
   }
 
   const retryAuthCheck = useCallback(() => {
@@ -76,6 +101,7 @@ function App() {
       setSessionExpired(true)
       setAuthStatus("unauthenticated")
       setUserRole(null)
+      setIsAdmin(false)
     })
   }, [])
 
@@ -108,6 +134,7 @@ function App() {
         const data: unknown = await response.json()
         if (typeof data === "object" && data !== null && "role" in data && isUserRole(data.role)) {
           setUserRole(data.role)
+          setIsAdmin("isAdmin" in data && data.isAdmin === true)
           setAuthStatus("authenticated")
         } else {
           setAuthStatus("error")
@@ -125,13 +152,13 @@ function App() {
   }, [authCheckAttempt] // runs once when the app starts, and again when the user retries a failed check
   )
 
-  const guardProps = { authStatus, userRole, onRetry: retryAuthCheck }
+  const guardProps = { authStatus, userRole, isAdmin, onRetry: retryAuthCheck }
 
   return (
     <BrowserRouter>
       <SkipLink />
       <ScrollToTop />
-      <Navbar authStatus={authStatus} userRole={userRole} onLogout={handleLogout} />
+      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} onLogout={handleLogout} />
       <main id="main" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
@@ -154,6 +181,14 @@ function App() {
 
           <Route path="/seller/orders/:id" element={<RequireRole role="SELLER" {...guardProps}><SellerOrderDetailPage /></RequireRole>} />
 
+          <Route path="/seller/orders/:id/refund-offer" element={<RequireRole role="SELLER" {...guardProps}><OfferRefundPage /></RequireRole>} />
+
+          <Route path="/seller/disputes" element={<RequireRole role="SELLER" {...guardProps}><DisputeListPage viewer="seller" /></RequireRole>} />
+
+          <Route path="/seller/disputes/:id" element={<RequireRole role="SELLER" {...guardProps}><DisputeDetailPage viewer="seller" /></RequireRole>} />
+
+          <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
+
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
 
           <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
@@ -165,6 +200,24 @@ function App() {
           <Route path="/orders" element={<RequireRole role="CONSUMER" {...guardProps}><MyOrdersPage /></RequireRole>} />
 
           <Route path="/orders/:id" element={<RequireRole role="CONSUMER" {...guardProps}><OrderDetailPage /></RequireRole>} />
+
+          <Route path="/orders/:checkoutId/seller-orders/:orderId/complaint" element={<RequireRole role="CONSUMER" {...guardProps}><NewDisputePage /></RequireRole>} />
+
+          <Route path="/disputes" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeListPage viewer="buyer" /></RequireRole>} />
+
+          <Route path="/disputes/:id" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireRole>} />
+
+          <Route path="/admin" element={<Navigate to="/admin/complaints" replace />} />
+
+          <Route path="/admin/complaints" element={<RequireAdmin {...guardProps}><AdminShell><DisputeListPage viewer="admin" /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/complaints/:id" element={<RequireAdmin {...guardProps}><AdminShell><DisputeDetailPage viewer="admin" /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/refunds" element={<RequireAdmin {...guardProps}><AdminShell><AdminRefundsPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/recovery-cases" element={<RequireAdmin {...guardProps}><AdminShell><AdminRecoveryCasesPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
 
           <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
         </Routes>

@@ -4,6 +4,7 @@ import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
 import { HomeIcon } from "./Icons"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
+import { fetchComplaintsAwaitingSeller } from "../lib/disputeApi"
 
 // Login and registration pages show a centred logo above the form instead of the header.
 const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register"]
@@ -11,17 +12,20 @@ const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/regist
 type NavbarProps = {
     authStatus: AuthStatus
     userRole: UserRole | null
+    isAdmin: boolean
     onLogout: () => Promise<void>
 }
 
-function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
+function Navbar ({authStatus, userRole, isAdmin, onLogout}: NavbarProps){
 
     const {pathname} = useLocation()
     const navigate = useNavigate()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
     const [logoutError, setLogoutError] = useState("")
     const [awaitingCount, setAwaitingCount] = useState(0)
+    const [complaintCount, setComplaintCount] = useState(0)
     const isConsumer = authStatus === "authenticated" && userRole === "CONSUMER"
+    const isSeller = authStatus === "authenticated" && userRole === "SELLER"
 
     // Orders the seller has reported delivered that the shopper has not confirmed yet. Checked when
     // the shopper moves between pages, so the count follows what they confirm.
@@ -38,6 +42,21 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
         })
         return () => controller.abort()
     }, [isConsumer, pathname])
+
+    // Complaints waiting for the seller's answer, checked the same way.
+    useEffect(() => {
+        if (!isSeller) {
+            return
+        }
+
+        const controller = new AbortController()
+        fetchComplaintsAwaitingSeller(controller.signal).then((count) => {
+            if (!controller.signal.aborted) {
+                setComplaintCount(count ?? 0)
+            }
+        })
+        return () => controller.abort()
+    }, [isSeller, pathname])
 
     async function handleLogout() {
         setIsLoggingOut(true)
@@ -95,6 +114,17 @@ function Navbar ({authStatus, userRole, onLogout}: NavbarProps){
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/orders" && (
                                     <Link to="/seller/orders" className="header-link">Orders</Link>
+                                )}
+                                {userRole === "SELLER" && pathname !== "/seller/disputes" && (
+                                    <Link to="/seller/disputes" className="header-link">
+                                        Complaints
+                                        {complaintCount > 0 && (
+                                            <span className="count-badge" aria-label={`${complaintCount} waiting for your response`}>{complaintCount}</span>
+                                        )}
+                                    </Link>
+                                )}
+                                {isAdmin && !pathname.startsWith("/admin") && (
+                                    <Link to="/admin/complaints" className="header-link">Admin</Link>
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/myListing" && (
                                     <Link to="/seller/myListing" className="header-link">My store</Link>

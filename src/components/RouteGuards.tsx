@@ -9,6 +9,7 @@ import type { AuthStatus, UserRole } from "../types/user"
 type GuardProps = {
     authStatus: AuthStatus
     userRole: UserRole | null
+    isAdmin?: boolean
     onRetry: () => void
     children: ReactNode
 }
@@ -40,6 +41,33 @@ export function RequireRole({ role, authStatus, userRole, onRetry, children }: G
     }
 
     if (userRole !== role) {
+        return <Navigate to={homePathForRole(userRole)} replace />
+    }
+
+    return <>{children}</>
+}
+
+// Administrator pages. Whether someone is an administrator comes from the session check, but only
+// to decide what to show: the backend checks it again on every administrator request.
+export function RequireAdmin({ authStatus, userRole, isAdmin, onRetry, children }: GuardProps) {
+    if (authStatus === "loading") {
+        return <SessionLoading />
+    }
+
+    if (authStatus === "error") {
+        return (
+            <div role="alert">
+                <p>We could not verify your session. Please check your connection and try again.</p>
+                <button type="button" onClick={onRetry}>Try again</button>
+            </div>
+        )
+    }
+
+    if (authStatus === "unauthenticated") {
+        return <Navigate to="/login" replace />
+    }
+
+    if (!isAdmin) {
         return <Navigate to={homePathForRole(userRole)} replace />
     }
 

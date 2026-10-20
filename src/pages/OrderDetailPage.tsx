@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
+import BuyerOrderExtras from "../components/BuyerOrderExtras"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
@@ -76,6 +77,7 @@ function OrderDetailPage() {
                     <div className="summary-row"><span>Subtotal</span><span>{formatNaira(sellerOrder.subtotal)}</span></div>
                     <div className="summary-row"><span>Shipping</span><span>{formatNaira(sellerOrder.shipping)}</span></div>
                     <div className="summary-row summary-row-total"><span>Seller total</span><span>{formatNaira(sellerOrder.total)}</span></div>
+                    <BuyerOrderExtras checkoutId={order.id} sellerOrder={sellerOrder} />
                 </article>
             ))}
 

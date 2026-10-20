@@ -4,6 +4,7 @@ import DeliveryAddressBlock from "../components/DeliveryAddressBlock"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
 import SellerFulfilmentPanel from "../components/SellerFulfilmentPanel"
+import SellerOrderExtras from "../components/SellerOrderExtras"
 import type { FulfilmentUpdate } from "../components/SellerFulfilmentPanel"
 import { describeOrderStatus, fetchSellerOrders, formatDate, formatProvider } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
@@ -108,6 +109,7 @@ function SellerOrdersPage() {
                                             <DeliveryAddressBlock delivery={order.delivery} />
                                         </section>
                                     </div>
+                                    <SellerOrderExtras order={order} compact />
                                     <div className="order-money">
                                         <div className="summary-row"><span>Order total</span><span>{formatNaira(order.total)}</span></div>
                                         <div className="summary-row">

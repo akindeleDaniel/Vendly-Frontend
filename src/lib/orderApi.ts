@@ -171,6 +171,11 @@ export function formatShortDate(isoTime: string): string {
         : date.toLocaleString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })
 }
 
+// True when a money string from the server is more than zero, for showing a line only when it matters.
+export function hasAmount(amount: string | null | undefined): boolean {
+    return typeof amount === "string" && /[1-9]/.test(amount)
+}
+
 export function formatProvider(provider: string | null | undefined): string {
     return provider === "PAYSTACK" ? "Paystack" : provider === "FLUTTERWAVE" ? "Flutterwave" : "—"
 }

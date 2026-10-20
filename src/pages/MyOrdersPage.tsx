@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import BuyerOrderExtras from "../components/BuyerOrderExtras"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
@@ -82,6 +83,7 @@ function MyOrdersPage() {
     return (
         <div>
             <h1>My orders</h1>
+            <p><Link to="/disputes">Your complaints</Link></p>
             {orders.length === 0 ? (
                 <>
                     <p>You have no paid orders yet.</p>
@@ -111,6 +113,7 @@ function MyOrdersPage() {
                                         <ConfirmReceiptPrompt checkoutId={order.id} sellerOrderId={sellerOrder.id} onConfirmed={applyConfirmation} />
                                     )}
                                     <OrderItemList items={sellerOrder.items} />
+                                    <BuyerOrderExtras checkoutId={order.id} sellerOrder={sellerOrder} compact />
                                 </div>
                             ))}
                             <div className="summary-row summary-row-total"><span>Total</span><span>{formatNaira(order.total)}</span></div>

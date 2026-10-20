@@ -1,3 +1,6 @@
+import type { OrderDisputeLink } from "./dispute"
+import type { BuyerRefund, SellerRefund } from "./refund"
+
 // Shapes of the order endpoints as implemented by the backend (orderController.ts).
 // Money values are strings with two decimals, calculated by the server.
 
@@ -40,6 +43,13 @@ export type Fulfilment = {
 }
 
 // One paid checkout in a customer's history (GET /orders).
+// What a shopper sees about refunds and complaints on one seller's order.
+export type BuyerOrderExtras = {
+  refundedAmount: string
+  refunds: BuyerRefund[]
+  dispute: OrderDisputeLink | null
+}
+
 export type CustomerOrderSummary = {
   id: number
   status: string
@@ -53,7 +63,7 @@ export type CustomerOrderSummary = {
     seller: OrderSeller
     itemCount: number
     items: OrderItem[]
-  } & Fulfilment>
+  } & Fulfilment & BuyerOrderExtras>
 }
 
 // GET /orders/:id
@@ -72,13 +82,21 @@ export type CustomerOrder = {
     shipping: string
     total: string
     items: OrderItem[]
-  } & Fulfilment>
+  } & Fulfilment & BuyerOrderExtras>
 }
 
 // One order in a seller's list (GET /seller/orders), with what was bought and where it goes, so
 // the seller can pack it without opening it. The fee fields are null when the payment
 // provider did not report them.
-export type SellerOrderSummary = Fulfilment & {
+// What a seller sees about refunds, complaints and money kept back on one order.
+export type SellerOrderExtras = {
+  liabilityDeduction: string
+  refundedAmount: string
+  refunds: SellerRefund[]
+  dispute: OrderDisputeLink | null
+}
+
+export type SellerOrderSummary = Fulfilment & SellerOrderExtras & {
   id: number
   status: string
   createdAt: string
@@ -93,7 +111,7 @@ export type SellerOrderSummary = Fulfilment & {
 }
 
 // GET /seller/orders/:id
-export type SellerOrder = Fulfilment & {
+export type SellerOrder = Fulfilment & SellerOrderExtras & {
   id: number
   status: string
   createdAt: string

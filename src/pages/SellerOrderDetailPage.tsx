@@ -4,6 +4,7 @@ import DeliveryAddressBlock from "../components/DeliveryAddressBlock"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
 import SellerFulfilmentPanel from "../components/SellerFulfilmentPanel"
+import SellerOrderExtras from "../components/SellerOrderExtras"
 import { describeOrderStatus, fetchSellerOrder, formatProvider } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -73,6 +74,11 @@ function SellerOrderDetailPage() {
             <section aria-labelledby="ship-heading" className="card summary-card">
                 <h2 id="ship-heading">Deliver to</h2>
                 <DeliveryAddressBlock delivery={order.delivery} />
+            </section>
+
+            <section aria-labelledby="refunds-heading" className="card summary-card">
+                <h2 id="refunds-heading">Refunds and complaints</h2>
+                <SellerOrderExtras order={order} />
             </section>
 
             <section aria-labelledby="money-heading" className="card summary-card">
