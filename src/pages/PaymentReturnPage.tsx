@@ -5,6 +5,7 @@ import PaymentOptions from "../components/PaymentOptions"
 import { fetchPayment } from "../lib/paymentApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { Payment } from "../types/payment"
+import { formatNaira } from "../lib/money"
 
 // While the payment is pending, the backend is asked again every few seconds for about two minutes.
 const POLL_INTERVAL_MS = 4000
@@ -122,14 +123,17 @@ function PaymentReturnPage() {
             <div>
                 <h1>Payment confirmed</h1>
                 <Notice kind="success">
-                    Thank you. Your payment of {payment.currency} {payment.amount} is confirmed and your order has been sent to the seller.
+                    Thank you. Your payment of {formatNaira(payment.amount)} is confirmed and your order has been sent to the seller.
                 </Notice>
                 <dl className="card status-list">
                     <div><dt>Payment reference</dt><dd>{payment.reference}</dd></div>
                     <div><dt>Checkout reference</dt><dd>{payment.checkout.id}</dd></div>
                 </dl>
                 <p className="summary-note">The items you paid for have been removed from your cart.</p>
-                <Link to="/" className="btn btn-primary">Keep browsing</Link>
+                <div className="action-row">
+                    <Link to={`/orders/${payment.checkout.id}`} className="btn btn-primary">View your order</Link>
+                    <Link to="/">Keep browsing</Link>
+                </div>
             </div>
         )
     }

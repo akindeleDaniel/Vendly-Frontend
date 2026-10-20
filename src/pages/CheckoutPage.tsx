@@ -7,6 +7,7 @@ import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/c
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { formatNaira } from "../lib/money"
 
 type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "error"
 
@@ -81,25 +82,25 @@ function ReviewSummary({ review }: { review: CheckoutReview }) {
               <li key={item.listingId} className="order-line">
                 <div>
                   <p className="order-line-title">{item.title}</p>
-                  <p className="order-line-meta">{item.unitPrice} × {item.quantity}</p>
+                  <p className="order-line-meta">{formatNaira(item.unitPrice)} × {item.quantity}</p>
                 </div>
-                <span className="order-line-amount">{item.lineSubtotal}</span>
+                <span className="order-line-amount">{formatNaira(item.lineSubtotal)}</span>
               </li>
             ))}
           </ul>
           <hr className="summary-divider" />
-          <div className="summary-row"><span>Seller subtotal</span><span>{group.subtotal}</span></div>
-          <div className="summary-row"><span>Shipping</span><span>{group.shipping}</span></div>
-          <div className="summary-row summary-row-total"><span>Seller total</span><span>{group.total}</span></div>
+          <div className="summary-row"><span>Seller subtotal</span><span>{formatNaira(group.subtotal)}</span></div>
+          <div className="summary-row"><span>Shipping</span><span>{formatNaira(group.shipping)}</span></div>
+          <div className="summary-row summary-row-total"><span>Seller total</span><span>{formatNaira(group.total)}</span></div>
         </article>
       ))}
       <div className="card summary-card">
-        <div className="summary-row"><span>Subtotal</span><span>{review.subtotal}</span></div>
-        <div className="summary-row"><span>Shipping</span><span>{review.shipping}</span></div>
+        <div className="summary-row"><span>Subtotal</span><span>{formatNaira(review.subtotal)}</span></div>
+        <div className="summary-row"><span>Shipping</span><span>{formatNaira(review.shipping)}</span></div>
         <hr className="summary-divider" />
         <div className="summary-row summary-row-total">
           <span>Total</span>
-          <span className="summary-total-amount">{review.total}</span>
+          <span className="summary-total-amount">{formatNaira(review.total)}</span>
         </div>
       </div>
     </section>
@@ -143,19 +144,19 @@ function CheckoutSuccess({ result }: { result: CheckoutResult }) {
             <ul className="order-lines">
               {order.items.map((item) => (
                 <li key={item.listingId} className="order-line">
-                  <span>{item.title}: {item.quantity} × {item.unitPrice}</span>
+                  <span>{item.title}: {item.quantity} × {formatNaira(item.unitPrice)}</span>
                 </li>
               ))}
             </ul>
             <hr className="summary-divider" />
-            <div className="summary-row"><span>Subtotal</span><span>{order.subtotal}</span></div>
-            <div className="summary-row"><span>Shipping</span><span>{order.shipping}</span></div>
-            <div className="summary-row summary-row-total"><span>Order total</span><span>{order.total}</span></div>
+            <div className="summary-row"><span>Subtotal</span><span>{formatNaira(order.subtotal)}</span></div>
+            <div className="summary-row"><span>Shipping</span><span>{formatNaira(order.shipping)}</span></div>
+            <div className="summary-row summary-row-total"><span>Order total</span><span>{formatNaira(order.total)}</span></div>
           </article>
         ))}
         <div className="summary-row summary-row-total">
           <span>Total</span>
-          <span className="summary-total-amount">{result.total}</span>
+          <span className="summary-total-amount">{formatNaira(result.total)}</span>
         </div>
       </section>
 
@@ -445,7 +446,7 @@ function CheckoutPage() {
             <Notice kind="warning" ref={noticeRef} tabIndex={-1}>
               <p>{reviewNotice.message}</p>
               {reviewNotice.previousTotal !== null && (
-                <p><strong>Previous total: {reviewNotice.previousTotal}. New total: {review.total}.</strong></p>
+                <p><strong>Previous total: {formatNaira(reviewNotice.previousTotal)}. New total: {formatNaira(review.total)}.</strong></p>
               )}
               <button type="button" className="btn btn-primary" onClick={() => setReviewNotice(null)}>
                 I've reviewed the updated totals
