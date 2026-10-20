@@ -1,27 +1,23 @@
 import { useEffect, useId, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import AccountCheckStatus from "../components/AccountCheckStatus"
 import BankPicker from "../components/BankPicker"
+import ChangeBankAccountForm from "../components/ChangeBankAccountForm"
 import { ChevronLeftIcon } from "../components/Icons"
 import Notice from "../components/Notice"
 import {
     PROVIDER_NAMES,
+    acceptPayoutTerms,
     createPayoutAccounts,
     fetchPayoutBanks,
     fetchPayoutOverview,
-    isAccountNumber,
-    normalizeBusinessPhone,
-    resolvePayoutAccount
+    normalizeBusinessPhone
 } from "../lib/payoutApi"
+import { useAccountCheck } from "../lib/useAccountCheck"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { PayoutAccount, PayoutBank, PayoutOverview, PayoutStatus } from "../types/payout"
 
 type LoadStatus = "loading" | "ready" | "error"
-
-type ResolveState =
-    | { key: string, kind: "found", accountName: string }
-    | { key: string, kind: "invalid" }
-    | { key: string, kind: "unavailable" }
-    | { key: string, kind: "error", message: string }
 
 const STATUS_LABELS: Record<PayoutStatus, string> = {
     ACTIVE: "Active",
@@ -83,11 +79,13 @@ function PayoutSettingsPage() {
     const [accountNumber, setAccountNumber] = useState("")
     const [businessPhone, setBusinessPhone] = useState("")
     const [termsAccepted, setTermsAccepted] = useState(false)
-    const [resolveResult, setResolveResult] = useState<ResolveState | null>(null)
-    const [resolveAttempt, setResolveAttempt] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState("")
     const [justSetUp, setJustSetUp] = useState(false)
+    const [notice, setNotice] = useState("")
+    const [updatedTermsAccepted, setUpdatedTermsAccepted] = useState(false)
+    const [isAcceptingTerms, setIsAcceptingTerms] = useState(false)
+    const [termsError, setTermsError] = useState("")
 
     useEffect(() => {
         const controller = new AbortController()
@@ -143,37 +141,8 @@ function PayoutSettingsPage() {
     }, [navigate, loadAttempt])
 
     // Looks up the account holder's name as soon as a bank and a full 10-digit number are entered.
-    const resolveKey = bankId !== "" && isAccountNumber(accountNumber)
-        ? `${bankId}:${accountNumber}:${resolveAttempt}`
-        : null
-
-    useEffect(() => {
-        if (resolveKey === null) {
-            return
-        }
-
-        const controller = new AbortController()
-
-        resolvePayoutAccount(bankId, accountNumber, controller.signal).then((outcome) => {
-            if (controller.signal.aborted || outcome.kind === "unauthorized") {
-                return
-            }
-
-            if (outcome.kind === "found") {
-                setResolveResult({ key: resolveKey, kind: "found", accountName: outcome.accountName })
-            } else if (outcome.kind === "error") {
-                setResolveResult({ key: resolveKey, kind: "error", message: outcome.message })
-            } else {
-                setResolveResult({ key: resolveKey, kind: outcome.kind })
-            }
-        })
-
-        return () => controller.abort()
-    }, [resolveKey, bankId, accountNumber])
-
-    // A result only counts while it still matches what is typed in the form.
-    const resolved = resolveResult !== null && resolveResult.key === resolveKey ? resolveResult : null
-    const isChecking = resolveKey !== null && resolved === null
+    const check = useAccountCheck(bankId, accountNumber)
+    const resolved = check.result
 
     const normalizedPhone = normalizeBusinessPhone(businessPhone)
     const phoneIsInvalid = businessPhone.trim() !== "" && normalizedPhone === null
@@ -239,6 +208,30 @@ function PayoutSettingsPage() {
         }
     }
 
+    // Accepts the current payout terms again after the wording changed.
+    async function handleAcceptTerms() {
+        if (!overview || !updatedTermsAccepted || isAcceptingTerms) {
+            return
+        }
+
+        setIsAcceptingTerms(true)
+        setTermsError("")
+        const outcome = await acceptPayoutTerms(overview.feeTerms.version)
+        setIsAcceptingTerms(false)
+
+        if (outcome.kind === "ok") {
+            setUpdatedTermsAccepted(false)
+            setNotice("Thank you. You have accepted the current payout terms.")
+            await refreshOverview()
+        } else if (outcome.kind === "outdated") {
+            setTermsError(outcome.message)
+            setUpdatedTermsAccepted(false)
+            await refreshOverview()
+        } else if (outcome.kind === "error") {
+            setTermsError(outcome.message)
+        }
+    }
+
     if (loadStatus === "loading") {
         return <p role="status">Loading your payout settings...</p>
     }
@@ -279,8 +272,10 @@ function PayoutSettingsPage() {
             {justSetUp && (
                 <Notice kind="success">Your payout account is set up. You can now receive payments for your sales.</Notice>
             )}
+            {notice && <Notice kind="success">{notice}</Notice>}
 
             {isSetUp && activeAccount ? (
+                <>
                 <section aria-labelledby="payout-account-heading" className="card form-card">
                     <h2 id="payout-account-heading">Your payout account</h2>
                     <dl className="detail-list">
@@ -302,8 +297,46 @@ function PayoutSettingsPage() {
                         <p className="terms-text">{overview.feeTerms.text}</p>
                     </details>
 
-                    <p className="field-help">Changing your bank account is not available yet.</p>
+                    <p className="field-help">
+                        <Link to="/seller/liabilities">See refunds and amounts owed</Link>
+                    </p>
                 </section>
+
+                {overview.acceptedFeeTermsVersion !== overview.feeTerms.version && (
+                    <section aria-labelledby="terms-update-heading" className="card form-card">
+                        <h2 id="terms-update-heading">The payout terms have been updated</h2>
+                        <p className="terms-text">{overview.feeTerms.text}</p>
+                        <p className="field-help">
+                            Vendly can only recover refunds from your later sales once you have accepted the current terms.
+                        </p>
+                        <label className="checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={updatedTermsAccepted}
+                                disabled={isAcceptingTerms}
+                                onChange={(event) => setUpdatedTermsAccepted(event.target.checked)}
+                            />
+                            I have read and accept the updated terms
+                        </label>
+                        {termsError && <Notice kind="error">{termsError}</Notice>}
+                        <button type="button" className="btn btn-primary" disabled={!updatedTermsAccepted || isAcceptingTerms} onClick={handleAcceptTerms}>
+                            {isAcceptingTerms ? "Saving..." : "Accept the updated terms"}
+                        </button>
+                    </section>
+                )}
+
+                <section aria-labelledby="change-bank-heading" className="card form-card">
+                    <h2 id="change-bank-heading">Change your bank account</h2>
+                    <ChangeBankAccountForm
+                        banks={banks}
+                        onChanged={(updatedAccounts, fullyDone) => {
+                            setOverview((current) => current && { ...current, accounts: updatedAccounts })
+                            setNotice(fullyDone ? "Your bank account has been changed." : "")
+                            void refreshOverview()
+                        }}
+                    />
+                </section>
+                </>
             ) : (
                 <section aria-labelledby="payout-setup-heading" className="card form-card">
                     <h2 id="payout-setup-heading">Add your bank account</h2>
@@ -344,25 +377,7 @@ function PayoutSettingsPage() {
                             />
                         </label>
 
-                        <div id={accountStatusId} className="field-status">
-                            {isChecking && <p role="status" className="field-help">Checking the account...</p>}
-                            {resolved?.kind === "found" && (
-                                <Notice kind="success">
-                                    <p>Account name: <strong>{resolved.accountName}</strong></p>
-                                    <p>Check that this is your account before you continue.</p>
-                                </Notice>
-                            )}
-                            {resolved?.kind === "invalid" && (
-                                <Notice kind="error">We could not find an account with those details. Check the bank and account number.</Notice>
-                            )}
-                            {resolved?.kind === "unavailable" && (
-                                <Notice kind="warning">
-                                    <p>We could not check the account right now.</p>
-                                    <button type="button" onClick={() => setResolveAttempt((attempt) => attempt + 1)}>Try again</button>
-                                </Notice>
-                            )}
-                            {resolved?.kind === "error" && <Notice kind="error">{resolved.message}</Notice>}
-                        </div>
+                        <AccountCheckStatus check={check} id={accountStatusId} />
 
                         <label>
                             Business phone number

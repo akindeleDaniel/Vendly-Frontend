@@ -24,6 +24,7 @@ export type FeeTerms = {
 
 export type PayoutOverview = {
     feeTerms: FeeTerms
+    acceptedFeeTermsVersion: string | null
     feeTermsAcceptedAt: string | null
     businessPhone: string | null
     accounts: PayoutAccount[]

@@ -1,4 +1,6 @@
 import { apiFetch } from "./api"
+import { apiRequest, isRecord as isPlainRecord, failureMessage } from "./apiRequest"
+import type { SellerLiabilities } from "../types/refund"
 import type {
     PayoutAccount,
     PayoutBank,
@@ -148,6 +150,7 @@ export async function fetchPayoutOverview(signal?: AbortSignal): Promise<LoadOut
         kind: "ok",
         data: {
             feeTerms: { version: body.feeTerms.version, text: body.feeTerms.text },
+            acceptedFeeTermsVersion: typeof body.acceptedFeeTermsVersion === "string" ? body.acceptedFeeTermsVersion : null,
             feeTermsAcceptedAt: typeof body.feeTermsAcceptedAt === "string" ? body.feeTermsAcceptedAt : null,
             businessPhone: typeof body.businessPhone === "string" ? body.businessPhone : null,
             accounts
@@ -258,6 +261,96 @@ export async function createPayoutAccounts(input: PayoutSetupInput): Promise<Set
     }
 
     return { kind: "error", message }
+}
+
+export type ChangeOutcome =
+    | { kind: "success", accounts: PayoutAccount[] }
+    | { kind: "incomplete", message: string, accounts: PayoutAccount[] }// one provider did not update
+    | { kind: "password-incorrect", message: string }
+    | { kind: "unchanged", message: string }
+    | { kind: "not-set-up", message: string }
+    | { kind: "in-progress", message: string }
+    | { kind: "invalid-account", message: string }
+    | { kind: "unauthorized" }
+    | { kind: "error", message: string }
+
+// Moves the payouts to a different bank account. The seller's password is required, because
+// changing where the money goes is what someone with a stolen session would try.
+export async function changePayoutAccount(input: { bankId: string, accountNumber: string, password: string }): Promise<ChangeOutcome> {
+    const result = await apiRequest<{ accounts: PayoutAccount[] }>("/seller/payout/accounts", {
+        method: "PUT",
+        body: input
+    })
+
+    if (result.kind === "ok") {
+        const accounts = readAccounts(result.data.accounts)
+        return accounts ? { kind: "success", accounts } : { kind: "error", message: UNEXPECTED_RESPONSE_MESSAGE }
+    }
+
+    if (result.kind === "unauthorized") {
+        return { kind: "unauthorized" }
+    }
+
+    if (result.kind === "network-error") {
+        return { kind: "error", message: NETWORK_MESSAGE }
+    }
+
+    const accounts = isPlainRecord(result.body) ? readAccounts(result.body.accounts) : null
+
+    if (result.status === 502 && result.code === "PAYOUT_SETUP_INCOMPLETE" && accounts) {
+        return { kind: "incomplete", message: result.message, accounts }
+    }
+
+    switch (result.code) {
+        case "PAYOUT_PASSWORD_INCORRECT":
+            return { kind: "password-incorrect", message: "That password is not correct." }
+        case "PAYOUT_ACCOUNT_UNCHANGED":
+            return { kind: "unchanged", message: result.message }
+        case "PAYOUT_ACCOUNTS_NOT_SET_UP":
+            return { kind: "not-set-up", message: result.message }
+        case "PAYOUT_SETUP_IN_PROGRESS":
+            return { kind: "in-progress", message: result.message }
+        case "PAYOUT_ACCOUNT_INVALID":
+            return { kind: "invalid-account", message: result.message }
+        default:
+            return { kind: "error", message: result.message }
+    }
+}
+
+// Records that the seller accepts the current payout terms. Refunds are only recovered from the
+// later sales of sellers who have.
+export async function acceptPayoutTerms(feeTermsVersion: string): Promise<{ kind: "ok" } | { kind: "outdated", message: string } | { kind: "unauthorized" } | { kind: "error", message: string }> {
+    const result = await apiRequest<unknown>("/seller/payout/terms", { method: "POST", body: { feeTermsVersion } })
+
+    if (result.kind === "ok") {
+        return { kind: "ok" }
+    }
+
+    if (result.kind === "unauthorized") {
+        return { kind: "unauthorized" }
+    }
+
+    if (result.kind === "failed" && result.code === "PAYOUT_FEE_TERMS_OUTDATED") {
+        return { kind: "outdated", message: result.message }
+    }
+
+    return { kind: "error", message: failureMessage(result) }
+}
+
+function isSellerLiabilities(value: unknown): value is SellerLiabilities {
+    return (
+        isPlainRecord(value) &&
+        typeof value.termsAccepted === "boolean" &&
+        isPlainRecord(value.feeTerms) &&
+        typeof value.feeTerms.version === "string" &&
+        typeof value.feeTerms.text === "string" &&
+        typeof value.outstanding === "string" &&
+        Array.isArray(value.liabilities)
+    )
+}
+
+export function fetchSellerLiabilities(signal?: AbortSignal) {
+    return apiRequest<SellerLiabilities>("/seller/liabilities", { signal, isValid: isSellerLiabilities })
 }
 
 // Mirrors the backend: a Nigerian mobile number as 0XXXXXXXXXX, 234XXXXXXXXXX or +234XXXXXXXXXX,
