@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
+import LogoutDialog from "./LogoutDialog"
 import { HomeIcon } from "./Icons"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 import { fetchComplaintsAwaitingSeller } from "../lib/disputeApi"
@@ -14,13 +15,15 @@ type NavbarProps = {
     userRole: UserRole | null
     isAdmin: boolean
     onLogout: () => Promise<void>
+    onLogoutAll: () => Promise<void>
 }
 
-function Navbar ({authStatus, userRole, isAdmin, onLogout}: NavbarProps){
+function Navbar ({authStatus, userRole, isAdmin, onLogout, onLogoutAll}: NavbarProps){
 
     const {pathname} = useLocation()
     const navigate = useNavigate()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
     const [logoutError, setLogoutError] = useState("")
     const [awaitingCount, setAwaitingCount] = useState(0)
     const [complaintCount, setComplaintCount] = useState(0)
@@ -58,12 +61,14 @@ function Navbar ({authStatus, userRole, isAdmin, onLogout}: NavbarProps){
         return () => controller.abort()
     }, [isSeller, pathname])
 
-    async function handleLogout() {
+    // Logs out of this device only, or of every device, then goes to the home page.
+    async function handleLogout(everywhere: boolean) {
         setIsLoggingOut(true)
         setLogoutError("")
 
         try {
-            await onLogout()
+            await (everywhere ? onLogoutAll() : onLogout())
+            setIsLogoutDialogOpen(false)
             navigate("/")
         } catch (error) {
             setLogoutError(
@@ -129,8 +134,8 @@ function Navbar ({authStatus, userRole, isAdmin, onLogout}: NavbarProps){
                                 {userRole === "SELLER" && pathname !== "/seller/myListing" && (
                                     <Link to="/seller/myListing" className="header-link">My store</Link>
                                 )}
-                                <button type="button" className="btn-text" onClick={handleLogout} disabled={isLoggingOut}>
-                                    {isLoggingOut ? "Logging out..." : "Logout"}
+                                <button type="button" className="btn-text" onClick={() => { setLogoutError(""); setIsLogoutDialogOpen(true) }}>
+                                    Logout
                                 </button>
                             </>
                         ) : (
@@ -142,7 +147,14 @@ function Navbar ({authStatus, userRole, isAdmin, onLogout}: NavbarProps){
                     </nav>
                 )}
             </header>
-            {logoutError && <p role="alert" className="alert alert-error">{logoutError}</p>}
+            <LogoutDialog
+                isOpen={isLogoutDialogOpen}
+                isWorking={isLoggingOut}
+                error={logoutError}
+                onClose={() => setIsLogoutDialogOpen(false)}
+                onLogout={() => handleLogout(false)}
+                onLogoutAll={() => handleLogout(true)}
+            />
         </>
     )
 }

@@ -87,6 +87,23 @@ function App() {
     setIsAdmin(false)
   }
 
+  // Ends every login of this account on every device, this one included.
+  async function handleLogoutAll() {
+    const response = await apiFetch("/users/logout-all", {
+      method: "POST",
+      credentials: "include"
+    })
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, `Unable to log out on all devices (status ${response.status}).`))
+    }
+
+    clearPendingCartItem()
+    setAuthStatus("unauthenticated")
+    setUserRole(null)
+    setIsAdmin(false)
+  }
+
   const retryAuthCheck = useCallback(() => {
     setAuthStatus("loading")
     setAuthCheckAttempt((attempt) => attempt + 1)
@@ -158,7 +175,7 @@ function App() {
     <BrowserRouter>
       <SkipLink />
       <ScrollToTop />
-      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} onLogout={handleLogout} />
+      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
       <main id="main" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<DiscoveryPage userRole={userRole} />} />

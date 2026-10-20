@@ -264,3 +264,47 @@
   line-height: 1.25rem;
   text-align: center;
 }
+
+/* The Logout choice: a small modal dialog */
+.logout-dialog {
+  width: min(calc(100vw - 2rem), 24rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+}
+
+.logout-dialog::backdrop {
+  background: rgba(36, 41, 35, 0.65);
+}
+
+.logout-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+}
+
+.logout-dialog-body h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.logout-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.logout-option .field-help {
+  margin: 0;
+}
+
+.logout-dialog-body .alert {
+  margin: 0;
+}
+
+.logout-dialog-body > .btn-text {
+  align-self: center;
+}
