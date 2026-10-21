@@ -267,6 +267,7 @@ export type ChangeOutcome =
     | { kind: "success", accounts: PayoutAccount[] }
     | { kind: "incomplete", message: string, accounts: PayoutAccount[] }// one provider did not update
     | { kind: "password-incorrect", message: string }
+    | { kind: "password-required", message: string }// an account made with Google that has not set a password yet
     | { kind: "unchanged", message: string }
     | { kind: "not-set-up", message: string }
     | { kind: "in-progress", message: string }
@@ -304,6 +305,8 @@ export async function changePayoutAccount(input: { bankId: string, accountNumber
     switch (result.code) {
         case "PAYOUT_PASSWORD_INCORRECT":
             return { kind: "password-incorrect", message: "That password is not correct." }
+        case "PAYOUT_PASSWORD_REQUIRED":
+            return { kind: "password-required", message: result.message }
         case "PAYOUT_ACCOUNT_UNCHANGED":
             return { kind: "unchanged", message: result.message }
         case "PAYOUT_ACCOUNTS_NOT_SET_UP":

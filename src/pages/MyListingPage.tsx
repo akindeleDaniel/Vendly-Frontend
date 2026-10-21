@@ -330,7 +330,6 @@ function MyListingsPage() {
                 <div className="action-row">
                   {storeName && <Link to="/seller/profile/edit" className="btn">Edit store details</Link>}
                   {storeName && <Link to="/seller/payouts" className="btn">Payout settings</Link>}
-                  <Link to="/change-password" className="btn">Change password</Link>
                   {storeSlug && (
                     <button type="button" onClick={handleCopyShopLink}>
                       {linkCopied ? "Copied!" : "Copy shop link"}

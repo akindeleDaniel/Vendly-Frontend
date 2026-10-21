@@ -4,14 +4,18 @@ type LogoutDialogProps = {
     isOpen: boolean
     isWorking: boolean
     error: string
+    // False for an account made with Google that has not set a password: the last option then says "Set".
+    hasPassword: boolean
     onClose: () => void
     onLogout: () => void
     onLogoutAll: () => void
+    onPassword: () => void
 }
 
-// What Logout offers: end the login on this device, or on every device. It is a real modal dialog,
-// so the keyboard stays inside it and Escape closes it.
-function LogoutDialog({ isOpen, isWorking, error, onClose, onLogout, onLogoutAll }: LogoutDialogProps) {
+// What Logout offers: end the login on this device, or on every device, or go to the password page
+// (set one, or change it). It is a real modal dialog, so the keyboard stays inside it and Escape
+// closes it.
+function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout, onLogoutAll, onPassword }: LogoutDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null)
 
     useEffect(() => {
@@ -41,7 +45,7 @@ function LogoutDialog({ isOpen, isWorking, error, onClose, onLogout, onLogoutAll
             }}
         >
             <div className="logout-dialog-body">
-                <h2 id="logout-dialog-title">Log out</h2>
+                <h2 id="logout-dialog-title">Your account</h2>
 
                 <div className="logout-option">
                     <button type="button" className="btn btn-primary btn-block" disabled={isWorking} onClick={onLogout}>
@@ -56,6 +60,17 @@ function LogoutDialog({ isOpen, isWorking, error, onClose, onLogout, onLogoutAll
                     </button>
                     <p className="field-help">
                         Ends your login on every phone and computer. Use it if a device was lost or someone else may have used your account.
+                    </p>
+                </div>
+
+                <div className="logout-option logout-option-separated">
+                    <button type="button" className="btn btn-block" disabled={isWorking} onClick={onPassword}>
+                        {hasPassword ? "Change password" : "Set a password"}
+                    </button>
+                    <p className="field-help">
+                        {hasPassword
+                            ? "Choose a new password. This logs you out on your other devices."
+                            : "You signed in with Google. Add a password to log in with your email too."}
                     </p>
                 </div>
 

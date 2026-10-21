@@ -557,3 +557,38 @@
   flex-direction: column;
   justify-content: center;
 }
+
+/* "Continue with Google": Google draws the button, the page only gives it room */
+.google-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.google-button-wrap {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.google-button-wrap.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}

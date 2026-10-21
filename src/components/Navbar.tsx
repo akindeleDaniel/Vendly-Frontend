@@ -14,11 +14,12 @@ type NavbarProps = {
     authStatus: AuthStatus
     userRole: UserRole | null
     isAdmin: boolean
+    hasPassword: boolean
     onLogout: () => Promise<void>
     onLogoutAll: () => Promise<void>
 }
 
-function Navbar ({authStatus, userRole, isAdmin, onLogout, onLogoutAll}: NavbarProps){
+function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogoutAll}: NavbarProps){
 
     const {pathname} = useLocation()
     const navigate = useNavigate()
@@ -151,9 +152,11 @@ function Navbar ({authStatus, userRole, isAdmin, onLogout, onLogoutAll}: NavbarP
                 isOpen={isLogoutDialogOpen}
                 isWorking={isLoggingOut}
                 error={logoutError}
+                hasPassword={hasPassword}
                 onClose={() => setIsLogoutDialogOpen(false)}
                 onLogout={() => handleLogout(false)}
                 onLogoutAll={() => handleLogout(true)}
+                onPassword={() => { setIsLogoutDialogOpen(false); navigate("/change-password") }}
             />
         </>
     )

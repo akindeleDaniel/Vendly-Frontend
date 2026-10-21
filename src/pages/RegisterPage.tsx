@@ -2,10 +2,13 @@ import { useId, useState } from "react"
 import { Link } from "react-router-dom"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
-import { checkPassword, registerAccount } from "../lib/accountApi"
+import { checkPassword, registerAccount, resendCode, verifyCode } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import AuthShell from "../components/AuthShell"
 import CodeEntryForm from "../components/CodeEntryForm"
+import GoogleSignInButton from "../components/GoogleSignInButton"
+import GoogleSteps from "../components/GoogleSteps"
+import { useGoogleSignIn } from "../lib/useGoogleSignIn"
 import Notice from "../components/Notice"
 
 type User = {
@@ -32,6 +35,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
     const [codeSentTo, setCodeSentTo] = useState<string | null>(null)// set once the confirmation code has been emailed
+    const google = useGoogleSignIn(onLogin, role)// this page already knows whether the person is a buyer or a seller
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -67,12 +71,17 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
         setCodeSentTo(outcome.email)
     }
 
+    if (google.step !== null) {
+        return <GoogleSteps google={google} />
+    }
+
     if (codeSentTo !== null) {
         return (
             <AuthShell title="Check your email">
                 <CodeEntryForm
                     email={codeSentTo}
-                    purpose="VERIFY_EMAIL"
+                    verify={(code) => verifyCode("VERIFY_EMAIL", codeSentTo, code)}
+                    resend={() => resendCode("VERIFY_EMAIL", codeSentTo)}
                     submitLabel="Confirm and continue"
                     backLabel="Use a different email"
                     onVerified={onLogin}
@@ -118,6 +127,8 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                 <p id={passwordHintId} className="field-help">At least 10 characters. Avoid common passwords.</p>
                 {error && <Notice kind="error">{error}</Notice>}
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Create account"}</button>
+                <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
+                {google.error && <Notice kind="error">{google.error}</Notice>}
             </form>
             <p className="form-footer">Already have an account? <Link to={"/login"}>Log in</Link></p>
         </AuthShell>

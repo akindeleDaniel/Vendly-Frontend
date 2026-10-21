@@ -35,6 +35,64 @@ function errorOf(result: Failed): { kind: "error", message: string } {
     return { kind: "error", message: failureMessage(result) }
 }
 
+export type GoogleOutcome =
+    | { kind: "logged-in", role: UserRole, isNewAccount: boolean }
+    | { kind: "role-required", name: string, email: string }// a new person: ask buyer or seller, then send the same token again
+    | { kind: "link-required", email: string }// an account with this email exists: a code was emailed to link Google to it
+    | { kind: "otp-required", email: string }// an administrator, who always enters an emailed code
+    | { kind: "error", message: string }
+
+// Signs in (or signs up) with the token Google's button gives the browser. The backend checks the
+// token itself. `role` is only needed for someone new.
+export async function googleSignIn(credential: string, role?: UserRole): Promise<GoogleOutcome> {
+    const result = await apiRequest<unknown>("/users/google", {
+        method: "POST",
+        body: role ? { credential, role } : { credential }
+    })
+
+    if (result.kind !== "ok") {
+        return errorOf(result)
+    }
+
+    const data = result.data
+    const loggedInRole = readRole(data)
+
+    if (loggedInRole) {
+        return { kind: "logged-in", role: loggedInRole, isNewAccount: isRecord(data) && data.isNewAccount === true }
+    }
+
+    if (isRecord(data) && data.roleRequired === true) {
+        return {
+            kind: "role-required",
+            name: typeof data.name === "string" ? data.name : "",
+            email: typeof data.email === "string" ? data.email : ""
+        }
+    }
+
+    if (isRecord(data) && data.linkRequired === true) {
+        return { kind: "link-required", email: typeof data.email === "string" ? data.email : "" }
+    }
+
+    if (isRecord(data) && data.otpRequired === true) {
+        return { kind: "otp-required", email: typeof data.email === "string" ? data.email : "" }
+    }
+
+    return { kind: "error", message: "We received an unexpected response from the server. Please try again." }
+}
+
+// Finishes linking Google to an existing account with the code that was emailed. A correct code logs
+// the person in.
+export async function googleLink(credential: string, code: string): Promise<VerifyOutcome> {
+    const result = await apiRequest<unknown>("/users/google/link", { method: "POST", body: { credential, code } })
+
+    if (result.kind !== "ok") {
+        return errorOf(result)
+    }
+
+    const role = readRole(result.data)
+    return role ? { kind: "ok", role } : { kind: "error", message: "Unable to determine account role. Please try again." }
+}
+
 export type RegisterOutcome =
     | { kind: "code-sent", email: string }
     | { kind: "error", message: string }
@@ -122,6 +180,18 @@ export async function requestPasswordReset(email: string): Promise<MessageOutcom
 export async function resetPassword(email: string, code: string, newPassword: string): Promise<MessageOutcome> {
     const result = await apiRequest<unknown>("/users/reset-password", { method: "POST", body: { email, code, newPassword } })
     return result.kind === "ok" ? { kind: "ok", message: readMessage(result.data, "Your password has been changed.") } : errorOf(result)
+}
+
+// For an account made with Google, which has no password yet: emails a code to confirm it is them.
+export async function sendSetPasswordCode(): Promise<MessageOutcome> {
+    const result = await apiRequest<unknown>("/users/set-password/send-code", { method: "POST", body: {} })
+    return result.kind === "ok" ? { kind: "ok", message: readMessage(result.data, "We have emailed you a code.") } : errorOf(result)
+}
+
+// Adds a password to an account that has none. This device stays logged in; every other device is logged out.
+export async function setPassword(code: string, newPassword: string): Promise<MessageOutcome> {
+    const result = await apiRequest<unknown>("/users/set-password", { method: "POST", body: { code, newPassword } })
+    return result.kind === "ok" ? { kind: "ok", message: readMessage(result.data, "Your password has been set.") } : errorOf(result)
 }
 
 // The person stays logged in on this device; every other device is logged out.

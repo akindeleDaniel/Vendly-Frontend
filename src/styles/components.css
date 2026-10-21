@@ -308,3 +308,29 @@
 .logout-dialog-body > .btn-text {
   align-self: center;
 }
+
+.logout-option-separated {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.logout-dialog-body > p {
+  margin: 0;
+}
+
+/* A back arrow with no text, at the top of a page */
+.back-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  margin: 0 0 var(--space-1) calc(var(--space-3) * -1);
+  border-radius: 50%;
+  color: var(--color-forest);
+}
+
+.back-arrow:hover {
+  background: var(--color-forest-tint);
+  color: var(--color-forest-hover);
+}

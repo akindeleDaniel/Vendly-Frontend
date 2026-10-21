@@ -2,10 +2,13 @@ import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
-import { logIn } from "../lib/accountApi"
+import { logIn, resendCode, verifyCode } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import AuthShell from "../components/AuthShell"
 import CodeEntryForm from "../components/CodeEntryForm"
+import GoogleSignInButton from "../components/GoogleSignInButton"
+import GoogleSteps from "../components/GoogleSteps"
+import { useGoogleSignIn } from "../lib/useGoogleSignIn"
 import Notice from "../components/Notice"
 import type { CodePurpose } from "../lib/accountApi"
 
@@ -40,6 +43,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
     const [codeStep, setCodeStep] = useState<CodeStep | null>(null)
+    const google = useGoogleSignIn(onLogin)
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -77,12 +81,17 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
         }
     }
 
+    if (google.step !== null) {
+        return <GoogleSteps google={google} />
+    }
+
     if (codeStep !== null) {
         return (
             <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter the code we emailed you" : "Confirm your email"}>
                 <CodeEntryForm
                     email={codeStep.email}
-                    purpose={codeStep.purpose}
+                    verify={(code) => verifyCode(codeStep.purpose, codeStep.email, code)}
+                    resend={() => resendCode(codeStep.purpose, codeStep.email)}
                     notice={codeStep.notice}
                     submitLabel={codeStep.purpose === "LOGIN" ? "Log in" : "Confirm and continue"}
                     backLabel={codeStep.purpose === "LOGIN" ? "Log in with a different account" : "Use a different email"}
@@ -119,6 +128,8 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
                 </label>
                 {error && <Notice kind="error">{error}</Notice>}
                 <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Log in"}</button>
+                <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
+                {google.error && <Notice kind="error">{google.error}</Notice>}
                 <p className="form-footer"><Link to="/forgot-password">Forgot your password?</Link></p>
             </form>
             <p className="form-footer">Don't have an account? <Link to={"/register"}>Register</Link></p>

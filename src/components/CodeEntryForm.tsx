@@ -2,8 +2,7 @@ import { useId, useState } from "react"
 import CodeInput, { CODE_LENGTH } from "./CodeInput"
 import { RotateIcon } from "./Icons"
 import Notice from "./Notice"
-import { resendCode, verifyCode } from "../lib/accountApi"
-import type { CodePurpose } from "../lib/accountApi"
+import type { MessageOutcome, VerifyOutcome } from "../lib/accountApi"
 import { useCooldown } from "../lib/useCooldown"
 import type { UserRole } from "../types/user"
 
@@ -11,7 +10,10 @@ const RESEND_WAIT_SECONDS = 60
 
 type CodeEntryFormProps = {
     email: string
-    purpose: CodePurpose
+    // Checks the code. A correct one logs the person in.
+    verify: (code: string) => Promise<VerifyOutcome>
+    // Asks for a new code.
+    resend: () => Promise<MessageOutcome>
     submitLabel: string
     // Shown above the code boxes, for example why a code is needed.
     notice?: string
@@ -23,7 +25,7 @@ type CodeEntryFormProps = {
 
 // Asks for the 6-digit code that was just emailed. A correct code logs the person in. The backend
 // sends nothing if a new code is asked for within a minute, so the resend button waits 60 seconds.
-function CodeEntryForm({ email, purpose, submitLabel, notice, backLabel, onVerified, onBack }: CodeEntryFormProps) {
+function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, onVerified, onBack }: CodeEntryFormProps) {
     const helpId = useId()
     const [code, setCode] = useState("")
     const [isChecking, setIsChecking] = useState(false)
@@ -42,7 +44,7 @@ function CodeEntryForm({ email, purpose, submitLabel, notice, backLabel, onVerif
         setIsChecking(true)
         setError("")
         setResendMessage("")
-        const outcome = await verifyCode(purpose, email, code)
+        const outcome = await verify(code)
         setIsChecking(false)
 
         if (outcome.kind === "ok") {
@@ -61,7 +63,7 @@ function CodeEntryForm({ email, purpose, submitLabel, notice, backLabel, onVerif
         setIsResending(true)
         setError("")
         setResendMessage("")
-        const outcome = await resendCode(purpose, email)
+        const outcome = await resend()
         setIsResending(false)
 
         if (outcome.kind === "ok") {

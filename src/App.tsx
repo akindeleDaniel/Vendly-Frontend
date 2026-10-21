@@ -19,7 +19,9 @@ import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
 import AdminShell from "./components/AdminShell"
 import NotFoundPage from "./pages/NotFoundPage"
 import ProductPage from "./pages/ProductPage"
-import ChangePasswordPage from "./pages/ChangePasswordPage"
+import PasswordPage from "./pages/PasswordPage"
+import SetPasswordPrompt from "./components/SetPasswordPrompt"
+import { clearPasswordPromptDismissed } from "./lib/passwordPrompt"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import AdminLiabilitiesPage from "./pages/AdminLiabilitiesPage"
 import AdminRecoveryCasesPage from "./pages/AdminRecoveryCasesPage"
@@ -43,6 +45,8 @@ function isUserRole(value: unknown): value is UserRole {
 function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>("loading")// starts as loading since the session is still being checked
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [loginCount, setLoginCount] = useState(0)// a new login starts the "set a password" pop-up afresh
+  const [hasPassword, setHasPassword] = useState(true)// false for an account made with Google that has not set one
   const [isAdmin, setIsAdmin] = useState(false)// only decides what to show; the backend checks it on every admin request
   const [sessionExpired, setSessionExpired] = useState(false)
   const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
@@ -52,13 +56,15 @@ function App() {
     authStatusRef.current = authStatus
   }, [authStatus])
 
-  // The login response does not say whether the person is an administrator, so ask the session check.
-  async function refreshAdminFlag() {
+  // The login response does not say whether the person is an administrator or has a password, so
+  // ask the session check.
+  async function refreshAccountFlags() {
     try {
       const response = await apiFetch("/users/check", { credentials: "include" })
       if (response.ok) {
         const data: unknown = await response.json()
         setIsAdmin(typeof data === "object" && data !== null && "isAdmin" in data && data.isAdmin === true)
+        setHasPassword(!(typeof data === "object" && data !== null && "hasPassword" in data && data.hasPassword === false))
       }
     } catch {
       // The admin link simply stays hidden.
@@ -72,7 +78,9 @@ function App() {
     setUserRole(role)
     setAuthStatus("authenticated")
     setSessionExpired(false)
-    void refreshAdminFlag()
+    clearPasswordPromptDismissed()
+    setLoginCount((count) => count + 1)
+    void refreshAccountFlags()
   }
 
   async function handleLogout() {
@@ -156,6 +164,7 @@ function App() {
         if (typeof data === "object" && data !== null && "role" in data && isUserRole(data.role)) {
           setUserRole(data.role)
           setIsAdmin("isAdmin" in data && data.isAdmin === true)
+          setHasPassword(!("hasPassword" in data && data.hasPassword === false))
           setAuthStatus("authenticated")
         } else {
           setAuthStatus("error")
@@ -179,7 +188,8 @@ function App() {
     <BrowserRouter>
       <SkipLink />
       <ScrollToTop />
-      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
+      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} hasPassword={hasPassword} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
+      <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
       <main id="main" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
@@ -194,13 +204,13 @@ function App() {
 
           <Route path="/forgot-password" element={<RedirectIfAuthenticated {...guardProps}><ForgotPasswordPage /></RedirectIfAuthenticated>} />
 
-          <Route path="/change-password" element={<RequireSession {...guardProps}><ChangePasswordPage backTo={userRole === "SELLER" ? "/seller/myListing" : "/orders"} /></RequireSession>} />
+          <Route path="/change-password" element={<RequireSession {...guardProps}><PasswordPage hasPassword={hasPassword} backTo={userRole === "SELLER" ? "/seller/myListing" : "/orders"} onPasswordSet={() => void refreshAccountFlags()} /></RequireSession>} />
 
           <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
           <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
 
-          <Route path="/seller/payouts" element={<RequireRole role="SELLER" {...guardProps}><PayoutSettingsPage /></RequireRole>} />
+          <Route path="/seller/payouts" element={<RequireRole role="SELLER" {...guardProps}><PayoutSettingsPage hasPassword={hasPassword} /></RequireRole>} />
 
           <Route path="/seller/orders" element={<RequireRole role="SELLER" {...guardProps}><SellerOrdersPage /></RequireRole>} />
 

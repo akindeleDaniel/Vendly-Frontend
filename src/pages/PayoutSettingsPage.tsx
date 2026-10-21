@@ -62,7 +62,7 @@ function ProviderStatusList({ accounts }: { accounts: PayoutAccount[] }) {
     )
 }
 
-function PayoutSettingsPage() {
+function PayoutSettingsPage({ hasPassword }: { hasPassword: boolean }) {
     const navigate = useNavigate()
     const termsId = useId()
     const phoneErrorId = useId()
@@ -327,6 +327,12 @@ function PayoutSettingsPage() {
 
                 <section aria-labelledby="change-bank-heading" className="card form-card">
                     <h2 id="change-bank-heading">Change your bank account</h2>
+                    {!hasPassword ? (
+                        <Notice kind="info">
+                            <p>You signed up with Google, so your account has no password yet. A password is needed to change your bank account.</p>
+                            <Link to="/change-password" className="btn">Set a password</Link>
+                        </Notice>
+                    ) : (
                     <ChangeBankAccountForm
                         banks={banks}
                         onChanged={(updatedAccounts, fullyDone) => {
@@ -335,6 +341,7 @@ function PayoutSettingsPage() {
                             void refreshOverview()
                         }}
                     />
+                    )}
                 </section>
                 </>
             ) : (
