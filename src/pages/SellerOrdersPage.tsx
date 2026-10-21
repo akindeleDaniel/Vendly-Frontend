@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import BackArrow from "../components/BackArrow"
 import DeliveryAddressBlock from "../components/DeliveryAddressBlock"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
@@ -60,6 +61,7 @@ function SellerOrdersPage() {
 
     return (
         <div>
+            <BackArrow to="/seller/myListing" label="Back to my store" />
             <h1>Orders</h1>
             <p>Your paid orders. Fees are what the payment provider deducted from your share before paying you.</p>
 

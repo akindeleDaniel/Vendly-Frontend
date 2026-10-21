@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
+import BackArrow from "../components/BackArrow"
 import DeliveryAddressBlock from "../components/DeliveryAddressBlock"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
@@ -35,6 +36,7 @@ function SellerOrderDetailPage() {
     if (outcome.kind !== "ok") {
         return (
             <div>
+                <BackArrow to="/seller/orders" label="Back to orders" />
                 <h1>Order</h1>
                 {outcome.kind === "not-found" && <Notice kind="warning">We could not find this order.</Notice>}
                 {outcome.kind === "unauthorized" && <Notice kind="warning">Your session has ended. Please log in again.</Notice>}
@@ -44,7 +46,6 @@ function SellerOrderDetailPage() {
                         <button type="button" onClick={() => { setOutcome(null); setAttempt((count) => count + 1) }}>Try again</button>
                     </Notice>
                 )}
-                <Link to="/seller/orders">Back to orders</Link>
             </div>
         )
     }
@@ -52,6 +53,7 @@ function SellerOrderDetailPage() {
     const order = outcome.data
     return (
         <div>
+            <BackArrow to="/seller/orders" label="Back to orders" />
             <h1>Order {order.id}</h1>
             <dl className="card status-list">
                 <div><dt>Status</dt><dd><span className="badge">{describeOrderStatus(order, "seller")}</span></dd></div>
@@ -98,7 +100,6 @@ function SellerOrderDetailPage() {
                 <p className="form-hint">The provider pays this to your payout account on its usual settlement schedule.</p>
             </section>
 
-            <Link to="/seller/orders">Back to orders</Link>
         </div>
     )
 }

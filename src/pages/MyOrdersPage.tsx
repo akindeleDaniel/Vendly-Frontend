@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import BuyerOrderExtras from "../components/BuyerOrderExtras"
+import BackArrow from "../components/BackArrow"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
@@ -66,6 +67,7 @@ function MyOrdersPage() {
     if (outcome.kind !== "ok") {
         return (
             <div>
+                <BackArrow to="/" label="Back to the home page" />
                 <h1>My orders</h1>
                 {outcome.kind === "error" && (
                     <Notice kind="error">
@@ -82,10 +84,10 @@ function MyOrdersPage() {
 
     return (
         <div>
+            <BackArrow to="/" label="Back to the home page" />
             <h1>My orders</h1>
             <p className="page-links">
                 <Link to="/disputes">Your complaints</Link>
-                <Link to="/change-password">Change password</Link>
             </p>
             {orders.length === 0 ? (
                 <>

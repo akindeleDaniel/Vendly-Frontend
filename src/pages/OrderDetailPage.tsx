@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import BuyerOrderExtras from "../components/BuyerOrderExtras"
+import BackArrow from "../components/BackArrow"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
@@ -34,10 +35,10 @@ function OrderDetailPage() {
     if (outcome.kind !== "ok") {
         return (
             <div>
+                <BackArrow to="/orders" label="Back to my orders" />
                 <h1>Order</h1>
                 {outcome.kind === "not-found" && <Notice kind="warning">We could not find this order.</Notice>}
                 {outcome.kind === "error" && <Notice kind="error">{outcome.message}</Notice>}
-                <Link to="/orders">Back to my orders</Link>
             </div>
         )
     }
@@ -46,6 +47,7 @@ function OrderDetailPage() {
 
     return (
         <div>
+            <BackArrow to="/orders" label="Back to my orders" />
             <h1>Order {order.id}</h1>
             <dl className="card status-list">
                 <div><dt>Status</dt><dd><span className="badge">{formatOrderStatus(order.status)}</span></dd></div>
@@ -95,7 +97,6 @@ function OrderDetailPage() {
                 {order.delivery.instructions && <p>Instructions: {order.delivery.instructions}</p>}
             </section>
 
-            <Link to="/orders">Back to my orders</Link>
         </div>
     )
 }

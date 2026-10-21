@@ -28,6 +28,15 @@ export function ChevronRightIcon({ size }: IconProps) {
     return <Icon size={size}><polyline points="9,6 15,12 9,18" /></Icon>
 }
 
+export function ArrowLeftIcon({ size = 24 }: IconProps) {
+    return (
+        <Icon size={size}>
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12,19 5,12 12,5" />
+        </Icon>
+    )
+}
+
 export function ChevronLeftIcon({ size = 18 }: IconProps) {
     return <Icon size={size}><polyline points="15,6 9,12 15,18" /></Icon>
 }
