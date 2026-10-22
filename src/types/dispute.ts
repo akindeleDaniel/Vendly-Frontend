@@ -70,6 +70,8 @@ export type Dispute = DisputeSummary & {
     }
     messages: DisputeMessage[]
     refunds: DisputeRefund[]
+    // After Vendly rejects a complaint the buyer can appeal once, within 7 days. The second decision is final.
+    appeal?: { canAppeal: boolean, appealed: boolean, deadline: string | null }
     buyer?: { name: string, email: string }
     sellerContact?: { email: string }
 }

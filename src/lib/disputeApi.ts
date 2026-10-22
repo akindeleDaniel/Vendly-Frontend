@@ -62,6 +62,15 @@ export function withdrawDispute(viewer: "buyer" | "seller", id: number): Promise
     return apiRequest<DisputeBody>(`${BASE_PATHS[viewer]}/${id}/withdraw`, { method: "POST", body: {}, isValid: isDisputeBody })
 }
 
+// A buyer appeals a rejected complaint (once, within 7 days of the decision).
+export function appealDispute(id: number, message: string, evidenceUrls: string[]): Promise<ApiResult<DisputeBody>> {
+    return apiRequest<DisputeBody>(`/disputes/${id}/appeal`, {
+        method: "POST",
+        body: withOptional({ message }, evidenceUrls),
+        isValid: isDisputeBody
+    })
+}
+
 export type OpenDisputeInput = {
     reason: string
     message: string
@@ -139,6 +148,11 @@ export function approveDispute(id: number, input: ApproveDisputeInput): Promise<
 
 export function rejectDispute(id: number, note: string): Promise<ApiResult<DisputeBody>> {
     return apiRequest<DisputeBody>(`/admin/disputes/${id}/reject`, { method: "POST", body: { note }, isValid: isDisputeBody })
+}
+
+// An administrator puts a rejected complaint back in the queue; both sides read the note.
+export function reopenDispute(id: number, note: string): Promise<ApiResult<DisputeBody>> {
+    return apiRequest<DisputeBody>(`/admin/disputes/${id}/reopen`, { method: "POST", body: { note }, isValid: isDisputeBody })
 }
 
 export const DISPUTE_FILTERS: Array<{ value: "" | DisputeStatus, label: string }> = [

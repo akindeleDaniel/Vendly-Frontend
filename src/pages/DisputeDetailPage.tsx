@@ -8,7 +8,9 @@ import Notice from "../components/Notice"
 import SellerRespondPanel from "../components/SellerRespondPanel"
 import { failureMessage } from "../lib/apiRequest"
 import type { ApiResult } from "../lib/apiRequest"
-import { getDispute, isDisputeClosed, postDisputeMessage, withdrawDispute } from "../lib/disputeApi"
+import { appealDispute, getDispute, isDisputeClosed, postDisputeMessage, withdrawDispute } from "../lib/disputeApi"
+import { formatShortDate } from "../lib/orderApi"
+import ReopenDisputePanel from "../components/ReopenDisputePanel"
 import type { DisputeViewer } from "../lib/disputeApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { Dispute } from "../types/dispute"
@@ -100,6 +102,9 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
     const needsSellerResponse = viewer === "seller" && dispute.status === "OPEN" && dispute.openedBy === "BUYER"
     const needsDecision = viewer === "admin" && (dispute.status === "SELLER_AGREED" || dispute.status === "UNDER_REVIEW")
 
+    const canAppeal = viewer === "buyer" && dispute.appeal?.canAppeal === true
+    const canReopen = viewer === "admin" && dispute.status === "RESOLVED" && dispute.outcome === "REJECTED"
+
     const messageForm = (
         <DisputeMessageForm
             label="Your message"
@@ -118,9 +123,31 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
                 {/* The seller's response and the administrator's decision are themselves messages in the
                     conversation, so a second message box is not shown beside them. An administrator can
                     still ask a question without deciding, from the folded section. */}
+                {canAppeal && (
+                    <section aria-labelledby="appeal-heading" className="card summary-card">
+                        <h2 id="appeal-heading">Appeal this decision</h2>
+                        <p>
+                            If you think Vendly got this wrong, tell us why and we will look at it again.
+                            {dispute.appeal?.deadline && <> You can appeal until {formatShortDate(dispute.appeal.deadline)}.</>}
+                        </p>
+                        <Notice kind="warning">You can appeal once, and the second decision is final.</Notice>
+                        <DisputeMessageForm
+                            label="Why should we look again?"
+                            submitLabel="Send appeal"
+                            onSend={(message, urls) => runAction(() => appealDispute(dispute.id, message, urls))}
+                        />
+                    </section>
+                )}
+
+                {canReopen && <ReopenDisputePanel dispute={dispute} onUpdated={(updated) => setState({ kind: "ready", dispute: updated })} />}
+
                 {isClosed ? (
                     <Notice kind="info">
-                        {dispute.status === "WITHDRAWN" ? "This was withdrawn, so it is closed." : "This has been decided and is closed."}
+                        {dispute.status === "WITHDRAWN"
+                            ? "This was withdrawn, so it is closed."
+                            : dispute.appeal?.appealed
+                                ? "This was appealed and decided again. The second decision is final."
+                                : "This has been decided and is closed."}
                     </Notice>
                 ) : needsSellerResponse ? null : needsDecision ? (
                     <details className="card summary-card admin-issue">
