@@ -334,3 +334,28 @@
   background: var(--color-forest-tint);
   color: var(--color-forest-hover);
 }
+
+/* "N new" beside a header link, and a "New" marker on a list item */
+.count-badge-new {
+  background: var(--color-amber);
+  color: var(--color-charcoal);
+}
+
+.badge-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.badge-new {
+  background: var(--color-amber);
+  color: var(--color-charcoal);
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}

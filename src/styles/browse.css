@@ -429,3 +429,27 @@
     padding: var(--space-5);
   }
 }
+
+/* The shop's delivery cost under its location */
+.shop-delivery {
+  margin: var(--space-1) 0 0;
+  font-weight: 600;
+}
+
+/* On sale / Archived switch on the seller's store page */
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.view-tab {
+  border-radius: var(--radius-pill);
+}
+
+.view-tab.is-active {
+  border-color: var(--color-forest);
+  background: var(--color-forest);
+  color: var(--color-cream);
+}
