@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import ListingCard from "../components/ListingCard"
+import Pagination from "../components/Pagination"
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "../components/Icons"
 import { CATEGORIES } from "../data/categories"
 import { apiFetch, getErrorMessage } from "../lib/api"
@@ -46,9 +47,13 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
   const search = (searchParams.get("search") ?? "").trim()
+  const pageParam = Number(searchParams.get("page"))
+  const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1
   const [searchText, setSearchText] = useState(search)
   useDocumentTitle(selectedCategory ?? (search ? "Search results" : null))
   const [products, setProducts] = useState<Listing[]>([])
+  const [productTotal, setProductTotal] = useState(0)
+  const [productPageSize, setProductPageSize] = useState(24)
   const [shops, setShops] = useState<ShopSummary[]>([])
   const [productRequestStatus, setProductRequestStatus] = useState<RequestStatus>("idle")
   const [shopRequestStatus, setShopRequestStatus] = useState<RequestStatus>("idle")
@@ -61,7 +66,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
   const showProducts = selectedCategory !== null || search !== ""
   // Results are tagged with the filters they were fetched for, so results from older filters are
   // never shown as if they matched the current ones (not even for the moment before a new fetch starts).
-  const productsQueryKey = JSON.stringify([selectedCategory, search])
+  const productsQueryKey = JSON.stringify([selectedCategory, search, page])
   const shopsQueryKey = JSON.stringify([selectedCategory, search, consumerLocation])
   const [productsKey, setProductsKey] = useState("")
   const [shopsKey, setShopsKey] = useState("")
@@ -87,6 +92,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
         }
         lastWrittenSearchRef.current = trimmed
         const next = new URLSearchParams(current)
+        next.delete("page")// a new search starts on the first page
         if (trimmed) {
           next.set("search", trimmed)
         } else {
@@ -108,8 +114,8 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     }
   }, [search])
 
-  // Products load for views 2 and 3 only. The backend decides the order (it shuffles the
-  // results), so they are shown exactly as received.
+  // Products load for views 2 and 3 only, one page at a time. The backend decides the order
+  // (newest first), so they are shown exactly as received.
   useEffect(() => {
     if (!showProducts) {
       return
@@ -122,6 +128,9 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     }
     if (search) {
       query.set("search", search)
+    }
+    if (page > 1) {
+      query.set("page", String(page))
     }
 
     async function fetchProducts() {
@@ -144,11 +153,16 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
           return
         }
 
-        const data: Listing[] = await response.json()
+        const data: { listings?: Listing[], total?: number, pageSize?: number } = await response.json()
         if (controller.signal.aborted) {
           return
         }
-        setProducts(data)
+        if (!Array.isArray(data.listings)) {
+          throw new Error("Unexpected products response")
+        }
+        setProducts(data.listings)
+        setProductTotal(typeof data.total === "number" ? data.total : data.listings.length)
+        setProductPageSize(typeof data.pageSize === "number" && data.pageSize > 0 ? data.pageSize : 24)
         setProductRequestStatus("success")
       } catch {
         if (controller.signal.aborted) {
@@ -162,7 +176,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     fetchProducts()
 
     return () => controller.abort()
-  }, [showProducts, selectedCategory, search, productsQueryKey, productRetryCount])
+  }, [showProducts, selectedCategory, search, page, productsQueryKey, productRetryCount])
 
   // The shops endpoint requires a category, so shops load for view 3 only.
   // Location ordering is done by the backend; the list is shown as received.
@@ -247,6 +261,19 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
     setShopRequestStatus("idle")
   }
 
+  function goToPage(nextPage: number) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (nextPage > 1) {
+        next.set("page", String(nextPage))
+      } else {
+        next.delete("page")
+      }
+      return next
+    }, { preventScrollReset: true })
+    document.getElementById("products-heading")?.scrollIntoView()
+  }
+
   const searchLabel = selectedCategory ? `Search in ${selectedCategory}` : "Search products"
 
   return (
@@ -320,6 +347,12 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
                 </li>
               ))}
             </ul>
+          )}
+          {visibleProductStatus === "success" && products.length === 0 && page > 1 && (
+            <button type="button" onClick={() => goToPage(1)}>Back to the first page</button>
+          )}
+          {visibleProductStatus === "success" && (
+            <Pagination page={page} pageSize={productPageSize} total={productTotal} onChange={goToPage} />
           )}
         </section>
       )}
