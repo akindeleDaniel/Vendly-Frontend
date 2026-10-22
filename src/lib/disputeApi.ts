@@ -103,6 +103,17 @@ export async function fetchComplaintsAwaitingSeller(signal?: AbortSignal): Promi
     return result.kind === "ok" ? result.data.count : null
 }
 
+// How many complaints have something new for this person. Null when it cannot be read, so the site
+// simply shows no count.
+export async function fetchUnreadComplaintCount(viewer: "buyer" | "seller", signal?: AbortSignal): Promise<number | null> {
+    const path = viewer === "seller" ? "/seller/disputes/unread" : "/disputes/unread"
+    const result = await apiRequest<{ count: number }>(path, {
+        signal,
+        isValid: (body): body is { count: number } => isRecord(body) && Number.isInteger(body.count)
+    })
+    return result.kind === "ok" ? result.data.count : null
+}
+
 export type ApproveDisputeInput = {
     note: string
     amount?: string

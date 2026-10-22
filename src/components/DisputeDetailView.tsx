@@ -37,7 +37,9 @@ function DisputeDetailView({ dispute, viewer, children }: DisputeDetailViewProps
                         <dd>
                             {viewer === "seller"
                                 ? <Link to={`/seller/orders/${dispute.orderId}`}>Order {dispute.orderId}</Link>
-                                : `Order ${dispute.orderId}`}
+                                : viewer === "buyer"
+                                    ? <Link to={`/orders/${dispute.checkoutId}`}>View the order</Link>
+                                    : <Link to={`/admin/orders/${dispute.orderId}`}>Order {dispute.orderId}</Link>}
                         </dd>
                     </div>
                     {viewer === "buyer" && dispute.seller && <div><dt>Seller</dt><dd>{dispute.seller.businessName}</dd></div>}

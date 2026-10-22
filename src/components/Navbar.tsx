@@ -5,7 +5,7 @@ import Logo from "./Logo"
 import LogoutDialog from "./LogoutDialog"
 import { HomeIcon } from "./Icons"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
-import { fetchComplaintsAwaitingSeller } from "../lib/disputeApi"
+import { fetchComplaintsAwaitingSeller, fetchUnreadComplaintCount } from "../lib/disputeApi"
 
 // Login and registration pages show a centred logo above the form instead of the header.
 const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register", "/forgot-password"]
@@ -28,6 +28,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
     const [logoutError, setLogoutError] = useState("")
     const [awaitingCount, setAwaitingCount] = useState(0)
     const [complaintCount, setComplaintCount] = useState(0)
+    const [unreadComplaints, setUnreadComplaints] = useState(0)
     const isConsumer = authStatus === "authenticated" && userRole === "CONSUMER"
     const isSeller = authStatus === "authenticated" && userRole === "SELLER"
 
@@ -63,6 +64,21 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
     }, [isSeller, pathname])
 
     // Logs out of this device only, or of every device, then goes to the home page.
+    // Complaints with something new in them for this person (a reply they have not opened).
+    useEffect(() => {
+        if (!isConsumer && !isSeller) {
+            return
+        }
+
+        const controller = new AbortController()
+        fetchUnreadComplaintCount(isSeller ? "seller" : "buyer", controller.signal).then((count) => {
+            if (!controller.signal.aborted) {
+                setUnreadComplaints(count ?? 0)
+            }
+        })
+        return () => controller.abort()
+    }, [isConsumer, isSeller, pathname])
+
     async function handleLogout(everywhere: boolean) {
         setIsLoggingOut(true)
         setLogoutError("")
@@ -127,10 +143,19 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
                                         {complaintCount > 0 && (
                                             <span className="count-badge" aria-label={`${complaintCount} waiting for your response`}>{complaintCount}</span>
                                         )}
+                                        {unreadComplaints > 0 && (
+                                            <span className="count-badge count-badge-new" aria-label={`${unreadComplaints} with something new`}>{unreadComplaints} new</span>
+                                        )}
+                                    </Link>
+                                )}
+                                {userRole === "CONSUMER" && unreadComplaints > 0 && pathname !== "/disputes" && (
+                                    <Link to="/disputes" className="header-link">
+                                        Complaints
+                                        <span className="count-badge count-badge-new" aria-label={`${unreadComplaints} with something new`}>{unreadComplaints} new</span>
                                     </Link>
                                 )}
                                 {isAdmin && !pathname.startsWith("/admin") && (
-                                    <Link to="/admin/complaints" className="header-link">Admin</Link>
+                                    <Link to="/admin" className="header-link">Admin</Link>
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/myListing" && (
                                     <Link to="/seller/myListing" className="header-link">My store</Link>

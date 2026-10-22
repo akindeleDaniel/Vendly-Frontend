@@ -18,6 +18,8 @@ export type DisputeAuthor = "BUYER" | "SELLER" | "ADMIN" | "SYSTEM"
 export type DisputeSummary = {
     id: number
     orderId: number
+    checkoutId: number// the shopper's order page is /orders/:checkoutId
+    unread?: boolean// in the buyer's and seller's lists: someone else wrote since this person last opened it
     reason: DisputeReason
     reasonLabel: string
     openedBy: "BUYER" | "SELLER"

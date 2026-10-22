@@ -102,7 +102,10 @@ function DisputeListPage({ viewer }: { viewer: DisputeViewer }) {
                                                 {dispute.openedBy === "SELLER" ? "Refund offer" : "Complaint"} {dispute.id}
                                             </Link>
                                         </h2>
-                                        <DisputeBadge dispute={dispute} viewer={viewer} />
+                                        <span className="badge-group">
+                                            {dispute.unread && <span className="badge badge-new">New</span>}
+                                            <DisputeBadge dispute={dispute} viewer={viewer} />
+                                        </span>
                                     </div>
                                     <p className="order-line-meta">
                                         {dispute.reasonLabel} · Order {dispute.orderId} · {formatShortDate(dispute.createdAt)}
