@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom"
+import AdminSellerStanding from "../components/AdminSellerStanding"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import { fetchAdminUser } from "../lib/adminLookupApi"
@@ -84,6 +85,8 @@ function AdminUserDetailPage() {
                     </div>
                 </dl>
             </section>
+
+            {user.role === "SELLER" && user.shop && <AdminSellerStanding userId={user.id} />}
         </div>
     )
 }
