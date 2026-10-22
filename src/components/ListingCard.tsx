@@ -6,7 +6,8 @@ import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
 import { CATEGORIES } from "../data/categories"
 import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
-import ImagePicker from "./ImagePicker"
+import ListingPhotosPicker from "./ListingPhotosPicker"
+import type { ListingPhoto } from "../lib/listingPhotos"
 
 type ListingCardProps = {
   listing: Listing
@@ -18,7 +19,8 @@ type ListingCardProps = {
   isSaving?: boolean
   saveError?: string
   setEditFormData?: (data: ListingFormData) => void
-  setEditImageFile?: (file: File | null) => void
+  editPhotos?: ListingPhoto[]
+  setEditPhotos?: (photos: ListingPhoto[]) => void
   handleEditClick?: (listing: Listing) => void
   handleDelete?: (id: number) => void
   isArchived?: boolean // an archived listing is off sale: it can only be restored
@@ -30,7 +32,7 @@ type ListingCardProps = {
   isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, isArchived, handleRestore, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, editPhotos, setEditPhotos, handleEditClick, handleDelete, isArchived, handleRestore, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
   const {
     quantity: selectedQuantity,
@@ -65,7 +67,6 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
     <div className={`product-card${isEditing ? " product-card-editing" : ""}`}>
       {isEditing ? (
         <>
-          {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} />}
           <label>
             Title
             <input name="title" maxLength={TITLE_MAX_LENGTH} value={editFormData!.title}
@@ -104,11 +105,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               ))}
             </select>
           </label>
-          <ImagePicker
-            label="Change photo (optional)"
-            onChange={(file) => setEditImageFile!(file)}
-            disabled={isSaving}
-          />
+          <ListingPhotosPicker photos={editPhotos!} onChange={(photos) => setEditPhotos!(photos)} disabled={isSaving} />
           {saveError && <p role="alert" className="alert alert-error">{saveError}</p>}
           {isEditable && <button type="button" className="btn btn-primary" onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
           {isEditable && <button type="button" onClick={handleCancel} disabled={isSaving}>Cancel</button>}

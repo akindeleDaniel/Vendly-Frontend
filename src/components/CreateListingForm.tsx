@@ -1,7 +1,8 @@
 import type { ListingFormData } from "../types/listing"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "../data/categories"
-import ImagePicker from "./ImagePicker"
+import ListingPhotosPicker from "./ListingPhotosPicker"
+import type { ListingPhoto } from "../lib/listingPhotos"
 import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
 
 export type CreateListingFormData = ListingFormData
@@ -10,11 +11,12 @@ type CreateListingFormProps = {
     formData: CreateListingFormData
     handleSubmit: SubmitEventHandler<HTMLFormElement>
     setFormData: (data: CreateListingFormData) => void
-    setImageFile: (file: File | null) => void
+    photos: ListingPhoto[]
+    setPhotos: (photos: ListingPhoto[]) => void
     isCreating: boolean
 }
 
-function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, isCreating}: CreateListingFormProps){
+function CreateListingForm ({handleSubmit, formData, setFormData, photos, setPhotos, isCreating}: CreateListingFormProps){
     return(
         <form onSubmit={handleSubmit}>
         <label>
@@ -67,7 +69,7 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, 
             ))}
           </select>
         </label>
-        <ImagePicker label="Photo" onChange={setImageFile} disabled={isCreating} />
+        <ListingPhotosPicker photos={photos} onChange={setPhotos} disabled={isCreating} />
         <button type="submit" className="btn-block btn-lg" disabled={isCreating}>{isCreating ? "Creating..." : "Create listing"}</button>
       </form>
     )

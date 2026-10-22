@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import type {ListingFormData, Listing} from "../types/listing"
 import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
-import { uploadImage } from "../lib/uploadImage"
+import { photosChanged, savedPhotos, uploadListingPhotos, type ListingPhoto } from "../lib/listingPhotos"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { apiRequest, failureMessage } from "../lib/apiRequest"
 import { validateListingFields } from "../lib/limits"
@@ -18,8 +18,8 @@ function MyListingsPage() {
     const [storeLogoUrl, setStoreLogoUrl] = useState<string>("")
     const [storeName, setStoreName] = useState<string>("")
     const [storeSlug, setStoreSlug] = useState<string>("")
-    const [imageFile, setImageFile] = useState<File | null>(null)
-    const [editImageFile, setEditImageFile] = useState<File | null>(null)
+    const [photos, setPhotos] = useState<ListingPhoto[]>([])
+    const [editPhotos, setEditPhotos] = useState<ListingPhoto[]>([])
     const [formKey, setFormKey] = useState(0)
     const [linkCopied, setLinkCopied] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
@@ -80,8 +80,8 @@ function MyListingsPage() {
       setCreateError("Please fill in every field.")
       return
     }
-    if (imageFile === null) {
-      setCreateError("Please choose a photo.")
+    if (photos.length === 0) {
+      setCreateError("Please choose at least one photo.")
       return
     }
     const createProblem = validateListingFields(formData)
@@ -94,9 +94,9 @@ function MyListingsPage() {
     setCreateError("")
 
     try{
-      const imageUrl = await uploadImage(imageFile)
-      if (imageUrl === null) {
-        setCreateError("Image upload failed. Please check your connection and try again.")
+      const imageUrls = await uploadListingPhotos(photos)
+      if (imageUrls === null) {
+        setCreateError("A photo could not be uploaded. Please check your connection and try again.")
         return
       }
 
@@ -109,7 +109,7 @@ function MyListingsPage() {
           ...formData,
           price: Number(formData.price),
           stockQuantity: Number(formData.stockQuantity),
-          imageUrl
+          imageUrls
         }),
         credentials:"include"
       })
@@ -122,7 +122,7 @@ function MyListingsPage() {
       const createdListing: Listing = await response.json()
       setListings((currentListings) => [...currentListings, createdListing]);
       setFormData({ title: "", description: "", price: "", category: "", stockQuantity: "" })
-      setImageFile(null)
+      setPhotos([])
       setFormKey(formKey + 1)// starts the form (and its photo picker) afresh
     }catch {
       setCreateError("Something went wrong. Please check your connection and try again.")
@@ -202,7 +202,7 @@ function MyListingsPage() {
 
     function handleEditClick(listing: Listing){
     setEditingId(listing.id)
-    setEditImageFile(null)
+    setEditPhotos(savedPhotos(listing))
     setSaveError("")
     setEditFormData({
       title: listing.title,
@@ -213,10 +213,10 @@ function MyListingsPage() {
     })
   }
 
-  // The Save button stays disabled until the edit form differs from the saved listing or a new photo is chosen.
+  // The Save button stays disabled until the edit form, or its photos, differ from the saved listing.
   function hasListingChanges(listing: Listing) {
     return (
-      editImageFile !== null ||
+      photosChanged(listing, editPhotos) ||
       editFormData.title !== listing.title ||
       editFormData.description !== listing.description ||
       editFormData.category !== listing.category ||
@@ -245,15 +245,22 @@ function MyListingsPage() {
     setSaveError("")
 
     try{
-      let imageUrl: string | undefined = undefined
+      // Photos are only sent when they changed; a save without them leaves the photos alone.
+      let imageUrls: string[] | undefined = undefined
+      const savedListing = listings.find((candidate) => candidate.id === id)
 
-      if (editImageFile !== null) {
-        const uploadedUrl = await uploadImage(editImageFile)
-        if (uploadedUrl === null) {
-          setSaveError("Image upload failed")
+      if (savedListing && photosChanged(savedListing, editPhotos)) {
+        if (editPhotos.length === 0) {
+          setSaveError("A listing needs at least one photo.")
           return
         }
-        imageUrl = uploadedUrl
+
+        const uploadedUrls = await uploadListingPhotos(editPhotos)
+        if (uploadedUrls === null) {
+          setSaveError("A photo could not be uploaded. Please check your connection and try again.")
+          return
+        }
+        imageUrls = uploadedUrls
       }
 
       const response = await apiFetch(`/listings/${id}`, {
@@ -265,7 +272,7 @@ function MyListingsPage() {
           ...editFormData,
           price: Number(editFormData.price),
           stockQuantity: Number(editFormData.stockQuantity),
-          imageUrl
+          imageUrls
         }),
         credentials:"include"
       })
@@ -276,16 +283,16 @@ function MyListingsPage() {
         return
       }
 
-      const savedListing: Listing = await response.json()
+      const updatedListing: Listing = await response.json()
 
       // The saved listing becomes the new baseline for the dirty-state check.
       setListings((currentListings) =>
         currentListings.map((listing) =>
-          listing.id === id ? savedListing : listing
+          listing.id === id ? updatedListing : listing
         )
       );
       setEditingId(null);
-      setEditImageFile(null)
+      setEditPhotos([])
     }catch {
       setSaveError("Something went wrong. Please check your connection and try again.")
     }finally{
@@ -296,7 +303,7 @@ function MyListingsPage() {
     function handleCancel() {
       setSaveError("")
       setEditingId(null);
-      setEditImageFile(null)
+      setEditPhotos([])
     }
 
     useEffect(() => {
@@ -395,7 +402,8 @@ function MyListingsPage() {
                 formData={formData}
                 handleSubmit={handleSubmit}
                 setFormData={setFormData}
-                setImageFile={setImageFile}
+                photos={photos}
+                setPhotos={setPhotos}
                 isCreating={isCreating}
               />
             </section>
@@ -441,7 +449,8 @@ function MyListingsPage() {
                       isSaving={isSaving}
                       saveError={listing.id === editingId ? saveError : ""}
                       setEditFormData={setEditFormData}
-                      setEditImageFile={setEditImageFile}
+                      editPhotos={editPhotos}
+                      setEditPhotos={setEditPhotos}
                       handleEditClick={handleEditClick}
                       handleDelete={handleDelete}
                       isArchived={view === "archived"}

@@ -592,3 +592,33 @@
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* The photos of a listing being created or edited */
+.photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.photo-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.photo-main-badge {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+}
+
+.photo-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ChevronLeftIcon } from "../components/Icons"
 import Notice from "../components/Notice"
+import PhotoGallery from "../components/PhotoGallery"
 import { apiFetch } from "../lib/api"
+import { photosOf } from "../lib/listingPhotos"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
@@ -129,12 +131,9 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
             )}
 
             <article className="card product-detail">
-                <div className="product-detail-media">
-                    {product.imageUrl
-                        ? <img src={product.imageUrl} alt={product.title} />
-                        : <span role="img" aria-label="No photo available">No photo</span>}
+                <PhotoGallery photos={photosOf(product)} title={product.title}>
                     {stock.isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
-                </div>
+                </PhotoGallery>
 
                 <div className="product-detail-info">
                     <h1>{product.title}</h1>

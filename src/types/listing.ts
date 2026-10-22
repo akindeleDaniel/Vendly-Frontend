@@ -4,7 +4,8 @@ export type Listing = {
   description: string
   price: number
   category: string
-  imageUrl: string
+  imageUrl: string // always the first photo
+  images?: string[] // every photo, in the order shoppers see them (up to 5)
   createdAt: string // date is a string because when coming from express or json, it comes as a string(stringify)
   stockQuantity: number
   sellerSlug?: string | null
