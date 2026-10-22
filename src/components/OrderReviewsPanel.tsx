@@ -122,11 +122,13 @@ function ReviewTarget({ heading, kind, review, onCreate, onChanged }: ReviewTarg
 type OrderReviewsPanelProps = {
     checkoutId: number
     sellerOrderId: number
+    startOpen?: boolean// true when the buyer came here from a "Write a review" button
 }
 
 // After an order is delivered the buyer can rate the shop and each product in it. A review can be
 // changed or deleted for 7 days.
-function OrderReviewsPanel({ checkoutId, sellerOrderId }: OrderReviewsPanelProps) {
+function OrderReviewsPanel({ checkoutId, sellerOrderId, startOpen = false }: OrderReviewsPanelProps) {
+    const [isOpen, setIsOpen] = useState(startOpen)
     const { state, reload } = useApiResource(`${checkoutId}|${sellerOrderId}`, (signal) => fetchOrderReviews(checkoutId, sellerOrderId, signal))
 
     if (state.kind === "loading") {
@@ -146,9 +148,21 @@ function OrderReviewsPanel({ checkoutId, sellerOrderId }: OrderReviewsPanelProps
         return null
     }
 
+    const hasReviewed = state.data.shop !== null || state.data.products.some((product) => product.review !== null)
+
+    if (!isOpen) {
+        return (
+            <div className="review-panel">
+                <button type="button" className="btn btn-primary" onClick={() => setIsOpen(true)}>
+                    {hasReviewed ? "See or change your reviews" : "Write a review"}
+                </button>
+            </div>
+        )
+    }
+
     // The key restarts a form with the saved values once its review changes.
     return (
-        <section className="review-panel" aria-label="Review this order">
+        <section className="review-panel" aria-label="Review this order" ref={(element) => { if (startOpen) element?.scrollIntoView({ block: "center" }) }}>
             <h3 className="order-section-title">Rate this order</h3>
             <ReviewTarget
                 key={`shop-${state.data.shop?.id ?? "new"}-${state.data.shop?.rating}-${state.data.shop?.comment}`}

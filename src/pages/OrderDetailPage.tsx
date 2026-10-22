@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import BuyerOrderExtras from "../components/BuyerOrderExtras"
 import BackArrow from "../components/BackArrow"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
@@ -17,6 +17,7 @@ import { formatNaira } from "../lib/money"
 function OrderDetailPage() {
     useDocumentTitle("Order")
     const { id = "" } = useParams()
+    const reviewOrderId = useSearchParams()[0].get("review")// set by the "Write a review" button on the orders list
     const [outcome, setOutcome] = useState<OrderOutcome<CustomerOrder> | null>(null)
 
     useEffect(() => {
@@ -75,7 +76,7 @@ function OrderDetailPage() {
                             onConfirmed={(updated) => setOutcome({ kind: "ok", data: updated })}
                         />
                     )}
-                    {sellerOrder.status === "DELIVERED" && <OrderReviewsPanel checkoutId={order.id} sellerOrderId={sellerOrder.id} />}
+                    {sellerOrder.status === "DELIVERED" && <OrderReviewsPanel checkoutId={order.id} sellerOrderId={sellerOrder.id} startOpen={reviewOrderId === String(sellerOrder.id)} />}
                     <OrderItemList items={sellerOrder.items} />
                     <hr className="summary-divider" />
                     <div className="summary-row"><span>Subtotal</span><span>{formatNaira(sellerOrder.subtotal)}</span></div>

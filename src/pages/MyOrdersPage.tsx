@@ -118,6 +118,9 @@ function MyOrdersPage() {
                                     {sellerOrder.status === "SHIPPED" && sellerOrder.deliveryReportedAt !== null && (
                                         <ConfirmReceiptPrompt checkoutId={order.id} sellerOrderId={sellerOrder.id} onConfirmed={applyConfirmation} />
                                     )}
+                                    {sellerOrder.status === "DELIVERED" && (
+                                        <Link to={`/orders/${order.id}?review=${sellerOrder.id}`} className="btn btn-primary">Write a review</Link>
+                                    )}
                                     <OrderItemList items={sellerOrder.items} />
                                     <BuyerOrderExtras checkoutId={order.id} sellerOrder={sellerOrder} compact />
                                 </div>
