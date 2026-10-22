@@ -9,6 +9,7 @@ import CodeEntryForm from "../components/CodeEntryForm"
 import GoogleSignInButton from "../components/GoogleSignInButton"
 import GoogleSteps from "../components/GoogleSteps"
 import { useGoogleSignIn } from "../lib/useGoogleSignIn"
+import { useRetryAfter } from "../lib/useRetryAfter"
 import Notice from "../components/Notice"
 import type { CodePurpose } from "../lib/accountApi"
 
@@ -44,6 +45,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
     const [error, setError] = useState("")
     const [codeStep, setCodeStep] = useState<CodeStep | null>(null)
     const google = useGoogleSignIn(onLogin)
+    const wait = useRetryAfter()
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -77,6 +79,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
                 break
             case "error":
                 setError(outcome.message)
+                wait.block(outcome.retryAfterSeconds)
                 break
         }
     }
@@ -127,7 +130,9 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
                     />
                 </label>
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Logging in..." : "Log in"}</button>
+                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || wait.remaining > 0}>
+                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSubmitting ? "Logging in..." : "Log in"}
+                </button>
                 <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
                 {google.error && <Notice kind="error">{google.error}</Notice>}
                 <p className="form-footer"><Link to="/forgot-password">Forgot your password?</Link></p>

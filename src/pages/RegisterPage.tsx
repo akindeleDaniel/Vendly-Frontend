@@ -9,6 +9,7 @@ import CodeEntryForm from "../components/CodeEntryForm"
 import GoogleSignInButton from "../components/GoogleSignInButton"
 import GoogleSteps from "../components/GoogleSteps"
 import { useGoogleSignIn } from "../lib/useGoogleSignIn"
+import { useRetryAfter } from "../lib/useRetryAfter"
 import Notice from "../components/Notice"
 
 type User = {
@@ -35,6 +36,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
     const [codeSentTo, setCodeSentTo] = useState<string | null>(null)// set once the confirmation code has been emailed
+    const wait = useRetryAfter()
     const google = useGoogleSignIn(onLogin, role)// this page already knows whether the person is a buyer or a seller
 
     async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
@@ -63,6 +65,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
 
         if (outcome.kind === "error") {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
             return
         }
 
@@ -126,7 +129,9 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
                 </label>
                 <p id={passwordHintId} className="field-help">At least 10 characters. Avoid common passwords.</p>
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting}>{isSubmitting ? "Registering..." : "Create account"}</button>
+                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || wait.remaining > 0}>
+                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSubmitting ? "Registering..." : "Create account"}
+                </button>
                 <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
                 {google.error && <Notice kind="error">{google.error}</Notice>}
             </form>

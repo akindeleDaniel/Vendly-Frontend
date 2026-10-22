@@ -31,8 +31,15 @@ function readRole(data: unknown): UserRole | null {
 
 type Failed = Exclude<Awaited<ReturnType<typeof apiRequest<unknown>>>, { kind: "ok" }>
 
-function errorOf(result: Failed): { kind: "error", message: string } {
-    return { kind: "error", message: failureMessage(result) }
+// Any failure: the message to show and, after a "too many attempts" answer, how many seconds to wait.
+export type ErrorOutcome = { kind: "error", message: string, retryAfterSeconds?: number }
+
+function errorOf(result: Failed): ErrorOutcome {
+    return {
+        kind: "error",
+        message: failureMessage(result),
+        ...(result.kind === "failed" && result.retryAfterSeconds !== null ? { retryAfterSeconds: result.retryAfterSeconds } : {})
+    }
 }
 
 export type GoogleOutcome =
@@ -40,7 +47,7 @@ export type GoogleOutcome =
     | { kind: "role-required", name: string, email: string }// a new person: ask buyer or seller, then send the same token again
     | { kind: "link-required", email: string }// an account with this email exists: a code was emailed to link Google to it
     | { kind: "otp-required", email: string }// an administrator, who always enters an emailed code
-    | { kind: "error", message: string }
+    | ErrorOutcome
 
 // Signs in (or signs up) with the token Google's button gives the browser. The backend checks the
 // token itself. `role` is only needed for someone new.
@@ -95,7 +102,7 @@ export async function googleLink(credential: string, code: string): Promise<Veri
 
 export type RegisterOutcome =
     | { kind: "code-sent", email: string }
-    | { kind: "error", message: string }
+    | ErrorOutcome
 
 // Registering does not log anyone in: the backend emails a 6-digit code that must be entered first.
 export async function registerAccount(input: { name: string, email: string, password: string, role: UserRole }): Promise<RegisterOutcome> {
@@ -113,7 +120,7 @@ export type LoginOutcome =
     | { kind: "logged-in", role: UserRole }// a browser the backend already trusts
     | { kind: "code-required", email: string }// a code was emailed
     | { kind: "unverified", email: string }// the sign-up email was never confirmed; a code was emailed
-    | { kind: "error", message: string }
+    | ErrorOutcome
 
 export async function logIn(email: string, password: string): Promise<LoginOutcome> {
     const result = await apiRequest<unknown>("/users/login", { method: "POST", body: { email, password } })
@@ -142,7 +149,7 @@ export async function logIn(email: string, password: string): Promise<LoginOutco
 
 export type VerifyOutcome =
     | { kind: "ok", role: UserRole }
-    | { kind: "error", message: string }
+    | ErrorOutcome
 
 // Checks a 6-digit code. A correct code logs the person in on this device.
 export async function verifyCode(purpose: CodePurpose, email: string, code: string): Promise<VerifyOutcome> {
@@ -159,7 +166,7 @@ export async function verifyCode(purpose: CodePurpose, email: string, code: stri
 
 export type MessageOutcome =
     | { kind: "ok", message: string }
-    | { kind: "error", message: string }
+    | ErrorOutcome
 
 function readMessage(data: unknown, fallback: string): string {
     return isRecord(data) && typeof data.message === "string" && data.message ? data.message : fallback

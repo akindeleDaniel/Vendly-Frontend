@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import Notice from "../components/Notice"
 import { changePassword, checkPassword } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { useRetryAfter } from "../lib/useRetryAfter"
 
 // Changes the password of the signed-in account. This device stays logged in; every other device
 // is logged out by the backend.
@@ -12,6 +13,7 @@ function ChangePasswordPage({ backTo }: { backTo: string }) {
     const [currentPassword, setCurrentPassword] = useState("")
     const [newPassword, setNewPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
+    const wait = useRetryAfter()
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState("")
     const [success, setSuccess] = useState("")
@@ -52,6 +54,7 @@ function ChangePasswordPage({ backTo }: { backTo: string }) {
             setConfirmPassword("")
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -75,7 +78,9 @@ function ChangePasswordPage({ backTo }: { backTo: string }) {
                 </label>
                 {success && <Notice kind="success">{success}</Notice>}
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isSaving}>{isSaving ? "Saving..." : "Change password"}</button>
+                <button type="submit" className="btn-block btn-lg" disabled={isSaving || wait.remaining > 0}>
+                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSaving ? "Saving..." : "Change password"}
+                </button>
             </form>
         </div>
     )

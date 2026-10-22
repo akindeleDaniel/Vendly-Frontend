@@ -4,6 +4,7 @@ import { RotateIcon } from "./Icons"
 import Notice from "./Notice"
 import type { MessageOutcome, VerifyOutcome } from "../lib/accountApi"
 import { useCooldown } from "../lib/useCooldown"
+import { useRetryAfter } from "../lib/useRetryAfter"
 import type { UserRole } from "../types/user"
 
 const RESEND_WAIT_SECONDS = 60
@@ -33,6 +34,7 @@ function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, 
     const [error, setError] = useState("")
     const [resendMessage, setResendMessage] = useState("")
     const { remaining, restart } = useCooldown(RESEND_WAIT_SECONDS)// a code was only just sent
+    const wait = useRetryAfter()
 
     async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -51,6 +53,7 @@ function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, 
             onVerified(outcome.role)
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
             setCode("")
         }
     }
@@ -72,6 +75,7 @@ function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, 
             restart()
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -84,11 +88,11 @@ function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, 
             <CodeInput value={code} onChange={setCode} disabled={isChecking} invalid={error !== ""} describedBy={helpId} />
             {error && <Notice kind="error">{error}</Notice>}
             {resendMessage && <Notice kind="success">{resendMessage}</Notice>}
-            <button type="submit" className="btn-block btn-lg" disabled={isChecking || code.length !== CODE_LENGTH}>
-                {isChecking ? "Checking..." : submitLabel}
+            <button type="submit" className="btn-block btn-lg" disabled={isChecking || code.length !== CODE_LENGTH || wait.remaining > 0}>
+                {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isChecking ? "Checking..." : submitLabel}
             </button>
             <div className="code-actions">
-                <button type="button" className="btn-text icon-text-button" disabled={remaining > 0 || isResending || isChecking} onClick={handleResend}>
+                <button type="button" className="btn-text icon-text-button" disabled={remaining > 0 || isResending || isChecking || wait.remaining > 0} onClick={handleResend}>
                     <RotateIcon size={18} />
                     {remaining > 0 ? `Resend code in ${remaining}s` : isResending ? "Sending..." : "Resend code"}
                 </button>

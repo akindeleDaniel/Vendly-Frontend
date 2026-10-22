@@ -5,6 +5,7 @@ import CodeInput, { CODE_LENGTH } from "../components/CodeInput"
 import Notice from "../components/Notice"
 import { checkPassword, requestPasswordReset, resetPassword } from "../lib/accountApi"
 import { useCooldown } from "../lib/useCooldown"
+import { useRetryAfter } from "../lib/useRetryAfter"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 const RESEND_WAIT_SECONDS = 60
@@ -23,6 +24,7 @@ function ForgotPasswordPage() {
     const [error, setError] = useState("")
     const [notice, setNotice] = useState("")
     const { remaining, restart } = useCooldown(RESEND_WAIT_SECONDS)
+    const wait = useRetryAfter()
 
     async function handleRequestCode(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -47,6 +49,7 @@ function ForgotPasswordPage() {
             setStep("reset")
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -65,6 +68,7 @@ function ForgotPasswordPage() {
             restart()
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -91,6 +95,7 @@ function ForgotPasswordPage() {
             navigate("/login", { replace: true, state: { passwordReset: true } })
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -104,7 +109,9 @@ function ForgotPasswordPage() {
                         <input name="email" type="email" autoComplete="email" maxLength={254} value={email} disabled={isWorking} autoFocus onChange={(event) => setEmail(event.target.value)} />
                     </label>
                     {error && <Notice kind="error">{error}</Notice>}
-                    <button type="submit" className="btn-block btn-lg" disabled={isWorking}>{isWorking ? "Sending..." : "Send the code"}</button>
+                    <button type="submit" className="btn-block btn-lg" disabled={isWorking || wait.remaining > 0}>
+                        {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isWorking ? "Sending..." : "Send the code"}
+                    </button>
                 </form>
                 <p className="form-footer"><Link to="/login">Back to log in</Link></p>
             </AuthShell>
@@ -131,11 +138,11 @@ function ForgotPasswordPage() {
                 </label>
                 <p id={passwordHintId} className="field-help">At least 10 characters. Avoid common passwords. Changing your password logs you out everywhere.</p>
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isWorking || code.length !== CODE_LENGTH || newPassword === ""}>
-                    {isWorking ? "Saving..." : "Change password"}
+                <button type="submit" className="btn-block btn-lg" disabled={isWorking || code.length !== CODE_LENGTH || newPassword === "" || wait.remaining > 0}>
+                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isWorking ? "Saving..." : "Change password"}
                 </button>
                 <div className="code-actions">
-                    <button type="button" className="btn-text" disabled={remaining > 0 || isWorking} onClick={handleResend}>
+                    <button type="button" className="btn-text" disabled={remaining > 0 || isWorking || wait.remaining > 0} onClick={handleResend}>
                         {remaining > 0 ? `Send a new code in ${remaining}s` : "Send a new code"}
                     </button>
                     <button type="button" className="btn-text" disabled={isWorking} onClick={() => { setStep("email"); setCode(""); setNewPassword(""); setError(""); setNotice("") }}>

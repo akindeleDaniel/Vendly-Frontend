@@ -5,6 +5,7 @@ import Notice from "../components/Notice"
 import { checkPassword, sendSetPasswordCode, setPassword } from "../lib/accountApi"
 import { useCooldown } from "../lib/useCooldown"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { useRetryAfter } from "../lib/useRetryAfter"
 
 const RESEND_WAIT_SECONDS = 60
 
@@ -27,6 +28,7 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
     const [error, setError] = useState("")
     const [notice, setNotice] = useState("")
     const { remaining, restart } = useCooldown(RESEND_WAIT_SECONDS)
+    const wait = useRetryAfter()
 
     async function requestCode() {
         if (isWorking) {
@@ -44,6 +46,7 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
             setStep("enter")
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -75,6 +78,7 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
             onPasswordSet()
         } else {
             setError(outcome.message)
+            wait.block(outcome.retryAfterSeconds)
         }
     }
 
@@ -103,8 +107,8 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
                             You signed up with Google, so your account has no password. Adding one lets you log in with your email, and is needed to change your payout bank account. We will email you a code first to confirm it is you.
                         </p>
                         {error && <Notice kind="error">{error}</Notice>}
-                        <button type="button" className="btn-block btn-lg" disabled={isWorking} onClick={requestCode}>
-                            {isWorking ? "Sending..." : "Email me a code"}
+                        <button type="button" className="btn-block btn-lg" disabled={isWorking || wait.remaining > 0} onClick={requestCode}>
+                            {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isWorking ? "Sending..." : "Email me a code"}
                         </button>
                     </div>
                 ) : (
@@ -122,11 +126,11 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
                             <input type="password" autoComplete="new-password" value={confirmPassword} disabled={isWorking} onChange={(event) => setConfirmPassword(event.target.value)} />
                         </label>
                         {error && <Notice kind="error">{error}</Notice>}
-                        <button type="submit" className="btn-block btn-lg" disabled={isWorking || code.length !== CODE_LENGTH || newPassword === ""}>
-                            {isWorking ? "Saving..." : "Set password"}
+                        <button type="submit" className="btn-block btn-lg" disabled={isWorking || code.length !== CODE_LENGTH || newPassword === "" || wait.remaining > 0}>
+                            {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isWorking ? "Saving..." : "Set password"}
                         </button>
                         <div className="code-actions">
-                            <button type="button" className="btn-text" disabled={remaining > 0 || isWorking} onClick={requestCode}>
+                            <button type="button" className="btn-text" disabled={remaining > 0 || isWorking || wait.remaining > 0} onClick={requestCode}>
                                 {remaining > 0 ? `Resend code in ${remaining}s` : "Resend code"}
                             </button>
                         </div>
