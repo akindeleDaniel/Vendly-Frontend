@@ -51,6 +51,7 @@ export type AdminOrderDetail = {
         shippingNote: string | null
         deliveryReportedAt: string | null
         deliveryConfirmedAt: string | null
+        deliveryAutoClosedAt: string | null
     }
     checkoutStatus: string
     payments: Array<{

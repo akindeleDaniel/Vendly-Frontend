@@ -50,7 +50,8 @@ function MyOrdersPage() {
                                         shippedAt: fresh.shippedAt,
                                         shippingNote: fresh.shippingNote,
                                         deliveryReportedAt: fresh.deliveryReportedAt,
-                                        deliveryConfirmedAt: fresh.deliveryConfirmedAt
+                                        deliveryConfirmedAt: fresh.deliveryConfirmedAt,
+                                        deliveryAutoClosedAt: fresh.deliveryAutoClosedAt
                                     }
                                     : sellerOrder
                             })

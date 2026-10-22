@@ -40,6 +40,9 @@ export type Fulfilment = {
   shippingNote: string | null
   deliveryReportedAt: string | null
   deliveryConfirmedAt: string | null
+  // Set when the order was closed as delivered after 7 days without an answer from the buyer.
+  // Then the status is DELIVERED but deliveryConfirmedAt is null.
+  deliveryAutoClosedAt?: string | null
 }
 
 // One paid checkout in a customer's history (GET /orders).

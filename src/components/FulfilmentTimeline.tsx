@@ -49,6 +49,7 @@ function latestOf(times: Array<string | null>): string | null {
 // the step only becomes complete once the buyer confirms receipt: until then it asks for attention.
 function FulfilmentTimeline({ status, paidAt, fulfilment, viewer }: FulfilmentTimelineProps) {
     const { shippedAt, shippingNote, deliveryReportedAt, deliveryConfirmedAt } = fulfilment
+    const deliveryAutoClosedAt = fulfilment.deliveryAutoClosedAt ?? null
 
     if (status === "REFUNDED" || status === "CANCELLED") {
         return <p className="stepper-closed">{status === "REFUNDED" ? "This order was refunded." : "This order was cancelled."}</p>
@@ -70,9 +71,11 @@ function FulfilmentTimeline({ status, paidAt, fulfilment, viewer }: FulfilmentTi
             key: "delivered",
             label: "Delivered",
             state: isConfirmed ? "done" : isReported ? "attention" : "pending",
-            date: deliveryConfirmedAt ?? deliveryReportedAt,
+            date: deliveryConfirmedAt ?? deliveryAutoClosedAt ?? deliveryReportedAt,
             note: isConfirmed
-                ? viewer === "buyer" ? "You confirmed" : "Buyer confirmed"
+                ? deliveryConfirmedAt === null && deliveryAutoClosedAt !== null
+                    ? "Closed automatically after 7 days"
+                    : viewer === "buyer" ? "You confirmed" : "Buyer confirmed"
                 : isReported
                     ? viewer === "buyer" ? "Please confirm below" : "Waiting for the buyer to confirm"
                     : null
@@ -82,7 +85,7 @@ function FulfilmentTimeline({ status, paidAt, fulfilment, viewer }: FulfilmentTi
     const currentIndex = steps.some((step) => step.state === "attention")
         ? steps.findIndex((step) => step.state === "attention")
         : steps.map((step) => step.state).lastIndexOf("done")
-    const lastUpdated = latestOf([paidAt, shippedAt, deliveryReportedAt, deliveryConfirmedAt])
+    const lastUpdated = latestOf([paidAt, shippedAt, deliveryReportedAt, deliveryConfirmedAt, deliveryAutoClosedAt])
 
     return (
         <div className="stepper-wrap">

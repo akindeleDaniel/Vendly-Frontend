@@ -97,6 +97,7 @@ function AdminOrderDetailPage() {
                     {fulfilment.shippingNote && <div><dt>Shipping note</dt><dd>{fulfilment.shippingNote}</dd></div>}
                     <div><dt>Seller reported delivered</dt><dd>{fulfilment.deliveryReportedAt ? formatShortDate(fulfilment.deliveryReportedAt) : "Not yet"}</dd></div>
                     <div><dt>Buyer confirmed</dt><dd>{fulfilment.deliveryConfirmedAt ? formatShortDate(fulfilment.deliveryConfirmedAt) : "Not yet"}</dd></div>
+                    {fulfilment.deliveryAutoClosedAt && <div><dt>Closed automatically</dt><dd>{formatShortDate(fulfilment.deliveryAutoClosedAt)}</dd></div>}
                 </dl>
             </section>
 
