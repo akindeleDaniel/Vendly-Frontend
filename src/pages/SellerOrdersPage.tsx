@@ -13,6 +13,14 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { OrderPage, SellerOrderSummary } from "../types/order"
 import { formatNaira } from "../lib/money"
 
+const complaintFilters = [
+    { value: "", label: "Any" },
+    { value: "awaiting-response", label: "Waiting for my answer" },
+    { value: "active", label: "Complaint in progress" },
+    { value: "any", label: "Has a complaint" },
+    { value: "none", label: "No complaint" }
+]
+
 const statusFilters = [
     { value: "", label: "All" },
     { value: "PAID", label: "Paid" },
@@ -27,18 +35,19 @@ function SellerOrdersPage() {
     useDocumentTitle("Orders")
     const [page, setPage] = useState(1)
     const [status, setStatus] = useState("")
+    const [complaint, setComplaint] = useState("")
     const [outcome, setOutcome] = useState<OrderOutcome<OrderPage<SellerOrderSummary>> | null>(null)
     const [attempt, setAttempt] = useState(0)
 
     useEffect(() => {
         const controller = new AbortController()
-        fetchSellerOrders(page, status, controller.signal).then((result) => {
+        fetchSellerOrders(page, status, complaint, controller.signal).then((result) => {
             if (!controller.signal.aborted) {
                 setOutcome(result)
             }
         })
         return () => controller.abort()
-    }, [page, status, attempt])
+    }, [page, status, complaint, attempt])
 
     // Applies one order's new status and dates to the list, leaving the other orders as they are.
     function applyUpdate(orderId: number, update: FulfilmentUpdate) {
@@ -59,18 +68,32 @@ function SellerOrdersPage() {
         setPage(1)
     }
 
+    function changeComplaint(next: string) {
+        setOutcome(null)
+        setComplaint(next)
+        setPage(1)
+    }
+
     return (
         <div>
             <BackArrow to="/seller/myListing" label="Back to my store" />
             <h1>Orders</h1>
             <p>Your paid orders. Fees are what the payment provider deducted from your share before paying you.</p>
 
-            <label className="field-inline">
-                Show{" "}
-                <select value={status} onChange={(event) => changeStatus(event.target.value)}>
-                    {statusFilters.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
-                </select>
-            </label>
+            <div className="filter-row">
+                <label className="field-inline">
+                    Show{" "}
+                    <select value={status} onChange={(event) => changeStatus(event.target.value)}>
+                        {statusFilters.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
+                    </select>
+                </label>
+                <label className="field-inline">
+                    Complaints{" "}
+                    <select value={complaint} onChange={(event) => changeComplaint(event.target.value)}>
+                        {complaintFilters.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
+                    </select>
+                </label>
+            </div>
 
             {outcome === null && <p role="status">Loading orders...</p>}
             {outcome?.kind === "unauthorized" && (

@@ -56,8 +56,12 @@ export function fetchMyOrder(id: string, signal?: AbortSignal) {
     return getOrders<CustomerOrder>(`/orders/${encodeURIComponent(id)}`, hasId, signal)
 }
 
-export function fetchSellerOrders(page: number, status: string, signal?: AbortSignal) {
-    const query = new URLSearchParams({ page: String(page), ...(status ? { status } : {}) })
+export function fetchSellerOrders(page: number, status: string, complaint: string, signal?: AbortSignal) {
+    const query = new URLSearchParams({
+        page: String(page),
+        ...(status ? { status } : {}),
+        ...(complaint ? { complaint } : {})
+    })
     return getOrders<OrderPage<SellerOrderSummary>>(`/seller/orders?${query}`, isOrderPage, signal)
 }
 
