@@ -57,6 +57,7 @@ function App() {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loginCount, setLoginCount] = useState(0)// a new login starts the "set a password" pop-up afresh
   const [hasPassword, setHasPassword] = useState(true)// false for an account made with Google that has not set one
+  const [userName, setUserName] = useState("")// for the "Hi Balake" greeting
   const [isAdmin, setIsAdmin] = useState(false)// only decides what to show; the backend checks it on every admin request
   const [sessionExpired, setSessionExpired] = useState(false)
   const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
@@ -74,6 +75,7 @@ function App() {
       if (response.ok) {
         const data: unknown = await response.json()
         setIsAdmin(typeof data === "object" && data !== null && "isAdmin" in data && data.isAdmin === true)
+        setUserName(typeof data === "object" && data !== null && "name" in data && typeof data.name === "string" ? data.name : "")
         setHasPassword(!(typeof data === "object" && data !== null && "hasPassword" in data && data.hasPassword === false))
       }
     } catch {
@@ -174,6 +176,7 @@ function App() {
         if (typeof data === "object" && data !== null && "role" in data && isUserRole(data.role)) {
           setUserRole(data.role)
           setIsAdmin("isAdmin" in data && data.isAdmin === true)
+          setUserName("name" in data && typeof data.name === "string" ? data.name : "")
           setHasPassword(!("hasPassword" in data && data.hasPassword === false))
           setAuthStatus("authenticated")
         } else {
@@ -202,7 +205,7 @@ function App() {
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
       <main id="main" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<DiscoveryPage userRole={userRole} />} />
+          <Route path="/" element={<DiscoveryPage userRole={userRole} userName={authStatus === "authenticated" ? userName : ""} />} />
 
           <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
 
@@ -246,7 +249,7 @@ function App() {
 
           <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
 
-          <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
+          <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage userName={userName} /></RequireRole>} />
 
           <Route path="/product/:id" element={<ProductPage userRole={userRole} authStatus={authStatus} />} />
 

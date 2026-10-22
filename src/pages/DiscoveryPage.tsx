@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import ListingCard from "../components/ListingCard"
 import Pagination from "../components/Pagination"
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "../components/Icons"
+import Greeting from "../components/Greeting"
 import { CATEGORIES } from "../data/categories"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import type { Listing } from "../types/listing"
@@ -12,6 +13,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type DiscoveryPageProps = {
   userRole: UserRole | null
+  userName?: string
 }
 
 type ConsumerLocation = {
@@ -42,7 +44,7 @@ const TILE_TINTS = [
 //   1. no category, no search  -> a grid of category tiles
 //   2. a search, no category   -> product results across all categories
 //   3. a category              -> products in that category (optionally searched) and its shops
-function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
+function DiscoveryPage ({ userRole, userName = "" }: DiscoveryPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
@@ -285,6 +287,7 @@ function DiscoveryPage ({ userRole }: DiscoveryPageProps) {
         </Link>
       )}
 
+      {!selectedCategory && !search && <Greeting name={userName} />}
       <h1>{selectedCategory ?? (search ? "Search results" : "What are you looking for?")}</h1>
 
       <form role="search" className="search-form" onSubmit={(event) => event.preventDefault()}>

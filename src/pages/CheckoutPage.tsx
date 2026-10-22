@@ -178,8 +178,7 @@ function CheckoutPage() {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [review, setReview] = useState<CheckoutReview | null>(null)
   const [reviewNotice, setReviewNotice] = useState<ReviewNotice | null>(null)
-  // The name is left blank: the session check returns only the role, so there is no reliable
-  // source to prefill it from.
+  // The name is left blank: the parcel may be for someone other than the account holder.
   const [delivery, setDelivery] = useState<DeliveryDetails>({
     fullName: "",
     phone: "",
@@ -482,8 +481,8 @@ function CheckoutPage() {
               <Notice kind="error">
                 <p>
                   {issue.itemTitle
-                    ? `"${issue.itemTitle}" cannot be checked out right now (for example, there is not enough stock).`
-                    : "An item in your cart cannot be checked out right now (for example, there is not enough stock)."}
+                    ? `"${issue.itemTitle}" cannot be checked out right now (for example, it is out of stock or the shop is no longer selling).`
+                    : "An item in your cart cannot be checked out right now (for example, it is out of stock or the shop is no longer selling)."}
                   {" "}Your checkout was not created. Please review your cart.
                 </p>
                 <Link to="/cart" className="btn">Back to cart</Link>

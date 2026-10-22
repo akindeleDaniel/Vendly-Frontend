@@ -9,8 +9,10 @@ import { apiRequest, failureMessage } from "../lib/apiRequest"
 import { validateListingFields } from "../lib/limits"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
+import Greeting from "../components/Greeting"
+import SellerStandingNotice from "../components/SellerStandingNotice"
 
-function MyListingsPage() {
+function MyListingsPage({ userName = "" }: { userName?: string }) {
     const navigate = useNavigate()
     useDocumentTitle("My store")
 
@@ -18,7 +20,6 @@ function MyListingsPage() {
     const [storeLogoUrl, setStoreLogoUrl] = useState<string>("")
     const [storeName, setStoreName] = useState<string>("")
     const [storeSlug, setStoreSlug] = useState<string>("")
-    const [takesPreOrders, setTakesPreOrders] = useState(false)
     const [photos, setPhotos] = useState<ListingPhoto[]>([])
     const [editPhotos, setEditPhotos] = useState<ListingPhoto[]>([])
     const [formKey, setFormKey] = useState(0)
@@ -344,7 +345,6 @@ function MyListingsPage() {
                 }
                 setStoreLogoUrl(profile.logoUrl)
                 setStoreName(profile.businessName)
-                setTakesPreOrders(profile.foodOrderType === "PRE_ORDER" || profile.foodOrderType === "BOTH")
                 setStoreSlug(profile.slug)
                 setListings(myListings)
             } catch {
@@ -372,6 +372,9 @@ function MyListingsPage() {
               </Notice>
             )}
 
+            <Greeting name={userName} />
+            <SellerStandingNotice />
+
             <section aria-labelledby="store-heading" className="card shop-header store-header">
               {storeLogoUrl
                 ? <img className="avatar avatar-lg" src={storeLogoUrl} alt="" />
@@ -384,11 +387,6 @@ function MyListingsPage() {
                   </p>
                 )}
                 <div className="action-row">
-                  {storeName && <Link to="/seller/profile/edit" className="btn">Edit store details</Link>}
-                  {storeName && <Link to="/seller/payouts" className="btn">Payout settings</Link>}
-                  {storeName && <Link to="/seller/earnings" className="btn">Earnings</Link>}
-                  {storeName && <Link to="/seller/reviews" className="btn">Reviews</Link>}
-                  {storeName && takesPreOrders && <Link to="/seller/pre-orders" className="btn">Pre-orders</Link>}
                   {storeSlug && (
                     <button type="button" onClick={handleCopyShopLink}>
                       {linkCopied ? "Copied!" : "Copy shop link"}
