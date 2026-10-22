@@ -1,4 +1,4 @@
-import { useId, useRef } from "react"
+import { useEffect, useId, useRef } from "react"
 
 export const CODE_LENGTH = 6
 
@@ -18,6 +18,18 @@ type CodeInputProps = {
 function CodeInput({ value, onChange, disabled, invalid, describedBy, label = "6-digit code" }: CodeInputProps) {
     const labelId = useId()
     const boxes = useRef<Array<HTMLInputElement | null>>([])
+    // How many digits are entered, kept up to date the moment a digit is typed. The `value` above is only
+    // new after the page redraws, which is too late for the focus event of the next box.
+    const enteredCount = useRef(value.length)
+
+    useEffect(() => {
+        enteredCount.current = value.length
+    }, [value])
+
+    function change(next: string) {
+        enteredCount.current = next.length
+        onChange(next)
+    }
 
     function focusBox(index: number) {
         boxes.current[Math.max(0, Math.min(index, CODE_LENGTH - 1))]?.focus()
@@ -28,14 +40,14 @@ function CodeInput({ value, onChange, disabled, invalid, describedBy, label = "6
 
         if (digits === "") {
             // The digit in this box was deleted.
-            onChange(value.slice(0, index) + value.slice(index + 1))
+            change(value.slice(0, index) + value.slice(index + 1))
             return
         }
 
         // One typed digit replaces the one in the box; several (a paste, an autofill) fill the boxes
         // from here on.
         const next = (value.slice(0, index) + digits + value.slice(index + digits.length)).slice(0, CODE_LENGTH)
-        onChange(next)
+        change(next)
         focusBox(Math.min(index + digits.length, CODE_LENGTH - 1))
     }
 
@@ -43,7 +55,7 @@ function CodeInput({ value, onChange, disabled, invalid, describedBy, label = "6
         if (event.key === "Backspace" && value[index] === undefined && index > 0) {
             // An empty box: Backspace removes the digit before it and steps back.
             event.preventDefault()
-            onChange(value.slice(0, index - 1) + value.slice(index))
+            change(value.slice(0, index - 1) + value.slice(index))
             focusBox(index - 1)
         } else if (event.key === "ArrowLeft") {
             event.preventDefault()
@@ -75,8 +87,8 @@ function CodeInput({ value, onChange, disabled, invalid, describedBy, label = "6
                         onKeyDown={(event) => handleKeyDown(index, event)}
                         onFocus={(event) => {
                             // Boxes fill from the left, so a tap on a box further along goes to the next empty one.
-                            if (index > value.length) {
-                                focusBox(value.length)
+                            if (index > enteredCount.current) {
+                                focusBox(enteredCount.current)
                             } else {
                                 event.currentTarget.select()
                             }
