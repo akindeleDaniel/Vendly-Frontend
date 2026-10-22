@@ -1,25 +1,27 @@
 import { Link, useNavigate } from "react-router-dom"
 import type { Listing, ListingFormData } from "../types/listing"
-import type { UserRole } from "../types/user"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { describeStock } from "../lib/stock"
-import { useAddToCart } from "../lib/useAddToCart"
 import { CATEGORIES } from "../data/categories"
 import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
+import ListingOptionsEditor from "./ListingOptionsEditor"
 import ListingPhotosPicker from "./ListingPhotosPicker"
+import { newOptionDraft } from "../lib/optionDrafts"
+import type { OptionDraft } from "../lib/optionDrafts"
 import StarRating from "./StarRating"
 import type { ListingPhoto } from "../lib/listingPhotos"
 
 type ListingCardProps = {
   listing: Listing
   isEditable: boolean
-  userRole?: UserRole | null
   editingId?: number | null
   editFormData?: ListingFormData
   hasChanges?: boolean
   isSaving?: boolean
   saveError?: string
   setEditFormData?: (data: ListingFormData) => void
+  editOptions?: OptionDraft[] | null// null while the product has no options
+  setEditOptions?: (drafts: OptionDraft[] | null) => void
   editPhotos?: ListingPhoto[]
   setEditPhotos?: (photos: ListingPhoto[]) => void
   handleEditClick?: (listing: Listing) => void
@@ -29,24 +31,14 @@ type ListingCardProps = {
   handleSave?: (id: number) => void
   handleCancel?: () => void
   shopLinkSearch?: string // query string kept on the shop link so the shop page can return to the same search
-  allowAddToCart?: boolean // only storefronts offer Add to Cart; browsing pages just link to the storefront
-  isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
+  allowAddToCart?: boolean // on a storefront the card opens the product's page, where it is added to the cart
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, editPhotos, setEditPhotos, handleEditClick, handleDelete, isArchived, handleRestore, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
+function ListingCard({ listing, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, editOptions, setEditOptions, editPhotos, setEditPhotos, handleEditClick, handleDelete, isArchived, handleRestore, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
-  const {
-    quantity: selectedQuantity,
-    setQuantity,
-    isAdding: isAddingToCart,
-    feedback: cartFeedback,
-    addToCart: handleAddToCart
-  } = useAddToCart(listing, userRole, isLoggedOut)
   const stock = describeStock(listing.stockQuantity)
   const isSoldOut = stock.isSoldOut
   const isLowStock = stock.isLow
-
-  const showCartControls = !isEditable && allowAddToCart && userRole !== "SELLER"
 
   const shopPath = !isEditable && listing.sellerSlug
     ? `/shop/${encodeURIComponent(listing.sellerSlug)}${shopLinkSearch ? `?${shopLinkSearch}` : ""}`
@@ -83,16 +75,20 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
           <label>
             Price
             <input name="price" inputMode="decimal" max={PRICE_MAX} value={editFormData!.price}
+              disabled={listing.hasOptions}
               onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
-          <label>
-            Stock Quantity
-            <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
-              value={editFormData!.stockQuantity}
-              onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
-            />
-          </label>
+          {listing.hasOptions && <p className="field-help">This product has options, so its price and stock are set on each option below.</p>}
+          {editOptions === null && (
+            <label>
+              Stock Quantity
+              <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
+                value={editFormData!.stockQuantity}
+                onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
+              />
+            </label>
+          )}
           <label>
             Category
             <select
@@ -106,6 +102,18 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               ))}
             </select>
           </label>
+          {!listing.hasOptions && (
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={editOptions !== null}
+                disabled={isSaving}
+                onChange={(e) => setEditOptions!(e.target.checked ? [newOptionDraft()] : null)}
+              />
+              This product has options, such as colours or sizes
+            </label>
+          )}
+          {editOptions !== null && <ListingOptionsEditor drafts={editOptions!} onChange={(drafts) => setEditOptions!(drafts)} disabled={isSaving} />}
           <ListingPhotosPicker photos={editPhotos!} onChange={(photos) => setEditPhotos!(photos)} disabled={isSaving} />
           {saveError && <p role="alert" className="alert alert-error">{saveError}</p>}
           {isEditable && <button type="button" className="btn btn-primary" onClick={() => handleSave!(listing.id)} disabled={!hasChanges || isSaving}>{isSaving ? "Saving..." : "Save"}</button>}
@@ -130,7 +138,8 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               <h3 className="product-title">
                 {linkPath ? <Link to={linkPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}
               </h3>
-              <p className="product-price">{formatMinorUnits(toMinorUnits(listing.price))}</p>
+              <p className="product-price">{listing.hasPriceRange ? "From " : ""}{formatMinorUnits(toMinorUnits(listing.price))}</p>
+              {listing.hasOptions && <p className="product-meta">Several options</p>}
               {(listing.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={listing.ratingAverage} count={listing.ratingCount} /></p>}
               {!isEditable && !allowAddToCart && listing.sellerName && (
                 <p className="product-meta">Sold by {listing.sellerName}</p>
@@ -155,34 +164,6 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
             <div className="product-actions">
               <button type="button" onClick={() => handleEditClick!(listing)}>Edit Listing</button>
               <button type="button" className="btn btn-danger" onClick={() => handleDelete!(listing.id)}>Delete Listing</button>
-            </div>
-          )}
-          {showCartControls && (
-            <div className="product-actions">
-              {!isSoldOut && (
-                <select
-                  aria-label={`Quantity for ${listing.title}`}
-                  value={selectedQuantity}
-                  onChange={(event) => setQuantity(Number(event.currentTarget.value))}
-                >
-                  {Array.from({ length: listing.stockQuantity }, (_, index) => index + 1).map((option) => (
-                    <option key={option} value={option}>Quantity: {option}</option>
-                  ))}
-                </select>
-              )}
-              <button
-                type="button"
-                className={isSoldOut ? undefined : "btn btn-primary"}
-                onClick={handleAddToCart}
-                disabled={isAddingToCart || isSoldOut}
-              >
-                {isSoldOut ? "Sold out" : isAddingToCart ? "Adding..." : "Add to cart"}
-              </button>
-              {cartFeedback && (
-                <p role="status" className={`alert alert-${cartFeedback.kind === "success" ? "success" : cartFeedback.kind === "error" ? "error" : "info"}`}>
-                  {cartFeedback.text}
-                </p>
-              )}
             </div>
           )}
         </>

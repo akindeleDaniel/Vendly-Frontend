@@ -2,10 +2,12 @@ import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ChevronLeftIcon } from "../components/Icons"
 import Notice from "../components/Notice"
+import OptionPicker from "../components/OptionPicker"
 import PhotoGallery from "../components/PhotoGallery"
 import ReviewList from "../components/ReviewList"
 import StarRating from "../components/StarRating"
 import { apiFetch } from "../lib/api"
+import { buyableChoice, findChoiceById, hasOptions } from "../lib/listingOptions"
 import { photosOf } from "../lib/listingPhotos"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { describeStock } from "../lib/stock"
@@ -35,7 +37,18 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const [state, setState] = useState<LoadState>({ kind: "loading" })
     const [attempt, setAttempt] = useState(0)
     const listing = state.kind === "ready" ? state.listing : null
-    const cart = useAddToCart(listing, userRole, authStatus === "unauthenticated")
+    // What the shopper has picked among a product's options. A link to one choice opens the product with it chosen.
+    const [pickedOption, setPickedOption] = useState<string | null>(null)
+    const [pickedSize, setPickedSize] = useState<string | null>(null)
+    const initialChoice = listing ? findChoiceById(listing.options, listing.selectedListingId) : null
+    const optionLabel = pickedOption ?? initialChoice?.optionLabel ?? null
+    const sizeLabel = pickedOption !== null ? pickedSize : initialChoice?.sizeLabel ?? null
+    const selectedOption = listing?.options?.find((option) => option.label === optionLabel) ?? null
+    const selectedSize = selectedOption?.sizes.find((size) => size.label === sizeLabel) ?? null
+    const choice = buyableChoice(selectedOption, selectedSize)
+    // A product with options is bought through the chosen option or size, never itself.
+    const cartTarget = listing && hasOptions(listing) ? choice : listing
+    const cart = useAddToCart(cartTarget, userRole, authStatus === "unauthenticated")
     const pendingResult = usePendingCartAdd(userRole)
     useDocumentTitle(listing ? listing.title : "Product")
 
@@ -118,8 +131,15 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     }
 
     const product = state.listing
-    const stock = describeStock(product.stockQuantity)
+    const withOptions = hasOptions(product)
+    const stock = describeStock(withOptions && choice ? choice.stockQuantity : product.stockQuantity)
     const showCartControls = userRole !== "SELLER"
+    const needsChoice = withOptions && choice === null
+    const photos = photosOf(product)
+    const optionPhoto = selectedOption?.imageUrl ?? null
+    const shownPhotos = optionPhoto ? [optionPhoto, ...photos.filter((url) => url !== optionPhoto)] : photos
+    const shownPrice = withOptions && selectedOption ? selectedOption.price : product.price
+    const maxQuantity = cartTarget?.stockQuantity ?? 0
 
     return (
         <div>
@@ -133,18 +153,31 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
             )}
 
             <article className="card product-detail">
-                <PhotoGallery photos={photosOf(product)} title={product.title}>
+                <PhotoGallery key={optionLabel ?? "product"} photos={shownPhotos} title={product.title}>
                     {stock.isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
                 </PhotoGallery>
 
                 <div className="product-detail-info">
                     <h1>{product.title}</h1>
-                    <p className="product-detail-price">{formatMinorUnits(toMinorUnits(product.price))}</p>
+                    <p className="product-detail-price">
+                        {!selectedOption && product.hasPriceRange ? "From " : ""}{formatMinorUnits(toMinorUnits(shownPrice))}
+                    </p>
                     <p className="product-detail-tags">
                         <span className="badge">{product.category}</span>
                     </p>
                     {(product.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={product.ratingAverage} count={product.ratingCount} /></p>}
-                    <p className={stock.isLow ? "product-meta product-meta-warning" : "product-meta"}>{stock.label}</p>
+                    {withOptions && product.options && (
+                        <OptionPicker
+                            options={product.options}
+                            optionLabel={optionLabel}
+                            sizeLabel={sizeLabel}
+                            onOption={(label) => { setPickedOption(label); setPickedSize(null) }}
+                            onSize={(label) => { setPickedOption(optionLabel); setPickedSize(label) }}
+                        />
+                    )}
+                    <p className={stock.isLow && !needsChoice ? "product-meta product-meta-warning" : "product-meta"}>
+                        {needsChoice ? (selectedOption ? "Choose a size to see what is left." : "Choose an option to see what is left.") : stock.label}
+                    </p>
                     {product.sellerName && product.sellerSlug && (
                         <p className="product-meta">
                             Sold by <Link to={`/shop/${encodeURIComponent(product.sellerSlug)}`}>{product.sellerName}</Link>
@@ -156,24 +189,24 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
 
                     {showCartControls && (
                         <div className="product-actions">
-                            {!stock.isSoldOut && (
+                            {!needsChoice && !stock.isSoldOut && (
                                 <select
                                     aria-label={`Quantity for ${product.title}`}
                                     value={cart.quantity}
                                     onChange={(event) => cart.setQuantity(Number(event.currentTarget.value))}
                                 >
-                                    {Array.from({ length: product.stockQuantity }, (_, index) => index + 1).map((option) => (
+                                    {Array.from({ length: maxQuantity }, (_, index) => index + 1).map((option) => (
                                         <option key={option} value={option}>Quantity: {option}</option>
                                     ))}
                                 </select>
                             )}
                             <button
                                 type="button"
-                                className={stock.isSoldOut ? undefined : "btn btn-primary"}
+                                className={stock.isSoldOut || needsChoice ? undefined : "btn btn-primary"}
                                 onClick={cart.addToCart}
-                                disabled={cart.isAdding || stock.isSoldOut}
+                                disabled={cart.isAdding || needsChoice || stock.isSoldOut}
                             >
-                                {stock.isSoldOut ? "Sold out" : cart.isAdding ? "Adding..." : "Add to cart"}
+                                {needsChoice ? (selectedOption ? "Choose a size" : "Choose an option") : stock.isSoldOut ? "Sold out" : cart.isAdding ? "Adding..." : "Add to cart"}
                             </button>
                             {cart.feedback && (
                                 <p role="status" className={`alert alert-${cart.feedback.kind}`}>

@@ -8,11 +8,9 @@ import { CATEGORIES } from "../data/categories"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import type { Listing } from "../types/listing"
 import type { ShopSummary } from "../types/seller"
-import type { UserRole } from "../types/user"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 type DiscoveryPageProps = {
-  userRole: UserRole | null
   userName?: string
 }
 
@@ -44,7 +42,7 @@ const TILE_TINTS = [
 //   1. no category, no search  -> a grid of category tiles
 //   2. a search, no category   -> product results across all categories
 //   3. a category              -> products in that category (optionally searched) and its shops
-function DiscoveryPage ({ userRole, userName = "" }: DiscoveryPageProps) {
+function DiscoveryPage ({ userName = "" }: DiscoveryPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
   const selectedCategory = CATEGORIES.find((category) => category === categoryParam) ?? null
@@ -346,7 +344,7 @@ function DiscoveryPage ({ userRole, userName = "" }: DiscoveryPageProps) {
             <ul className="product-grid">
               {products.map((product) => (
                 <li key={product.id}>
-                  <ListingCard listing={product} isEditable={false} userRole={userRole} shopLinkSearch={searchParams.toString()} />
+                  <ListingCard listing={product} isEditable={false} shopLinkSearch={searchParams.toString()} />
                 </li>
               ))}
             </ul>

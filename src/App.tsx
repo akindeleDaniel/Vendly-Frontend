@@ -205,7 +205,7 @@ function App() {
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
       <main id="main" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<DiscoveryPage userRole={userRole} userName={authStatus === "authenticated" ? userName : ""} />} />
+          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} />} />
 
           <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
 
@@ -253,7 +253,7 @@ function App() {
 
           <Route path="/product/:id" element={<ProductPage userRole={userRole} authStatus={authStatus} />} />
 
-          <Route path="/shop/:slug" element={<ShopPage userRole={userRole} authStatus={authStatus} />} />
+          <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
 
           <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
 

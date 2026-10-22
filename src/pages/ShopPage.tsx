@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import { useParams } from "react-router-dom"
 import type { Listing } from "../types/listing"
-import type { AuthStatus, UserRole } from "../types/user"
+import type { UserRole } from "../types/user"
 import ListingCard from "../components/ListingCard"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import Notice from "../components/Notice"
@@ -27,10 +27,9 @@ type ShopProfile = {
 
 type ShopPageProps = {
     userRole: UserRole | null
-    authStatus: AuthStatus
 }
 
-function ShopPage ({ userRole, authStatus }: ShopPageProps) {
+function ShopPage ({ userRole }: ShopPageProps) {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
 
@@ -225,9 +224,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                                 <ListingCard
                                     isEditable={false}
                                     allowAddToCart
-                                    isLoggedOut={authStatus === "unauthenticated"}
                                     listing={listing}
-                                    userRole={userRole}
                                 />
                             </li>
                         ))}
