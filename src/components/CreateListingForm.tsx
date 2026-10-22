@@ -1,7 +1,10 @@
 import type { ListingFormData } from "../types/listing"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "../data/categories"
+import ListingOptionsEditor from "./ListingOptionsEditor"
 import ListingPhotosPicker from "./ListingPhotosPicker"
+import { newOptionDraft } from "../lib/optionDrafts"
+import type { OptionDraft } from "../lib/optionDrafts"
 import type { ListingPhoto } from "../lib/listingPhotos"
 import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
 
@@ -13,10 +16,12 @@ type CreateListingFormProps = {
     setFormData: (data: CreateListingFormData) => void
     photos: ListingPhoto[]
     setPhotos: (photos: ListingPhoto[]) => void
+    optionDrafts: OptionDraft[] | null// null while the product has no options
+    setOptionDrafts: (drafts: OptionDraft[] | null) => void
     isCreating: boolean
 }
 
-function CreateListingForm ({handleSubmit, formData, setFormData, photos, setPhotos, isCreating}: CreateListingFormProps){
+function CreateListingForm ({handleSubmit, formData, setFormData, photos, setPhotos, optionDrafts, setOptionDrafts, isCreating}: CreateListingFormProps){
     return(
         <form onSubmit={handleSubmit}>
         <label>
@@ -46,14 +51,16 @@ function CreateListingForm ({handleSubmit, formData, setFormData, photos, setPho
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
             />
           </label>
-          <label>
-            Stock Quantity
-            <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
-            value={formData.stockQuantity}
-            disabled={isCreating}
-            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-            />
-          </label>
+          {optionDrafts === null && (
+            <label>
+              Stock Quantity
+              <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
+              value={formData.stockQuantity}
+              disabled={isCreating}
+              onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+              />
+            </label>
+          )}
         </div>
         <label>
           Category
@@ -69,6 +76,16 @@ function CreateListingForm ({handleSubmit, formData, setFormData, photos, setPho
             ))}
           </select>
         </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={optionDrafts !== null}
+            disabled={isCreating}
+            onChange={(e) => setOptionDrafts(e.target.checked ? [newOptionDraft()] : null)}
+          />
+          This product has options, such as colours or sizes
+        </label>
+        {optionDrafts !== null && <ListingOptionsEditor drafts={optionDrafts} onChange={setOptionDrafts} disabled={isCreating} />}
         <ListingPhotosPicker photos={photos} onChange={setPhotos} disabled={isCreating} />
         <button type="submit" className="btn-block btn-lg" disabled={isCreating}>{isCreating ? "Creating..." : "Create listing"}</button>
       </form>

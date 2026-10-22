@@ -4,6 +4,8 @@ import type {ListingFormData, Listing} from "../types/listing"
 import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { photosChanged, savedPhotos, uploadListingPhotos, type ListingPhoto } from "../lib/listingPhotos"
+import { buildOptionsBody, draftsFromListing, validateOptionDrafts } from "../lib/optionDrafts"
+import type { OptionDraft } from "../lib/optionDrafts"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { apiRequest, failureMessage } from "../lib/apiRequest"
 import { validateListingFields } from "../lib/limits"
@@ -22,6 +24,9 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const [storeSlug, setStoreSlug] = useState<string>("")
     const [photos, setPhotos] = useState<ListingPhoto[]>([])
     const [editPhotos, setEditPhotos] = useState<ListingPhoto[]>([])
+    const [optionDrafts, setOptionDrafts] = useState<OptionDraft[] | null>(null)// null: the new product has no options
+    const [editOptions, setEditOptionsState] = useState<OptionDraft[] | null>(null)
+    const [editOptionsTouched, setEditOptionsTouched] = useState(false)
     const [formKey, setFormKey] = useState(0)
     const [linkCopied, setLinkCopied] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
@@ -78,7 +83,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       return
     }
 
-    if(formData.title === "" || formData.category === "" || formData.price === "" || formData.stockQuantity === "" || formData.description === ""){
+    if(formData.title === "" || formData.category === "" || formData.price === "" || (optionDrafts === null && formData.stockQuantity === "") || formData.description === ""){
       setCreateError("Please fill in every field.")
       return
     }
@@ -86,7 +91,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       setCreateError("Please choose at least one photo.")
       return
     }
-    const createProblem = validateListingFields(formData)
+    // A product with options is stocked on its options, so the stock box is not used.
+    const createProblem = validateListingFields(optionDrafts ? { ...formData, stockQuantity: "0" } : formData) ?? (optionDrafts ? validateOptionDrafts(optionDrafts) : null)
     if (createProblem) {
       setCreateError(createProblem)
       return
@@ -102,16 +108,24 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
         return
       }
 
+      const optionsBody = optionDrafts ? await buildOptionsBody(optionDrafts) : undefined
+      if (optionsBody === null) {
+        setCreateError("A photo of an option could not be uploaded. Please check your connection and try again.")
+        return
+      }
+
       const response = await apiFetch("/listings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
           price: Number(formData.price),
-          stockQuantity: Number(formData.stockQuantity),
-          imageUrls
+          imageUrls,
+          ...(optionsBody ? { options: optionsBody } : { stockQuantity: Number(formData.stockQuantity) })
         }),
         credentials:"include"
       })
@@ -125,6 +139,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       setListings((currentListings) => [...currentListings, createdListing]);
       setFormData({ title: "", description: "", price: "", category: "", stockQuantity: "" })
       setPhotos([])
+      setOptionDrafts(null)
       setFormKey(formKey + 1)// starts the form (and its photo picker) afresh
     }catch {
       setCreateError("Something went wrong. Please check your connection and try again.")
@@ -205,6 +220,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     function handleEditClick(listing: Listing){
     setEditingId(listing.id)
     setEditPhotos(savedPhotos(listing))
+    setEditOptionsState(listing.hasOptions ? draftsFromListing(listing) : null)
+    setEditOptionsTouched(false)
     setSaveError("")
     setEditFormData({
       title: listing.title,
@@ -215,9 +232,16 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     })
   }
 
-  // The Save button stays disabled until the edit form, or its photos, differ from the saved listing.
+  // Any change to the options counts as an edit; they are sent whole when saved.
+  function setEditOptions(drafts: OptionDraft[] | null) {
+    setEditOptionsState(drafts)
+    setEditOptionsTouched(true)
+  }
+
+  // The Save button stays disabled until the edit form, its photos or its options differ from the saved listing.
   function hasListingChanges(listing: Listing) {
     return (
+      editOptionsTouched ||
       photosChanged(listing, editPhotos) ||
       editFormData.title !== listing.title ||
       editFormData.description !== listing.description ||
@@ -237,7 +261,12 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       return
     }
 
-    const saveProblem = validateListingFields(editFormData)
+    // With options, price and stock belong to the options, so only the rest of the form is checked here.
+    const hasOptionsNow = editOptions !== null
+    const savedForOptions = listings.find((candidate) => candidate.id === id)
+    const saveProblem =
+      validateListingFields(hasOptionsNow ? { ...editFormData, stockQuantity: "0", ...(savedForOptions?.hasOptions ? { price: "1" } : {}) } : editFormData) ??
+      (hasOptionsNow ? validateOptionDrafts(editOptions) : null)
     if (saveProblem) {
       setSaveError(saveProblem)
       return
@@ -265,16 +294,19 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
         imageUrls = uploadedUrls
       }
 
+      // A product with options refuses a price and stock of its own, so they are left out and sent with the options.
+      const hadOptions = savedListing?.hasOptions === true
       const response = await apiFetch(`/listings/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...editFormData,
-          price: Number(editFormData.price),
-          stockQuantity: Number(editFormData.stockQuantity),
-          imageUrls
+          title: editFormData.title,
+          description: editFormData.description,
+          category: editFormData.category,
+          imageUrls,
+          ...(hasOptionsNow ? {} : { price: Number(editFormData.price), stockQuantity: Number(editFormData.stockQuantity) })
         }),
         credentials:"include"
       })
@@ -287,6 +319,32 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
 
       const updatedListing: Listing = await response.json()
 
+      // The options are replaced as a whole. The page reloads afterwards, as the saved options come from the list.
+      if (hasOptionsNow && editOptionsTouched) {
+        const optionsBody = await buildOptionsBody(editOptions)
+        if (optionsBody === null) {
+          setSaveError("A photo of an option could not be uploaded. Please check your connection and try again.")
+          return
+        }
+
+        const optionsResponse = await apiFetch(`/listings/${id}/options`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ options: optionsBody, ...(hadOptions ? {} : { price: Number(editFormData.price) }) }),
+          credentials: "include"
+        })
+
+        if (!optionsResponse.ok) {
+          // For example when stock would go below what shoppers have reserved: the backend says which option.
+          setSaveError(await getErrorMessage(optionsResponse, `Unable to save the options (status ${optionsResponse.status}).`))
+          return
+        }
+
+        setLoadAttempt((attempt) => attempt + 1)
+      }
+
       // The saved listing becomes the new baseline for the dirty-state check.
       setListings((currentListings) =>
         currentListings.map((listing) =>
@@ -295,6 +353,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       );
       setEditingId(null);
       setEditPhotos([])
+      setEditOptionsState(null)
+      setEditOptionsTouched(false)
     }catch {
       setSaveError("Something went wrong. Please check your connection and try again.")
     }finally{
@@ -306,6 +366,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       setSaveError("")
       setEditingId(null);
       setEditPhotos([])
+      setEditOptionsState(null)
+      setEditOptionsTouched(false)
     }
 
     useEffect(() => {
@@ -406,6 +468,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                 setFormData={setFormData}
                 photos={photos}
                 setPhotos={setPhotos}
+                optionDrafts={optionDrafts}
+                setOptionDrafts={setOptionDrafts}
                 isCreating={isCreating}
               />
             </section>
@@ -453,6 +517,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                       setEditFormData={setEditFormData}
                       editPhotos={editPhotos}
                       setEditPhotos={setEditPhotos}
+                      editOptions={editOptions}
+                      setEditOptions={setEditOptions}
                       handleEditClick={handleEditClick}
                       handleDelete={handleDelete}
                       isArchived={view === "archived"}

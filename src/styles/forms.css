@@ -622,3 +622,37 @@
   flex-wrap: wrap;
   gap: var(--space-1);
 }
+
+/* The seller's options editor */
+.options-editor {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.option-card {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-cream);
+}
+
+.option-card legend {
+  padding: 0 var(--space-1);
+  font-weight: 600;
+}
+
+.size-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.size-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem auto;
+  align-items: end;
+  gap: var(--space-2);
+}
