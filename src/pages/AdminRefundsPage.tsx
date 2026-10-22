@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import Notice from "../components/Notice"
 import { issueAdminRefund, listAdminRefunds, syncAdminRefund } from "../lib/adminApi"
 import { parseOptionalNaira } from "../lib/amountInput"
@@ -23,8 +23,8 @@ const STATUS_FILTERS = [
 ]
 
 // Starts a refund on one order. The amount is the whole refundable amount unless one is typed.
-function IssueRefundForm({ onIssued }: { onIssued: (refund: AdminRefund) => void }) {
-    const [orderId, setOrderId] = useState("")
+function IssueRefundForm({ onIssued, initialOrderId }: { onIssued: (refund: AdminRefund) => void, initialOrderId: string }) {
+    const [orderId, setOrderId] = useState(initialOrderId)
     const [reason, setReason] = useState("")
     const [amount, setAmount] = useState("")
     const [customerNote, setCustomerNote] = useState("")
@@ -90,13 +90,14 @@ function IssueRefundForm({ onIssued }: { onIssued: (refund: AdminRefund) => void
     }
 
     return (
-        <details className="card summary-card admin-issue">
+        <details className="card summary-card admin-issue" open={initialOrderId !== "" ? true : undefined}>
             <summary>Issue a refund</summary>
             <form onSubmit={handleSubmit} className="dispute-form">
                 <label>
                     Order number
                     <input inputMode="numeric" value={orderId} disabled={isSending} onChange={(event) => setOrderId(event.target.value.replace(/\D/g, ""))} />
                 </label>
+                <p className="field-help"><Link to="/admin/orders">Find the order number</Link> by searching for the buyer, the seller or a payment reference.</p>
                 <label>
                     Reason (the seller sees this)
                     <input type="text" maxLength={300} value={reason} disabled={isSending} onChange={(event) => setReason(event.target.value)} />
@@ -207,6 +208,8 @@ function AdminRefundsPage() {
     const [page, setPage] = useState(1)
     const [status, setStatus] = useState("")
     const { state, setData, reload } = useApiResource(`${page}:${status}`, (signal) => listAdminRefunds(page, status, signal))
+    const [searchParams] = useSearchParams()
+    const orderFromSearch = (searchParams.get("order") ?? "").replace(/\D/g, "")// an order chosen in the order search
 
     function replaceRefund(updated: AdminRefund) {
         setData((data) => ({ ...data, refunds: data.refunds.map((refund) => refund.id === updated.id ? updated : refund) }))
@@ -215,7 +218,7 @@ function AdminRefundsPage() {
     return (
         <div>
             <h1>Refunds</h1>
-            <IssueRefundForm onIssued={reload} />
+            <IssueRefundForm key={orderFromSearch} onIssued={reload} initialOrderId={orderFromSearch} />
 
             <label className="field-inline">
                 Show{" "}

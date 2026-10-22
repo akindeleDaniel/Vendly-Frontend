@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import RolePage from "./pages/RolePage"
@@ -17,6 +17,12 @@ import OrderDetailPage from "./pages/OrderDetailPage"
 import SellerOrdersPage from "./pages/SellerOrdersPage"
 import SellerOrderDetailPage from "./pages/SellerOrderDetailPage"
 import AdminShell from "./components/AdminShell"
+import AdminDashboardPage from "./pages/AdminDashboardPage"
+import AdminOrderDetailPage from "./pages/AdminOrderDetailPage"
+import AdminOrdersPage from "./pages/AdminOrdersPage"
+import AdminUserDetailPage from "./pages/AdminUserDetailPage"
+import AdminUsersPage from "./pages/AdminUsersPage"
+import SellerEarningsPage from "./pages/SellerEarningsPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import ProductPage from "./pages/ProductPage"
 import PasswordPage from "./pages/PasswordPage"
@@ -222,6 +228,8 @@ function App() {
 
           <Route path="/seller/disputes/:id" element={<RequireRole role="SELLER" {...guardProps}><DisputeDetailPage viewer="seller" /></RequireRole>} />
 
+          <Route path="/seller/earnings" element={<RequireRole role="SELLER" {...guardProps}><SellerEarningsPage /></RequireRole>} />
+
           <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
 
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage /></RequireRole>} />
@@ -244,7 +252,15 @@ function App() {
 
           <Route path="/disputes/:id" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireRole>} />
 
-          <Route path="/admin" element={<Navigate to="/admin/complaints" replace />} />
+          <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell><AdminDashboardPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/orders" element={<RequireAdmin {...guardProps}><AdminShell><AdminOrdersPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/orders/:id" element={<RequireAdmin {...guardProps}><AdminShell><AdminOrderDetailPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/users" element={<RequireAdmin {...guardProps}><AdminShell><AdminUsersPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/users/:id" element={<RequireAdmin {...guardProps}><AdminShell><AdminUserDetailPage /></AdminShell></RequireAdmin>} />
 
           <Route path="/admin/complaints" element={<RequireAdmin {...guardProps}><AdminShell><DisputeListPage viewer="admin" /></AdminShell></RequireAdmin>} />
 

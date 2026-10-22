@@ -2,6 +2,9 @@ import type { ReactNode } from "react"
 import { NavLink } from "react-router-dom"
 
 const TABS = [
+    { to: "/admin", label: "Overview", end: true },
+    { to: "/admin/orders", label: "Orders" },
+    { to: "/admin/users", label: "People" },
     { to: "/admin/complaints", label: "Complaints" },
     { to: "/admin/refunds", label: "Refunds" },
     { to: "/admin/recovery-cases", label: "Recovery cases" },
@@ -17,7 +20,7 @@ function AdminShell({ children }: { children: ReactNode }) {
                 <ul className="admin-tabs">
                     {TABS.map((tab) => (
                         <li key={tab.to}>
-                            <NavLink to={tab.to} className={({ isActive }) => isActive ? "admin-tab is-active" : "admin-tab"}>{tab.label}</NavLink>
+                            <NavLink to={tab.to} end={tab.end} className={({ isActive }) => isActive ? "admin-tab is-active" : "admin-tab"}>{tab.label}</NavLink>
                         </li>
                     ))}
                 </ul>
