@@ -23,6 +23,8 @@ import AdminOrdersPage from "./pages/AdminOrdersPage"
 import AdminUserDetailPage from "./pages/AdminUserDetailPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
 import SellerEarningsPage from "./pages/SellerEarningsPage"
+import SellerReviewsPage from "./pages/SellerReviewsPage"
+import AdminReviewsPage from "./pages/AdminReviewsPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import ProductPage from "./pages/ProductPage"
 import PasswordPage from "./pages/PasswordPage"
@@ -228,6 +230,8 @@ function App() {
 
           <Route path="/seller/disputes/:id" element={<RequireRole role="SELLER" {...guardProps}><DisputeDetailPage viewer="seller" /></RequireRole>} />
 
+          <Route path="/seller/reviews" element={<RequireRole role="SELLER" {...guardProps}><SellerReviewsPage /></RequireRole>} />
+
           <Route path="/seller/earnings" element={<RequireRole role="SELLER" {...guardProps}><SellerEarningsPage /></RequireRole>} />
 
           <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
@@ -267,6 +271,8 @@ function App() {
           <Route path="/admin/complaints/:id" element={<RequireAdmin {...guardProps}><AdminShell><DisputeDetailPage viewer="admin" /></AdminShell></RequireAdmin>} />
 
           <Route path="/admin/refunds" element={<RequireAdmin {...guardProps}><AdminShell><AdminRefundsPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/reviews" element={<RequireAdmin {...guardProps}><AdminShell><AdminReviewsPage /></AdminShell></RequireAdmin>} />
 
           <Route path="/admin/recovery-cases" element={<RequireAdmin {...guardProps}><AdminShell><AdminRecoveryCasesPage /></AdminShell></RequireAdmin>} />
 

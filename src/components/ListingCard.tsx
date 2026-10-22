@@ -7,6 +7,7 @@ import { useAddToCart } from "../lib/useAddToCart"
 import { CATEGORIES } from "../data/categories"
 import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
 import ListingPhotosPicker from "./ListingPhotosPicker"
+import StarRating from "./StarRating"
 import type { ListingPhoto } from "../lib/listingPhotos"
 
 type ListingCardProps = {
@@ -130,6 +131,7 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
                 {linkPath ? <Link to={linkPath} onClick={(event) => event.stopPropagation()}>{listing.title}</Link> : listing.title}
               </h3>
               <p className="product-price">{formatMinorUnits(toMinorUnits(listing.price))}</p>
+              {(listing.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={listing.ratingAverage} count={listing.ratingCount} /></p>}
               {!isEditable && !allowAddToCart && listing.sellerName && (
                 <p className="product-meta">Sold by {listing.sellerName}</p>
               )}

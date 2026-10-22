@@ -10,6 +10,8 @@ import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
+import ReviewList from "../components/ReviewList"
+import StarRating from "../components/StarRating"
 
 type ShopProfile = {
     businessName: string
@@ -18,6 +20,8 @@ type ShopProfile = {
     slug: string
     shippingPolicy?: "FREE" | "FIXED"
     shippingCost?: string | null// a naira amount, or null for free delivery
+    ratingAverage?: number | null
+    ratingCount?: number
 }
 
 type ShopPageProps = {
@@ -175,6 +179,7 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                             {profile.location}
                         </p>
                     )}
+                    {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
                     {profile.shippingPolicy && (
                         <p className="shop-delivery">
                             {profile.shippingPolicy === "FIXED" && profile.shippingCost
@@ -226,6 +231,8 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                     </ul>
                 )}
             </section>
+
+            <ReviewList kind="shop" subject={profile.slug} />
         </div>
     )
 }

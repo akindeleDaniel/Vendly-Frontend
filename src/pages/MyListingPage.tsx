@@ -385,6 +385,7 @@ function MyListingsPage() {
                   {storeName && <Link to="/seller/profile/edit" className="btn">Edit store details</Link>}
                   {storeName && <Link to="/seller/payouts" className="btn">Payout settings</Link>}
                   {storeName && <Link to="/seller/earnings" className="btn">Earnings</Link>}
+                  {storeName && <Link to="/seller/reviews" className="btn">Reviews</Link>}
                   {storeSlug && (
                     <button type="button" onClick={handleCopyShopLink}>
                       {linkCopied ? "Copied!" : "Copy shop link"}

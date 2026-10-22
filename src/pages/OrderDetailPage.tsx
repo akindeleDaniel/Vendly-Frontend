@@ -6,6 +6,7 @@ import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
+import OrderReviewsPanel from "../components/OrderReviewsPanel"
 import { describeOrderStatus, fetchMyOrder, formatDate, formatOrderStatus, formatProvider } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -74,6 +75,7 @@ function OrderDetailPage() {
                             onConfirmed={(updated) => setOutcome({ kind: "ok", data: updated })}
                         />
                     )}
+                    {sellerOrder.status === "DELIVERED" && <OrderReviewsPanel checkoutId={order.id} sellerOrderId={sellerOrder.id} />}
                     <OrderItemList items={sellerOrder.items} />
                     <hr className="summary-divider" />
                     <div className="summary-row"><span>Subtotal</span><span>{formatNaira(sellerOrder.subtotal)}</span></div>

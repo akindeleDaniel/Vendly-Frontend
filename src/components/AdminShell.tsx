@@ -7,6 +7,7 @@ const TABS = [
     { to: "/admin/users", label: "People" },
     { to: "/admin/complaints", label: "Complaints" },
     { to: "/admin/refunds", label: "Refunds" },
+    { to: "/admin/reviews", label: "Reviews" },
     { to: "/admin/recovery-cases", label: "Recovery cases" },
     { to: "/admin/liabilities", label: "Owed by sellers" }
 ]

@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ChevronLeftIcon } from "../components/Icons"
 import Notice from "../components/Notice"
 import PhotoGallery from "../components/PhotoGallery"
+import ReviewList from "../components/ReviewList"
+import StarRating from "../components/StarRating"
 import { apiFetch } from "../lib/api"
 import { photosOf } from "../lib/listingPhotos"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
@@ -141,6 +143,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                     <p className="product-detail-tags">
                         <span className="badge">{product.category}</span>
                     </p>
+                    {(product.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={product.ratingAverage} count={product.ratingCount} /></p>}
                     <p className={stock.isLow ? "product-meta product-meta-warning" : "product-meta"}>{stock.label}</p>
                     {product.sellerName && product.sellerSlug && (
                         <p className="product-meta">
@@ -182,6 +185,8 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                     )}
                 </div>
             </article>
+
+            <ReviewList kind="product" subject={String(product.id)} />
         </div>
     )
 }
