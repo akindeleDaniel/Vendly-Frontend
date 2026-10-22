@@ -5,6 +5,8 @@ import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
 import { uploadImage } from "../lib/uploadImage"
 import { apiFetch, getErrorMessage } from "../lib/api"
+import { apiRequest, failureMessage } from "../lib/apiRequest"
+import { validateListingFields } from "../lib/limits"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 
@@ -27,6 +29,9 @@ function MyListingsPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
+    const [view, setView] = useState<"on-sale" | "archived">("on-sale")
+    const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
+    const [isArchiving, setIsArchiving] = useState(false)
     
     const [formData, setFormData] =useState<CreateListingFormData>({
     title: "",
@@ -79,12 +84,9 @@ function MyListingsPage() {
       setCreateError("Please choose a photo.")
       return
     }
-    if (!Number.isFinite(Number(formData.price)) || Number(formData.price) <= 0){
-      setCreateError("Price must be a number greater than 0")
-      return
-    }
-    if (!Number.isInteger(Number(formData.stockQuantity)) || Number(formData.stockQuantity) < 0) {
-      setCreateError("Stock quantity must be a whole number greater than or equal to 0")
+    const createProblem = validateListingFields(formData)
+    if (createProblem) {
+      setCreateError(createProblem)
       return
     }
 
@@ -144,13 +146,57 @@ function MyListingsPage() {
       })
 
       if(!response.ok){
-        setDeleteError(await getErrorMessage(response, `Unable to delete this listing (status ${response.status}).`))
+        const body: unknown = await response.json().catch(() => null)
+
+        // A listing that has been ordered, or is in someone's cart, cannot be deleted. It can be taken
+        // off sale instead, which leaves paid orders alone.
+        if (response.status === 409 && typeof body === "object" && body !== null && "code" in body && body.code === "LISTING_HAS_HISTORY") {
+          setArchivePrompt({ id, title: listing?.title ?? "this listing" })
+          return
+        }
+
+        setDeleteError(
+          typeof body === "object" && body !== null && "message" in body && typeof body.message === "string" && body.message
+            ? body.message
+            : `Unable to delete this listing (status ${response.status}).`
+        )
         return
       }
 
       setListings((currentListings) => currentListings.filter((candidate) => candidate.id !== id))
     }catch{
       setDeleteError("Something went wrong. Please check your connection and try again.")
+    }
+  }
+
+  // Takes a listing off sale: it is hidden from shoppers and removed from every cart, and paid orders are not touched.
+  async function handleArchive() {
+    if (archivePrompt === null || isArchiving) {
+      return
+    }
+
+    setIsArchiving(true)
+    const result = await apiRequest<{ listing: Listing }>(`/listings/${archivePrompt.id}/archive`, { method: "POST", body: {} })
+    setIsArchiving(false)
+
+    if (result.kind === "ok") {
+      setListings((current) => current.map((candidate) => candidate.id === archivePrompt.id ? result.data.listing : candidate))
+      setArchivePrompt(null)
+      setDeleteError("")
+    } else if (result.kind !== "unauthorized") {
+      setDeleteError(failureMessage(result))
+      setArchivePrompt(null)
+    }
+  }
+
+  async function handleRestore(id: number) {
+    setDeleteError("")
+    const result = await apiRequest<{ listing: Listing }>(`/listings/${id}/unarchive`, { method: "POST", body: {} })
+
+    if (result.kind === "ok") {
+      setListings((current) => current.map((candidate) => candidate.id === id ? result.data.listing : candidate))
+    } else if (result.kind !== "unauthorized") {
+      setDeleteError(failureMessage(result))
     }
   }
 
@@ -189,13 +235,9 @@ function MyListingsPage() {
       return
     }
 
-    if (isNaN(Number(editFormData.price)) === true || Number(editFormData.price) <= 0){
-      setSaveError("Price must be a number greater than 0")
-      return
-    }
-
-    if (!Number.isInteger(Number(editFormData.stockQuantity)) || Number(editFormData.stockQuantity) < 0) {
-      setSaveError("Stock quantity must be a whole number greater than or equal to 0")
+    const saveProblem = validateListingFields(editFormData)
+    if (saveProblem) {
+      setSaveError(saveProblem)
       return
     }
 
@@ -266,7 +308,7 @@ function MyListingsPage() {
             try {
                 const [profileResponse, listingsResponse] = await Promise.all([
                     apiFetch("/seller/profile", { credentials: "include", signal: controller.signal }),
-                    apiFetch("/listings/Mylisting", { credentials: "include", signal: controller.signal })
+                    apiFetch("/listings/Mylisting?archived=all", { credentials: "include", signal: controller.signal })
                 ])
 
                 if (controller.signal.aborted) {
@@ -307,6 +349,11 @@ function MyListingsPage() {
         return () => controller.abort()
     }, [navigate, loadAttempt])
     
+    const onSaleListings = listings.filter((listing) => !listing.archivedAt)
+    const archivedListings = listings.filter((listing) => listing.archivedAt)
+    // With nothing archived left, the Archived tab is gone, so the page goes back to the listings on sale.
+    const shownListings = view === "archived" && archivedListings.length > 0 ? archivedListings : onSaleListings
+
     return (
         <div>
             {loadError && (
@@ -330,6 +377,7 @@ function MyListingsPage() {
                 <div className="action-row">
                   {storeName && <Link to="/seller/profile/edit" className="btn">Edit store details</Link>}
                   {storeName && <Link to="/seller/payouts" className="btn">Payout settings</Link>}
+                  {storeName && <Link to="/seller/earnings" className="btn">Earnings</Link>}
                   {storeSlug && (
                     <button type="button" onClick={handleCopyShopLink}>
                       {linkCopied ? "Copied!" : "Copy shop link"}
@@ -355,11 +403,35 @@ function MyListingsPage() {
             <section aria-labelledby="listings-heading">
               <h2 id="listings-heading">Your listings</h2>
               {deleteError && <Notice kind="error">{deleteError}</Notice>}
-              {listings.length === 0 ? (
-                <p>You have no listings yet. Add your first one above.</p>
+              {archivePrompt && (
+                <Notice kind="warning">
+                  <p>
+                    &ldquo;{archivePrompt.title}&rdquo; cannot be deleted because it has been ordered or is in a cart. You can archive it instead.
+                    It is taken off sale and removed from carts, and orders already paid are not affected. You can restore it later.
+                  </p>
+                  <div className="action-row">
+                    <button type="button" className="btn btn-primary" disabled={isArchiving} onClick={handleArchive}>
+                      {isArchiving ? "Archiving..." : "Archive it"}
+                    </button>
+                    <button type="button" disabled={isArchiving} onClick={() => setArchivePrompt(null)}>Cancel</button>
+                  </div>
+                </Notice>
+              )}
+              {archivedListings.length > 0 && (
+                <div className="view-tabs" role="group" aria-label="Which listings to show">
+                  <button type="button" aria-pressed={view === "on-sale"} className={view === "on-sale" ? "view-tab is-active" : "view-tab"} onClick={() => setView("on-sale")}>
+                    On sale ({onSaleListings.length})
+                  </button>
+                  <button type="button" aria-pressed={view === "archived"} className={view === "archived" ? "view-tab is-active" : "view-tab"} onClick={() => setView("archived")}>
+                    Archived ({archivedListings.length})
+                  </button>
+                </div>
+              )}
+              {shownListings.length === 0 ? (
+                <p>{view === "archived" ? "You have no archived listings." : "You have no listings yet. Add your first one above."}</p>
               ) : (
                 <div className="product-grid">
-                  {listings.map((listing) => (
+                  {shownListings.map((listing) => (
                     <ListingCard
                       isEditable={true}
                       listing={listing}
@@ -372,6 +444,8 @@ function MyListingsPage() {
                       setEditImageFile={setEditImageFile}
                       handleEditClick={handleEditClick}
                       handleDelete={handleDelete}
+                      isArchived={view === "archived"}
+                      handleRestore={handleRestore}
                       handleCancel={handleCancel}
                       handleSave={handleSave}
                       key={listing.id}

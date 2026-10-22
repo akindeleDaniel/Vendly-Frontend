@@ -2,6 +2,7 @@ import type { ListingFormData } from "../types/listing"
 import type { SubmitEventHandler } from "react"
 import { CATEGORIES } from "../data/categories"
 import ImagePicker from "./ImagePicker"
+import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
 
 export type CreateListingFormData = ListingFormData
 
@@ -19,6 +20,7 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, 
         <label>
           Title
           <input name="title"
+            maxLength={TITLE_MAX_LENGTH}
             value={formData.title}
             disabled={isCreating}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
@@ -26,7 +28,8 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, 
         </label>
         <label>
           Description
-          <input name="description"
+          <textarea name="description"
+          maxLength={DESCRIPTION_MAX_LENGTH}
           value={formData.description}
           disabled={isCreating}
           onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
@@ -35,7 +38,7 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, 
         <div className="form-row">
           <label>
             Price
-            <input type="number" min="0.01" step="any" required name="price"
+            <input type="number" min="0.01" max={PRICE_MAX} step="0.01" required name="price"
             value={formData.price}
             disabled={isCreating}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
@@ -43,7 +46,7 @@ function CreateListingForm ({handleSubmit, formData, setFormData, setImageFile, 
           </label>
           <label>
             Stock Quantity
-            <input type="number" min="0" step="1" required name="stockQuantity"
+            <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
             value={formData.stockQuantity}
             disabled={isCreating}
             onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}

@@ -9,12 +9,15 @@ import Notice from "../components/Notice"
 import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { formatNaira } from "../lib/money"
 
 type ShopProfile = {
     businessName: string
     location: string
     logoUrl: string
     slug: string
+    shippingPolicy?: "FREE" | "FIXED"
+    shippingCost?: string | null// a naira amount, or null for free delivery
 }
 
 type ShopPageProps = {
@@ -170,6 +173,13 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                         <p className="shop-location">
                             <MapPinIcon />
                             {profile.location}
+                        </p>
+                    )}
+                    {profile.shippingPolicy && (
+                        <p className="shop-delivery">
+                            {profile.shippingPolicy === "FIXED" && profile.shippingCost
+                                ? `Delivery: ${formatNaira(profile.shippingCost)} per order`
+                                : "Free delivery"}
                         </p>
                     )}
                 </div>

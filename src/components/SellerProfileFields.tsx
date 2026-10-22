@@ -1,5 +1,6 @@
 import { lgas, states } from "nigerian-states-and-lgas"
 import type { SellerProfile } from "../types/seller"
+import { SHOP_NAME_MAX_LENGTH } from "../lib/limits"
 
 type SellerProfileFieldsProps = {
     formData: SellerProfile
@@ -16,6 +17,7 @@ function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps
             <label>
                 Business name
                 <input name="businessName"
+                    maxLength={SHOP_NAME_MAX_LENGTH}
                     value={formData.businessName}
                     onChange={(e) => setFormData({...formData, businessName: e.target.value})}
                 />

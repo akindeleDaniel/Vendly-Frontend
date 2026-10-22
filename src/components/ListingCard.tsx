@@ -5,6 +5,7 @@ import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
 import { CATEGORIES } from "../data/categories"
+import { DESCRIPTION_MAX_LENGTH, PRICE_MAX, STOCK_MAX, TITLE_MAX_LENGTH } from "../lib/limits"
 import ImagePicker from "./ImagePicker"
 
 type ListingCardProps = {
@@ -20,6 +21,8 @@ type ListingCardProps = {
   setEditImageFile?: (file: File | null) => void
   handleEditClick?: (listing: Listing) => void
   handleDelete?: (id: number) => void
+  isArchived?: boolean // an archived listing is off sale: it can only be restored
+  handleRestore?: (id: number) => void
   handleSave?: (id: number) => void
   handleCancel?: () => void
   shopLinkSearch?: string // query string kept on the shop link so the shop page can return to the same search
@@ -27,7 +30,7 @@ type ListingCardProps = {
   isLoggedOut?: boolean // true only once the session check has confirmed the visitor is not logged in
 }
 
-function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
+function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, isSaving, saveError, setEditFormData, setEditImageFile, handleEditClick, handleDelete, isArchived, handleRestore, handleSave, handleCancel, shopLinkSearch, allowAddToCart, isLoggedOut, isEditable}: ListingCardProps) {
   const navigate = useNavigate()
   const {
     quantity: selectedQuantity,
@@ -65,25 +68,25 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
           {listing.imageUrl && <img src={listing.imageUrl} alt={listing.title} />}
           <label>
             Title
-            <input name="title" value={editFormData!.title}
+            <input name="title" maxLength={TITLE_MAX_LENGTH} value={editFormData!.title}
               onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Description
-            <input name="description" value={editFormData!.description}
+            <textarea name="description" maxLength={DESCRIPTION_MAX_LENGTH} value={editFormData!.description}
               onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Price
-            <input name="price" value={editFormData!.price}
+            <input name="price" inputMode="decimal" max={PRICE_MAX} value={editFormData!.price}
               onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
           </label>
           <label>
             Stock Quantity
-            <input type="number" min="0" step="1" required name="stockQuantity"
+            <input type="number" min="0" max={STOCK_MAX} step="1" required name="stockQuantity"
               value={editFormData!.stockQuantity}
               onChange={(e) => setEditFormData!({...editFormData!, [e.target.name]: e.target.value})}
             />
@@ -121,7 +124,9 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               {listing.imageUrl
                 ? <img src={listing.imageUrl} alt={listing.title} loading="lazy" />
                 : <span role="img" aria-label="No photo available">No photo</span>}
-              {isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
+              {isArchived
+                ? <span className="badge product-badge">Archived</span>
+                : isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
             </div>
             <div className="product-body">
               <h3 className="product-title">
@@ -142,7 +147,12 @@ function ListingCard({ listing, userRole, editingId, editFormData, hasChanges, i
               )}
             </div>
           </div>
-          {isEditable && (
+          {isEditable && isArchived && (
+            <div className="product-actions">
+              <button type="button" className="btn btn-primary" onClick={() => handleRestore!(listing.id)}>Restore to sale</button>
+            </div>
+          )}
+          {isEditable && !isArchived && (
             <div className="product-actions">
               <button type="button" onClick={() => handleEditClick!(listing)}>Edit Listing</button>
               <button type="button" className="btn btn-danger" onClick={() => handleDelete!(listing.id)}>Delete Listing</button>

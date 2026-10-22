@@ -9,6 +9,7 @@ export type Listing = {
   stockQuantity: number
   sellerSlug?: string | null
   sellerName?: string | null
+  archivedAt?: string | null // set when the seller has taken the listing off sale; null while it is on sale
 }
 
 export type ListingFormData = {

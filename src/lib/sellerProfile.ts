@@ -1,10 +1,15 @@
 import { lgas } from "nigerian-states-and-lgas"
 import type { SellerProfile } from "../types/seller"
+import { SHOP_NAME_MAX_LENGTH } from "./limits"
 
 // Returns an error message for the first invalid field, or null when the form can be submitted.
 export function validateSellerProfile(profile: SellerProfile): string | null {
     if (profile.businessName.trim() === "" || profile.state === "" || profile.lga === "") {
         return "All areas must be filled"
+    }
+
+    if (profile.businessName.trim().length > SHOP_NAME_MAX_LENGTH) {
+        return `The shop name must be ${SHOP_NAME_MAX_LENGTH} characters or fewer`
     }
 
     if (!lgas(profile.state)?.includes(profile.lga)) {
