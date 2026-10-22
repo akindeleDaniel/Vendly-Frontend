@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import DeliveryFields from "../components/DeliveryFields"
 import Notice from "../components/Notice"
 import PaymentOptions from "../components/PaymentOptions"
+import PreOrderCheckoutBlock from "../components/PreOrderCheckoutBlock"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
@@ -68,7 +69,7 @@ function formatStatus(status: string): string {
 }
 
 // Every amount here is a string calculated by the server and is shown exactly as received.
-function ReviewSummary({ review }: { review: CheckoutReview }) {
+function ReviewSummary({ review, onCheckAgain, isRefreshing }: { review: CheckoutReview, onCheckAgain: () => void, isRefreshing: boolean }) {
   return (
     <section aria-labelledby="order-summary-heading" className="checkout-summary">
       <h2 id="order-summary-heading">Order summary</h2>
@@ -88,6 +89,7 @@ function ReviewSummary({ review }: { review: CheckoutReview }) {
               </li>
             ))}
           </ul>
+          <PreOrderCheckoutBlock group={group} onCheckAgain={onCheckAgain} isRefreshing={isRefreshing} />
           <hr className="summary-divider" />
           <div className="summary-row"><span>Seller subtotal</span><span>{formatNaira(group.subtotal)}</span></div>
           <div className="summary-row"><span>Shipping</span><span>{formatNaira(group.shipping)}</span></div>
@@ -190,9 +192,14 @@ function CheckoutPage() {
   const [issue, setIssue] = useState<Issue | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [preOrderProblem, setPreOrderProblem] = useState("")
   const [result, setResult] = useState<CheckoutResult | null>(null)
   const submittingRef = useRef(false)
   const noticeRef = useRef<HTMLDivElement>(null)
+  // Food shops that take pre-orders: the approved requests this payment uses, and whether a shop that
+  // only takes pre-orders still has to approve one.
+  const approvedPreOrderIds = (review?.sellers ?? []).flatMap((group) => group.preOrder?.approved ? [group.preOrder.approved.id] : [])
+  const waitingForPreOrder = (review?.sellers ?? []).some((group) => group.preOrder?.required === true && !group.preOrder.approved)
   const isBlocked = issue?.type === "items-unavailable" || issue?.type === "locked" || issue?.type === "conflict"
 
   useEffect(() => {
@@ -312,7 +319,7 @@ function CheckoutPage() {
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (submittingRef.current || isRefreshing || review === null || reviewNotice !== null || isBlocked) {
+    if (submittingRef.current || isRefreshing || review === null || reviewNotice !== null || isBlocked || waitingForPreOrder) {
       return
     }
 
@@ -324,11 +331,12 @@ function CheckoutPage() {
 
     setValidationError(null)
     setIssue(null)
+    setPreOrderProblem("")
     submittingRef.current = true// blocks a second submit even before the next render disables the button
     setIsSubmitting(true)
 
     try {
-      const outcome = await submitCheckout(delivery, review.reviewToken)
+      const outcome = await submitCheckout(delivery, review.reviewToken, approvedPreOrderIds)
 
       switch (outcome.kind) {
         case "success":
@@ -353,6 +361,10 @@ function CheckoutPage() {
           break
         case "conflict":
           await refreshPreview("conflict")
+          break
+        case "preorder-problem":
+          await refreshPreview("check-again")
+          setPreOrderProblem(outcome.message)
           break
         case "empty-cart":
           setPreviewStatus("empty")
@@ -439,7 +451,7 @@ function CheckoutPage() {
       </Notice>
 
       <div className="checkout-layout">
-        <ReviewSummary review={review} />
+        <ReviewSummary review={review} onCheckAgain={() => refreshPreview("check-again")} isRefreshing={isRefreshing} />
 
         <div className="checkout-main">
           {reviewNotice && (
@@ -505,13 +517,17 @@ function CheckoutPage() {
               </Notice>
             )}
             {issue?.type === "error" && <Notice kind="error">{issue.message}</Notice>}
+            {preOrderProblem && <Notice kind="warning">{preOrderProblem}</Notice>}
+            {waitingForPreOrder && (
+              <Notice kind="info">A shop in your cart only takes pre-orders. Ask it for a time in the order summary and wait for its approval before you pay.</Notice>
+            )}
 
             {isBlocked ? (
               <button type="button" className="btn-block btn-lg" onClick={() => refreshPreview(issue?.type === "conflict" ? "conflict" : "check-again")} disabled={isRefreshing}>
                 {isRefreshing ? "Checking..." : "Check again"}
               </button>
             ) : (
-              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null}>
+              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null || waitingForPreOrder}>
                 {isSubmitting
                   ? "Creating checkout..."
                   : issue?.type === "unconfirmed" ? "Try again with the same details" : "Create checkout"}

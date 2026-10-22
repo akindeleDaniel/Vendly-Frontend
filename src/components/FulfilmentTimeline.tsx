@@ -89,6 +89,9 @@ function FulfilmentTimeline({ status, paidAt, fulfilment, viewer }: FulfilmentTi
 
     return (
         <div className="stepper-wrap">
+            {fulfilment.fulfilmentType === "PRE_ORDER" && fulfilment.readyAt && (
+                <p className="preorder-ready"><span className="badge">Pre-order</span> Ready on {formatShortDate(fulfilment.readyAt)}</p>
+            )}
             <ol className="stepper" aria-label="Order progress">
                 {steps.map((step, index) => {
                     const next = steps[index + 1]

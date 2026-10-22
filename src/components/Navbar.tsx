@@ -6,6 +6,8 @@ import LogoutDialog from "./LogoutDialog"
 import { HomeIcon } from "./Icons"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 import { fetchComplaintsAwaitingSeller, fetchUnreadComplaintCount } from "../lib/disputeApi"
+import { fetchPreOrdersAwaitingAnswer, listPreOrders } from "../lib/preOrderApi"
+import { apiRequest } from "../lib/apiRequest"
 
 // Login and registration pages show a centred logo above the form instead of the header.
 const AUTH_PATHS = ["/login", "/register", "/consumer/register", "/seller/register", "/forgot-password"]
@@ -29,6 +31,8 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
     const [awaitingCount, setAwaitingCount] = useState(0)
     const [complaintCount, setComplaintCount] = useState(0)
     const [unreadComplaints, setUnreadComplaints] = useState(0)
+    const [preOrderCount, setPreOrderCount] = useState(0)
+    const [showPreOrders, setShowPreOrders] = useState(false)// a seller who takes pre-orders, or a buyer who has asked for one
     const isConsumer = authStatus === "authenticated" && userRole === "CONSUMER"
     const isSeller = authStatus === "authenticated" && userRole === "SELLER"
 
@@ -62,6 +66,38 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
         })
         return () => controller.abort()
     }, [isSeller, pathname])
+
+    // Pre-orders are only for food shops. A seller sees the link when the shop takes them (or still has
+    // requests), with the count waiting for an answer; a buyer sees it once they have asked for one.
+    useEffect(() => {
+        if (!isSeller && !isConsumer) {
+            return
+        }
+
+        const controller = new AbortController()
+
+        async function check() {
+            if (isConsumer) {
+                const result = await listPreOrders("buyer", 1, "", controller.signal)
+                if (!controller.signal.aborted) {
+                    setShowPreOrders(result.kind === "ok" && result.data.total > 0)
+                }
+                return
+            }
+
+            const profile = await apiRequest<{ foodOrderType?: string }>("/seller/profile", { signal: controller.signal })
+            const takesPreOrders = profile.kind === "ok" && (profile.data.foodOrderType === "PRE_ORDER" || profile.data.foodOrderType === "BOTH")
+            const count = await fetchPreOrdersAwaitingAnswer(controller.signal)
+
+            if (!controller.signal.aborted) {
+                setPreOrderCount(count ?? 0)
+                setShowPreOrders(takesPreOrders || (count ?? 0) > 0)
+            }
+        }
+
+        check()
+        return () => controller.abort()
+    }, [isSeller, isConsumer, pathname])
 
     // Logs out of this device only, or of every device, then goes to the home page.
     // Complaints with something new in them for this person (a reply they have not opened).
@@ -120,6 +156,9 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
                                         )}
                                     </Link>
                                 )}
+                                {userRole === "CONSUMER" && showPreOrders && pathname !== "/pre-orders" && (
+                                    <Link to="/pre-orders" className="header-link">Pre-orders</Link>
+                                )}
                                 {userRole === "CONSUMER" && pathname === "/cart" && (
                                     <Link to="/" className="icon-link" aria-label="Home" title="Home">
                                         <HomeIcon size={24} />
@@ -136,6 +175,14 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/orders" && (
                                     <Link to="/seller/orders" className="header-link">Orders</Link>
+                                )}
+                                {userRole === "SELLER" && showPreOrders && pathname !== "/seller/pre-orders" && (
+                                    <Link to="/seller/pre-orders" className="header-link">
+                                        Pre-orders
+                                        {preOrderCount > 0 && (
+                                            <span className="count-badge" aria-label={`${preOrderCount} waiting for your answer`}>{preOrderCount}</span>
+                                        )}
+                                    </Link>
                                 )}
                                 {userRole === "SELLER" && pathname !== "/seller/disputes" && (
                                     <Link to="/seller/disputes" className="header-link">

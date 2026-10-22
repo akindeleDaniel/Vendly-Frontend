@@ -22,6 +22,7 @@ type ShopProfile = {
     shippingCost?: string | null// a naira amount, or null for free delivery
     ratingAverage?: number | null
     ratingCount?: number
+    foodOrderType?: "NOW" | "PRE_ORDER" | "BOTH"
 }
 
 type ShopPageProps = {
@@ -180,6 +181,8 @@ function ShopPage ({ userRole, authStatus }: ShopPageProps) {
                         </p>
                     )}
                     {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
+                    {profile.foodOrderType === "PRE_ORDER" && <p className="shop-delivery">Food is by pre-order only: ask for a ready time at checkout.</p>}
+                    {profile.foodOrderType === "BOTH" && <p className="shop-delivery">Takes pre-orders for food as well as orders for now.</p>}
                     {profile.shippingPolicy && (
                         <p className="shop-delivery">
                             {profile.shippingPolicy === "FIXED" && profile.shippingCost

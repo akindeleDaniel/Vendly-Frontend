@@ -5,6 +5,8 @@ import type { SellerProfile } from "../types/seller"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
 import SellerProfileFields from "../components/SellerProfileFields"
+import { FOOD_ORDER_TYPE_OPTIONS } from "../types/preOrder"
+import type { FoodOrderType } from "../types/preOrder"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 import ImagePicker from "../components/ImagePicker"
@@ -24,6 +26,9 @@ function EditSellerProfilePage (){
         shippingCost: ""
     })
 
+    const [foodOrderType, setFoodOrderType] = useState<FoodOrderType>("NOW")
+    const [savedFoodOrderType, setSavedFoodOrderType] = useState<FoodOrderType>("NOW")
+    const [sellsFood, setSellsFood] = useState(false)// has a Food & Grocery listing on sale
     const [savedProfile, setSavedProfile] = useState<SellerProfile | null>(null)// last values loaded from or saved to the server, used to detect edits
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
     const [logoFile, setLogoFile] = useState<File | null>(null)// only filled if the seller picks a new logo
@@ -66,8 +71,18 @@ function EditSellerProfilePage (){
                     shippingPolicy: data.shippingPolicy === "FIXED" ? "FIXED" : "FREE",
                     shippingCost: data.shippingCost === null || data.shippingCost === undefined ? "" : String(data.shippingCost)
                 }
+                // Pre-orders are only for shops with a food listing. A failed check just leaves the setting hidden.
+                const listingsResponse = await apiFetch("/listings/Mylisting", { credentials: "include", signal: controller.signal }).catch(() => null)
+                const myListings: unknown = listingsResponse?.ok ? await listingsResponse.json().catch(() => null) : null
+                if (controller.signal.aborted) {
+                    return
+                }
+                setSellsFood(Array.isArray(myListings) && myListings.some((listing) => listing?.category === "Food & Grocery"))
+                const loadedFoodOrderType: FoodOrderType = data.foodOrderType === "PRE_ORDER" || data.foodOrderType === "BOTH" ? data.foodOrderType : "NOW"
                 setFormData(loadedProfile)
                 setSavedProfile(loadedProfile)
+                setFoodOrderType(loadedFoodOrderType)
+                setSavedFoodOrderType(loadedFoodOrderType)
                 setCurrentLogoUrl(data.logoUrl ?? "")
                 setLoadStatus("ready")
             }catch {
@@ -88,6 +103,7 @@ function EditSellerProfilePage (){
         savedProfile !== null &&
         (
             logoFile !== null ||
+            foodOrderType !== savedFoodOrderType ||
             formData.businessName.trim() !== savedProfile.businessName.trim() ||
             formData.state !== savedProfile.state ||
             formData.lga !== savedProfile.lga ||
@@ -127,7 +143,10 @@ function EditSellerProfilePage (){
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(buildSellerProfileBody(formData, logoUrl)),
+                body: JSON.stringify({
+                    ...buildSellerProfileBody(formData, logoUrl),
+                    ...(foodOrderType !== savedFoodOrderType ? { foodOrderType } : {})
+                }),
                 credentials: "include"
             })
 
@@ -138,6 +157,7 @@ function EditSellerProfilePage (){
 
             // Only now are the submitted values the new baseline.
             setSavedProfile(formData)
+            setSavedFoodOrderType(foodOrderType)
             setCurrentLogoUrl(logoUrl)
             setLogoFile(null)
             navigate("/seller/myListing")
@@ -172,6 +192,22 @@ function EditSellerProfilePage (){
             <h1>Edit your store</h1>
             <form onSubmit={handleSubmit} className="card form-card">
                 <SellerProfileFields formData={formData} setFormData={setFormData} />
+                {(sellsFood || savedFoodOrderType !== "NOW") && (
+                    <>
+                        <label>
+                            How your food is sold
+                            <select value={foodOrderType} disabled={isSubmitting} onChange={(event) => setFoodOrderType(event.target.value as FoodOrderType)}>
+                                {FOOD_ORDER_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            </select>
+                        </label>
+                        <p className="field-help">
+                            This is set once for the whole shop, not for each listing. With pre-orders, buyers ask for a ready time and you have 48 hours to approve or decline before they pay.
+                        </p>
+                        <p className="field-help">
+                            "Pre-orders only" applies to everything you sell, not just food. If you sell other things too, choose "Both" so buyers can still order those for delivery now.
+                        </p>
+                    </>
+                )}
                 <ImagePicker
                     label="Change logo (optional)"
                     currentUrl={currentLogoUrl || undefined}

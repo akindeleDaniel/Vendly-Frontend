@@ -24,6 +24,8 @@ import AdminUserDetailPage from "./pages/AdminUserDetailPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
 import SellerEarningsPage from "./pages/SellerEarningsPage"
 import SellerReviewsPage from "./pages/SellerReviewsPage"
+import PreOrderListPage from "./pages/PreOrderListPage"
+import PreOrderDetailPage from "./pages/PreOrderDetailPage"
 import AdminReviewsPage from "./pages/AdminReviewsPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import ProductPage from "./pages/ProductPage"
@@ -229,6 +231,14 @@ function App() {
           <Route path="/seller/disputes" element={<RequireRole role="SELLER" {...guardProps}><DisputeListPage viewer="seller" /></RequireRole>} />
 
           <Route path="/seller/disputes/:id" element={<RequireRole role="SELLER" {...guardProps}><DisputeDetailPage viewer="seller" /></RequireRole>} />
+
+          <Route path="/seller/pre-orders" element={<RequireRole role="SELLER" {...guardProps}><PreOrderListPage viewer="seller" /></RequireRole>} />
+
+          <Route path="/seller/pre-orders/:id" element={<RequireRole role="SELLER" {...guardProps}><PreOrderDetailPage viewer="seller" /></RequireRole>} />
+
+          <Route path="/pre-orders" element={<RequireRole role="CONSUMER" {...guardProps}><PreOrderListPage viewer="buyer" /></RequireRole>} />
+
+          <Route path="/pre-orders/:id" element={<RequireRole role="CONSUMER" {...guardProps}><PreOrderDetailPage viewer="buyer" /></RequireRole>} />
 
           <Route path="/seller/reviews" element={<RequireRole role="SELLER" {...guardProps}><SellerReviewsPage /></RequireRole>} />
 

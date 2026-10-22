@@ -1,3 +1,5 @@
+import type { ApprovedPreOrder, FoodOrderType } from "./preOrder"
+
 // Shapes of the checkout endpoints as implemented by the backend (checkoutController.ts).
 // All money values are strings with two decimals, calculated by the server.
 
@@ -19,6 +21,10 @@ export type ReviewSeller = {
     businessName: string
     slug: string
   }
+  // How a food shop takes orders, and for a shop that takes pre-orders whether one is needed and
+  // whether an approved request exists for exactly what is in the cart.
+  orderType?: FoodOrderType
+  preOrder?: { required: boolean, approved: ApprovedPreOrder | null }
   items: ReviewItem[]
   subtotal: string
   shipping: string
@@ -55,6 +61,8 @@ export type CheckoutOrderItem = {
 
 export type CheckoutOrder = {
   id: number
+  fulfilmentType?: "NOW" | "PRE_ORDER"
+  readyAt?: string | null
   seller: {
     businessName: string
     slug: string

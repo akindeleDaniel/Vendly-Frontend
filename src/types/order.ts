@@ -43,6 +43,9 @@ export type Fulfilment = {
   // Set when the order was closed as delivered after 7 days without an answer from the buyer.
   // Then the status is DELIVERED but deliveryConfirmedAt is null.
   deliveryAutoClosedAt?: string | null
+  // PRE_ORDER for a food order the shop approved for readyAt; otherwise NOW.
+  fulfilmentType?: "NOW" | "PRE_ORDER"
+  readyAt?: string | null
 }
 
 // One paid checkout in a customer's history (GET /orders).

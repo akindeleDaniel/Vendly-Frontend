@@ -26,6 +26,7 @@ export type SubmitOutcome =
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "locked", message: string, checkout: LockedCheckout | null }
     | { kind: "conflict", message: string }
+    | { kind: "preorder-problem", message: string }// a food shop's pre-order is needed, has lapsed, or no longer matches
     | { kind: "empty-cart" }
     | { kind: "invalid-request", message: string }
     | { kind: "unauthorized" }
@@ -227,7 +228,7 @@ function buildDeliveryBody(delivery: DeliveryDetails) {
     }
 }
 
-export async function submitCheckout(delivery: DeliveryDetails, reviewToken: string): Promise<SubmitOutcome> {
+export async function submitCheckout(delivery: DeliveryDetails, reviewToken: string, preOrderIds: number[] = []): Promise<SubmitOutcome> {
     let response: Response
 
     try {
@@ -239,7 +240,8 @@ export async function submitCheckout(delivery: DeliveryDetails, reviewToken: str
             credentials: "include",
             body: JSON.stringify({
                 delivery: buildDeliveryBody(delivery),
-                reviewToken
+                reviewToken,
+                ...(preOrderIds.length > 0 ? { preOrderIds } : {})
             })
         })
     } catch {
@@ -288,6 +290,10 @@ export async function submitCheckout(delivery: DeliveryDetails, reviewToken: str
 
         if (code === "CHECKOUT_CONFLICT") {
             return { kind: "conflict", message }
+        }
+
+        if (code === "CHECKOUT_PREORDER_REQUIRED" || code === "CHECKOUT_PREORDER_INVALID" || code === "CHECKOUT_PREORDER_NOT_AVAILABLE") {
+            return { kind: "preorder-problem", message }
         }
     }
 
