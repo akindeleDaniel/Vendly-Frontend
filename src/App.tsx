@@ -41,7 +41,10 @@ import DisputeListPage from "./pages/DisputeListPage"
 import NewDisputePage from "./pages/NewDisputePage"
 import OfferRefundPage from "./pages/OfferRefundPage"
 import SellerLiabilitiesPage from "./pages/SellerLiabilitiesPage"
-import { RedirectIfAuthenticated, RequireAdmin, RequireRole, RequireSession } from "./components/RouteGuards"
+import { RedirectIfAuthenticated, RequireAdmin, RequireRole, RequireSession, RequireSuperAdmin } from "./components/RouteGuards"
+import AdminPlatformPage from "./pages/AdminPlatformPage"
+import AdminTeamPage from "./pages/AdminTeamPage"
+import AdminAuditLogPage from "./pages/AdminAuditLogPage"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { apiFetch, getErrorMessage, setUnauthorizedHandler } from "./lib/api"
 import { clearPendingCartItem } from "./lib/pendingCartItem"
@@ -58,6 +61,7 @@ function App() {
   const [loginCount, setLoginCount] = useState(0)// a new login starts the "set a password" pop-up afresh
   const [hasPassword, setHasPassword] = useState(true)// false for an account made with Google that has not set one
   const [userName, setUserName] = useState("")// for the "Hi Balake" greeting
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)// shows the platform, team and audit log screens; the backend checks it too
   const [isAdmin, setIsAdmin] = useState(false)// only decides what to show; the backend checks it on every admin request
   const [sessionExpired, setSessionExpired] = useState(false)
   const [authCheckAttempt, setAuthCheckAttempt] = useState(0)
@@ -75,6 +79,7 @@ function App() {
       if (response.ok) {
         const data: unknown = await response.json()
         setIsAdmin(typeof data === "object" && data !== null && "isAdmin" in data && data.isAdmin === true)
+        setIsSuperAdmin(typeof data === "object" && data !== null && "isSuperAdmin" in data && data.isSuperAdmin === true)
         setUserName(typeof data === "object" && data !== null && "name" in data && typeof data.name === "string" ? data.name : "")
         setHasPassword(!(typeof data === "object" && data !== null && "hasPassword" in data && data.hasPassword === false))
       }
@@ -176,6 +181,7 @@ function App() {
         if (typeof data === "object" && data !== null && "role" in data && isUserRole(data.role)) {
           setUserRole(data.role)
           setIsAdmin("isAdmin" in data && data.isAdmin === true)
+          setIsSuperAdmin("isSuperAdmin" in data && data.isSuperAdmin === true)
           setUserName("name" in data && typeof data.name === "string" ? data.name : "")
           setHasPassword(!("hasPassword" in data && data.hasPassword === false))
           setAuthStatus("authenticated")
@@ -195,7 +201,7 @@ function App() {
   }, [authCheckAttempt] // runs once when the app starts, and again when the user retries a failed check
   )
 
-  const guardProps = { authStatus, userRole, isAdmin, onRetry: retryAuthCheck }
+  const guardProps = { authStatus, userRole, isAdmin, isSuperAdmin, onRetry: retryAuthCheck }
 
   return (
     <BrowserRouter>
@@ -269,27 +275,33 @@ function App() {
 
           <Route path="/disputes/:id" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireRole>} />
 
-          <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell><AdminDashboardPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminDashboardPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/orders" element={<RequireAdmin {...guardProps}><AdminShell><AdminOrdersPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/orders" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminOrdersPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/orders/:id" element={<RequireAdmin {...guardProps}><AdminShell><AdminOrderDetailPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/orders/:id" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminOrderDetailPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/users" element={<RequireAdmin {...guardProps}><AdminShell><AdminUsersPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/users" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminUsersPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/users/:id" element={<RequireAdmin {...guardProps}><AdminShell><AdminUserDetailPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/users/:id" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminUserDetailPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/complaints" element={<RequireAdmin {...guardProps}><AdminShell><DisputeListPage viewer="admin" /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/complaints" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><DisputeListPage viewer="admin" /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/complaints/:id" element={<RequireAdmin {...guardProps}><AdminShell><DisputeDetailPage viewer="admin" /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/complaints/:id" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><DisputeDetailPage viewer="admin" /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/refunds" element={<RequireAdmin {...guardProps}><AdminShell><AdminRefundsPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/refunds" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminRefundsPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/reviews" element={<RequireAdmin {...guardProps}><AdminShell><AdminReviewsPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/reviews" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminReviewsPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/admin/recovery-cases" element={<RequireAdmin {...guardProps}><AdminShell><AdminRecoveryCasesPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/platform" element={<RequireSuperAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminPlatformPage /></AdminShell></RequireSuperAdmin>} />
 
-          <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin/team" element={<RequireSuperAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminTeamPage /></AdminShell></RequireSuperAdmin>} />
+
+          <Route path="/admin/audit-log" element={<RequireSuperAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminAuditLogPage /></AdminShell></RequireSuperAdmin>} />
+
+          <Route path="/admin/recovery-cases" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminRecoveryCasesPage /></AdminShell></RequireAdmin>} />
+
+          <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
 
           <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
 

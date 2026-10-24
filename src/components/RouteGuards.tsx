@@ -10,6 +10,7 @@ type GuardProps = {
     authStatus: AuthStatus
     userRole: UserRole | null
     isAdmin?: boolean
+    isSuperAdmin?: boolean
     onRetry: () => void
     children: ReactNode
 }
@@ -91,6 +92,37 @@ export function RequireAdmin({ authStatus, userRole, isAdmin, onRetry, children 
 
     if (!isAdmin) {
         return <Navigate to={homePathForRole(userRole)} replace />
+    }
+
+    return <>{children}</>
+}
+
+// Pages for super administrators only (the platform figures, the team and the audit log). As with
+// RequireAdmin, the session check only decides what to show: the backend checks it on every request.
+export function RequireSuperAdmin({ authStatus, userRole, isAdmin, isSuperAdmin, onRetry, children }: GuardProps) {
+    if (authStatus === "loading") {
+        return <SessionLoading />
+    }
+
+    if (authStatus === "error") {
+        return (
+            <div role="alert">
+                <p>We could not verify your session. Please check your connection and try again.</p>
+                <button type="button" onClick={onRetry}>Try again</button>
+            </div>
+        )
+    }
+
+    if (authStatus === "unauthenticated") {
+        return <Navigate to="/login" replace />
+    }
+
+    if (!isAdmin) {
+        return <Navigate to={homePathForRole(userRole)} replace />
+    }
+
+    if (!isSuperAdmin) {
+        return <Navigate to="/admin" replace />
     }
 
     return <>{children}</>
