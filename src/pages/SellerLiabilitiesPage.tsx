@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<LiabilityStatus, string> = {
     VOID: "Cancelled"
 }
 
-// What a seller owes Vendly after refunds, and every deduction taken from their sales so far, so
+// What a seller owes StoreHatch after refunds, and every deduction taken from their sales so far, so
 // money kept back is never a surprise.
 function SellerLiabilitiesPage() {
     useDocumentTitle("Refunds and amounts owed")
@@ -109,7 +109,7 @@ function SellerLiabilitiesPage() {
             {back}
             <h1>Refunds and amounts owed</h1>
             <p className="page-intro">
-                When a buyer is refunded for one of your orders, the refund is charged to you. Vendly recovers it from your later sales, keeping at most {data.deductionCapPercent}% of each sale until it is paid back.
+                When a buyer is refunded for one of your orders, the refund is charged to you. StoreHatch recovers it from your later sales, keeping at most {data.deductionCapPercent}% of each sale until it is paid back.
             </p>
 
             {!data.termsAccepted && (
@@ -155,7 +155,7 @@ function SellerLiabilitiesPage() {
                                             <li key={index}>
                                                 <span>
                                                     {formatShortDate(recovery.createdAt)} ·{" "}
-                                                    {recovery.orderId ? `from order ${recovery.orderId}` : recovery.note ?? "collected by Vendly"}
+                                                    {recovery.orderId ? `from order ${recovery.orderId}` : recovery.note ?? "collected by StoreHatch"}
                                                 </span>
                                                 <strong>−{formatNaira(recovery.amount)}</strong>
                                             </li>

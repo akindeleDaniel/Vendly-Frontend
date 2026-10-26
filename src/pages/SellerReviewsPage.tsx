@@ -58,7 +58,7 @@ function ReportForm({ type, review, onReported }: ReportFormProps) {
     return (
         <form onSubmit={handleSubmit} className="stack-form">
             <label>
-                Why should Vendly look at this review?
+                Why should StoreHatch look at this review?
                 <textarea maxLength={REASON_MAX} value={reason} disabled={isSending} onChange={(event) => setReason(event.target.value)} />
             </label>
             {error && <Notice kind="error">{error}</Notice>}
@@ -117,7 +117,7 @@ function SellerReviewsPage() {
                                     {review.comment ? <p>{review.comment}</p> : <p className="field-help">No comment.</p>}
                                     <p className="review-meta">{review.reviewer} · {formatShortDate(review.createdAt)}</p>
                                     {review.reported
-                                        ? <p className="field-help">You reported this review. Vendly will look at it.</p>
+                                        ? <p className="field-help">You reported this review. StoreHatch will look at it.</p>
                                         : <ReportForm type={type} review={review} onReported={reload} />}
                                 </li>
                             ))}

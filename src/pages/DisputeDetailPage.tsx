@@ -127,7 +127,7 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
                     <section aria-labelledby="appeal-heading" className="card summary-card">
                         <h2 id="appeal-heading">Appeal this decision</h2>
                         <p>
-                            If you think Vendly got this wrong, tell us why and we will look at it again.
+                            If you think StoreHatch got this wrong, tell us why and we will look at it again.
                             {dispute.appeal?.deadline && <> You can appeal until {formatShortDate(dispute.appeal.deadline)}.</>}
                         </p>
                         <Notice kind="warning">You can appeal once, and the second decision is final.</Notice>

@@ -178,7 +178,7 @@ function RefundCard({ refund, onChanged }: { refund: AdminRefund, onChanged: (re
                 <div><dt>Reason</dt><dd>{refund.reason}</dd></div>
                 {refund.customerNote && <div><dt>Note to the buyer</dt><dd>{refund.customerNote}</dd></div>}
                 {refund.providerStatus && <div><dt>Provider says</dt><dd>{refund.providerStatus}</dd></div>}
-                {refund.awaitingFunds && <div><dt>Waiting for</dt><dd>Funds in Vendly's provider balance</dd></div>}
+                {refund.awaitingFunds && <div><dt>Waiting for</dt><dd>Funds in StoreHatch's provider balance</dd></div>}
                 {refund.expectedAt && <div><dt>Expected</dt><dd>{formatShortDate(refund.expectedAt)}</dd></div>}
                 {refund.completedAt && <div><dt>Completed</dt><dd>{formatShortDate(refund.completedAt)}</dd></div>}
                 {refund.failureReason && <div><dt>Why it failed</dt><dd>{refund.failureReason}</dd></div>}

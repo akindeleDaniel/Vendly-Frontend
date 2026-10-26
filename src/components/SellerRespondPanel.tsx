@@ -9,7 +9,7 @@ import type { Dispute } from "../types/dispute"
 type Choice = "AGREE_TO_REFUND" | "DISAGREE"
 
 // The seller's answer to a complaint: agree to the refund, or disagree and say why. Agreeing sends
-// the complaint to Vendly, which issues the refund; disagreeing sends it to Vendly to decide.
+// the complaint to StoreHatch, which issues the refund; disagreeing sends it to StoreHatch to decide.
 function SellerRespondPanel({ dispute, onUpdated }: { dispute: Dispute, onUpdated: (dispute: Dispute) => void }) {
     const choiceName = useId()
     const messageId = useId()
@@ -49,8 +49,8 @@ function SellerRespondPanel({ dispute, onUpdated }: { dispute: Dispute, onUpdate
         <section aria-labelledby="respond-heading" className="card summary-card">
             <h2 id="respond-heading">Your response</h2>
             <p className="field-help">
-                The buyer is waiting for you. {dispute.responseDueAt ? "If you do not respond in time, Vendly will decide this complaint. " : ""}
-                Agreeing means you accept the refund; Vendly then issues it.
+                The buyer is waiting for you. {dispute.responseDueAt ? "If you do not respond in time, StoreHatch will decide this complaint. " : ""}
+                Agreeing means you accept the refund; StoreHatch then issues it.
             </p>
             <form onSubmit={handleSubmit} className="dispute-form">
                 <fieldset className="choice-fieldset">
@@ -64,7 +64,7 @@ function SellerRespondPanel({ dispute, onUpdated }: { dispute: Dispute, onUpdate
                         I disagree with this complaint
                     </label>
                 </fieldset>
-                <label htmlFor={messageId}>Message to the buyer and Vendly</label>
+                <label htmlFor={messageId}>Message to the buyer and StoreHatch</label>
                 <textarea id={messageId} value={message} maxLength={MESSAGE_MAX_LENGTH} disabled={isSending} onChange={(event) => setMessage(event.target.value)} />
                 <EvidenceUploader urls={urls} onChange={setUrls} onUploadingChange={setIsUploading} disabled={isSending} />
                 {error && <Notice kind="error">{error}</Notice>}

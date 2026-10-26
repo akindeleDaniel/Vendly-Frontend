@@ -123,7 +123,7 @@ function LiabilityCard({ liability, onChanged }: { liability: AdminLiability, on
     )
 }
 
-// What sellers owe Vendly after refunds. Money is recovered from their later sales; what cannot be
+// What sellers owe StoreHatch after refunds. Money is recovered from their later sales; what cannot be
 // recovered that way is collected by hand or written off here.
 function AdminLiabilitiesPage() {
     useDocumentTitle("Owed by sellers")

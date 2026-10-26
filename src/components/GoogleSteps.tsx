@@ -16,7 +16,7 @@ function GoogleSteps({ google }: { google: GoogleSignIn }) {
     if (step.kind === "role") {
         return (
             <AuthShell title="Are you a buyer or a seller?">
-                <p>{step.name ? `Welcome, ${step.name}. ` : ""}Choose how you will use Vendly with {step.email}.</p>
+                <p>{step.name ? `Welcome, ${step.name}. ` : ""}Choose how you will use StoreHatch with {step.email}.</p>
                 <div className="role-options">
                     <button type="button" className="role-card" disabled={google.isWorking} onClick={() => google.chooseRole("CONSUMER")}>
                         <span className="role-card-title">I want to shop</span>

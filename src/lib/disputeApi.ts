@@ -184,12 +184,12 @@ export function describeDispute(
             return viewer === "admin"
                 ? { label: "Seller agreed, needs a decision", tone: "attention" }
                 : viewer === "seller"
-                    ? { label: "You agreed, waiting for Vendly", tone: "neutral" }
-                    : { label: "Seller agreed, waiting for Vendly", tone: "neutral" }
+                    ? { label: "You agreed, waiting for StoreHatch", tone: "neutral" }
+                    : { label: "Seller agreed, waiting for StoreHatch", tone: "neutral" }
         case "UNDER_REVIEW":
             return viewer === "admin"
                 ? { label: "Needs a decision", tone: "attention" }
-                : { label: "Vendly is reviewing", tone: "neutral" }
+                : { label: "StoreHatch is reviewing", tone: "neutral" }
         case "RESOLVED":
             return dispute.outcome === "REFUNDED"
                 ? { label: "Refunded", tone: "good" }

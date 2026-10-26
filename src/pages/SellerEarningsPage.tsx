@@ -121,7 +121,7 @@ function SellerEarningsPage() {
 
                         {owedToVendly.count > 0 && (
                             <Notice kind="warning">
-                                <p>You still owe Vendly {formatNaira(owedToVendly.amountStillOwed)} for {owedToVendly.count} {owedToVendly.count === 1 ? "refund" : "refunds"}.</p>
+                                <p>You still owe StoreHatch {formatNaira(owedToVendly.amountStillOwed)} for {owedToVendly.count} {owedToVendly.count === 1 ? "refund" : "refunds"}.</p>
                                 <Link to="/seller/liabilities" className="btn">See what you owe</Link>
                             </Notice>
                         )}

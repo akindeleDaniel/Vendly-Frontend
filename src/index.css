@@ -1,4 +1,4 @@
-/* Vendly styles. Tokens first (the colours, sizes and spacing), then plain-element defaults,
+/* StoreHatch styles. Tokens first (the colours, sizes and spacing), then plain-element defaults,
    then shared component classes. */
 @import "./styles/tokens.css";
 @import "./styles/base.css";

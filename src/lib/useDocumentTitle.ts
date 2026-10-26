@@ -1,11 +1,10 @@
 import { useEffect } from "react"
+import { BRAND_NAME } from "./brand"
 
-const SITE_NAME = "Vendly"
-
-// Sets the browser tab title for the current page, for example "Your cart · Vendly".
+// Sets the browser tab title for the current page, for example "Your cart · StoreHatch".
 // Without a title it falls back to just the site name.
 export function useDocumentTitle(title?: string | null) {
     useEffect(() => {
-        document.title = title ? `${title} · ${SITE_NAME}` : SITE_NAME
+        document.title = title ? `${title} · ${BRAND_NAME}` : BRAND_NAME
     }, [title])
 }

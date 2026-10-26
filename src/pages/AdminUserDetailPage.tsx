@@ -77,7 +77,7 @@ function AdminUserDetailPage() {
                     </div>
                     <div><dt>Complaints in progress</dt><dd>{user.activeComplaints}</dd></div>
                     <div>
-                        <dt>Owed to Vendly</dt>
+                        <dt>Owed to StoreHatch</dt>
                         <dd>
                             {formatNaira(user.openLiabilities.amountStillOwed)}
                             {user.openLiabilities.count > 0 && <> across {user.openLiabilities.count} {user.openLiabilities.count === 1 ? "refund" : "refunds"} · <Link to="/admin/liabilities">See debts</Link></>}

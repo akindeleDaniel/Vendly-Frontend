@@ -65,7 +65,7 @@ function NewDisputePage() {
             <p className="page-back"><Link to={backTo} className="back-link">Back to the order</Link></p>
             <h1>Report a problem</h1>
             <p className="page-intro">
-                Tell us what went wrong with your order from {sellerOrder.seller?.businessName ?? "the seller"}. The seller is asked to respond first, and Vendly steps in if you cannot agree.
+                Tell us what went wrong with your order from {sellerOrder.seller?.businessName ?? "the seller"}. The seller is asked to respond first, and StoreHatch steps in if you cannot agree.
             </p>
 
             <section aria-label="The order" className="card summary-card">

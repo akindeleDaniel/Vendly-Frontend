@@ -28,7 +28,7 @@ function SellerOrderExtras({ order, compact }: SellerOrderExtrasProps) {
             )}
             {hasAmount(liabilityDeduction) && (
                 <div className="summary-row">
-                    <span>Kept by Vendly to recover refunds</span>
+                    <span>Kept by StoreHatch to recover refunds</span>
                     <span>−{formatNaira(liabilityDeduction)}</span>
                 </div>
             )}

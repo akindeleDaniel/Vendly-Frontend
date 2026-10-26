@@ -266,7 +266,7 @@ function PayoutSettingsPage({ hasPassword }: { hasPassword: boolean }) {
             </p>
             <h1>Payout settings</h1>
             <p className="page-intro">
-                This is the bank account your sales are paid into. Vendly never asks for your bank login, PIN, OTP or BVN.
+                This is the bank account your sales are paid into. StoreHatch never asks for your bank login, PIN, OTP or BVN.
             </p>
 
             {justSetUp && (
@@ -307,7 +307,7 @@ function PayoutSettingsPage({ hasPassword }: { hasPassword: boolean }) {
                         <h2 id="terms-update-heading">The payout terms have been updated</h2>
                         <p className="terms-text">{overview.feeTerms.text}</p>
                         <p className="field-help">
-                            Vendly can only recover refunds from your later sales once you have accepted the current terms.
+                            StoreHatch can only recover refunds from your later sales once you have accepted the current terms.
                         </p>
                         <label className="checkbox-label">
                             <input

@@ -4,7 +4,7 @@ import { formatNaira } from "./money"
 
 export type RefundFailure = {
     message: string
-    // Set when Vendly's balance with the provider is too low: the administrator can send the
+    // Set when StoreHatch's balance with the provider is too low: the administrator can send the
     // request again to queue the refund anyway.
     lowBalance: boolean
     // Set when the provider could not be reached: the refund may or may not exist, so it must not
@@ -28,7 +28,7 @@ export function readRefundFailure(result: Exclude<ApiResult<unknown>, { kind: "o
         const available = readMoney(body.availableBalance)
         const required = readMoney(body.required)
         return {
-            message: `Vendly's balance with the provider is too low for this refund${available && required ? ` (available ${available}, needed ${required})` : ""}. You can queue it anyway, and it goes out when the balance is topped up.`,
+            message: `StoreHatch's balance with the provider is too low for this refund${available && required ? ` (available ${available}, needed ${required})` : ""}. You can queue it anyway, and it goes out when the balance is topped up.`,
             lowBalance: true,
             unknownReference: null
         }

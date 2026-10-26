@@ -9,9 +9,9 @@ function authorLabel(author: DisputeAuthor, viewer: DisputeViewer): string {
         case "SELLER":
             return viewer === "seller" ? "You" : "The seller"
         case "ADMIN":
-            return "Vendly"
+            return "StoreHatch"
         case "SYSTEM":
-            return "Vendly (automatic)"
+            return "StoreHatch (automatic)"
     }
 }
 

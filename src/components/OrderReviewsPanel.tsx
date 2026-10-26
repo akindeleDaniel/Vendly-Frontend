@@ -81,7 +81,7 @@ function ReviewTarget({ heading, kind, review, onCreate, onChanged }: ReviewTarg
                 <StarRating average={review.rating} count={1} showCount={false} />
                 {review.comment && <p>{review.comment}</p>}
                 <p className="review-meta">Written {formatShortDate(review.createdAt)}</p>
-                {review.hidden && <Notice kind="warning">Vendly has hidden this review from the public.</Notice>}
+                {review.hidden && <Notice kind="warning">StoreHatch has hidden this review from the public.</Notice>}
                 {error && <Notice kind="error">{error}</Notice>}
                 {review.canChange
                     ? (

@@ -3,13 +3,13 @@
 
 export type SalesFigures = {
   payments: number
-  paid: string // what buyers paid through Vendly
+  paid: string // what buyers paid through StoreHatch
   refunds: number
   refunded: string
   net: string // paid minus refunded
 }
 
-// The value of sales through Vendly. It is not Vendly's own income: Vendly takes no commission on orders.
+// The value of sales through StoreHatch. It is not StoreHatch's own income: StoreHatch takes no commission on orders.
 export type PlatformSummary = {
   generatedAt: string
   users: { total: number, buyers: number, sellers: number, admins: number, joinedLast7Days: number, joinedLast30Days: number, emailNotConfirmed: number }

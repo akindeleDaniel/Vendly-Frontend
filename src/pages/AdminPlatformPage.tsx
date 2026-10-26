@@ -24,7 +24,7 @@ function SalesRow({ label, figures }: { label: string, figures: SalesFigures }) 
 }
 
 // How the platform is doing, for super administrators: people, shops, orders, money that went through
-// Vendly, and what needs attention. The figures are counted when the page opens.
+// StoreHatch, and what needs attention. The figures are counted when the page opens.
 function AdminPlatformPage() {
     useDocumentTitle("Platform")
     const { state, reload } = useApiResource("platform", (signal) => fetchPlatformSummary(signal))
@@ -48,9 +48,9 @@ function AdminPlatformPage() {
                         <p className="field-help">Counted {formatShortDate(data.generatedAt)}. <button type="button" className="btn-text" onClick={reload}>Count again</button></p>
 
                         <section aria-labelledby="sales-heading" className="card summary-card">
-                            <h2 id="sales-heading">Sales through Vendly</h2>
+                            <h2 id="sales-heading">Sales through StoreHatch</h2>
                             <p className="field-help">
-                                The value of what shoppers paid through Vendly, less refunds. This is not Vendly's own income: Vendly takes no commission on orders, so each seller's share goes to the seller.
+                                The value of what shoppers paid through StoreHatch, less refunds. This is not StoreHatch's own income: StoreHatch takes no commission on orders, so each seller's share goes to the seller.
                             </p>
                             <div className="table-scroll">
                                 <table className="data-table">

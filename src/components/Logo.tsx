@@ -1,18 +1,61 @@
+import { useId } from "react"
 import { Link } from "react-router-dom"
+import { BRAND_NAME, BRAND_WORDMARK } from "../lib/brand"
 
-// The Vendly mark (a V with an amber dot) and wordmark, linking home. The text is hidden from
-// screen readers because the link already has the accessible name "Vendly home".
-function Logo({ size = "default" }: { size?: "default" | "large" }) {
-    const pixels = size === "large" ? 48 : 32
+// The StoreHatch mark: a softly lit egg under a shop awning, with an amber circle. The gradients
+// need ids that are unique on the page, as the logo can appear more than once.
+export function LogoMark({ size = 32 }: { size?: number }) {
+    const id = useId().replace(/:/g, "")
+    const egg = "M128 48 C166 48 188 104 188 146 C188 182 162 208 128 208 C94 208 68 182 68 146 C68 104 90 48 128 48 Z"
+    const awning = "M54 90 Q128 76 202 90 V110 Q183.5 138 165 110 Q146.5 138 128 110 Q109.5 138 91 110 Q72.5 138 54 110 Z"
 
     return (
-        <Link to="/" className={size === "large" ? "brand brand-large" : "brand"} aria-label="Vendly home">
-            <svg width={pixels} height={pixels} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-                <rect width="64" height="64" rx="16" fill="#174B3A" />
-                <polyline points="17,21 30,45 41,25" fill="none" stroke="#F8F5EF" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="48" cy="16" r="4.5" fill="#D98B45" />
-            </svg>
-            <span className="brand-name" aria-hidden="true">vendly</span>
+        <svg width={size} height={size} viewBox="0 0 256 256" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="256" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stopColor="#215F4A" />
+                    <stop offset="1" stopColor="#113629" />
+                </linearGradient>
+                <radialGradient id={`${id}-egg`} cx="0.36" cy="0.28" r="0.85">
+                    <stop offset="0" stopColor="#FFFFFF" />
+                    <stop offset="0.45" stopColor="#F7F1E6" />
+                    <stop offset="1" stopColor="#DCCEB6" />
+                </radialGradient>
+                <radialGradient id={`${id}-dot`} cx="0.35" cy="0.3" r="0.8">
+                    <stop offset="0" stopColor="#F4BC82" />
+                    <stop offset="0.55" stopColor="#D98B45" />
+                    <stop offset="1" stopColor="#B0642A" />
+                </radialGradient>
+                <filter id={`${id}-blur`} x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="6" />
+                </filter>
+                <clipPath id={`${id}-clip`}>
+                    <path d={egg} />
+                </clipPath>
+            </defs>
+            <rect width="256" height="256" rx="60" fill={`url(#${id}-bg)`} />
+            <rect x="1.5" y="1.5" width="253" height="253" rx="58.5" fill="none" stroke="#FFFFFF" strokeOpacity="0.1" strokeWidth="3" />
+            <ellipse cx="128" cy="216" rx="54" ry="9" fill="#06170F" opacity="0.55" filter={`url(#${id}-blur)`} />
+            <path d={egg} fill={`url(#${id}-egg)`} />
+            <g clipPath={`url(#${id}-clip)`}>
+                <path d="M54 96 Q128 82 202 96 V118 Q183.5 146 165 118 Q146.5 146 128 118 Q109.5 146 91 118 Q72.5 146 54 118 Z" fill="#0B241B" opacity="0.3" filter={`url(#${id}-blur)`} />
+            </g>
+            <path d={awning} fill={`url(#${id}-bg)`} />
+            <ellipse cx="104" cy="160" rx="10" ry="22" fill="#FFFFFF" opacity="0.35" transform="rotate(18 104 160)" filter={`url(#${id}-blur)`} />
+            <circle cx="193" cy="60" r="22.5" fill="#123A2D" />
+            <circle cx="193" cy="60" r="19" fill={`url(#${id}-dot)`} />
+            <ellipse cx="187" cy="53" rx="6" ry="4" fill="#FFFFFF" opacity="0.45" />
+        </svg>
+    )
+}
+
+// The mark and the wordmark, linking home. The text is hidden from screen readers because the link
+// already has the accessible name "StoreHatch home".
+function Logo({ size = "default" }: { size?: "default" | "large" }) {
+    return (
+        <Link to="/" className={size === "large" ? "brand brand-large" : "brand"} aria-label={`${BRAND_NAME} home`}>
+            <LogoMark size={size === "large" ? 48 : 32} />
+            <span className="brand-name" aria-hidden="true">{BRAND_WORDMARK}</span>
         </Link>
     )
 }

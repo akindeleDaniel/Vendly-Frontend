@@ -1,4 +1,4 @@
-// The small part of Google's sign-in script (https://accounts.google.com/gsi/client) that Vendly uses.
+// The small part of Google's sign-in script (https://accounts.google.com/gsi/client) that StoreHatch uses.
 export {}
 
 declare global {

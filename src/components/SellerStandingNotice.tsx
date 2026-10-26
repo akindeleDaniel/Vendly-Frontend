@@ -20,7 +20,7 @@ function SellerStandingNotice() {
             <Notice kind="error">
                 <p><strong>Your shop is blocked.</strong> Shoppers cannot see it or buy from it, and it takes no new pre-orders.</p>
                 {standing.blockReason && <p>Reason: {standing.blockReason}</p>}
-                <p>Orders you already have carry on: you can still ship them, answer complaints and see your earnings. To have the block lifted, contact Vendly.</p>
+                <p>Orders you already have carry on: you can still ship them, answer complaints and see your earnings. To have the block lifted, contact StoreHatch.</p>
             </Notice>
         )
     }
@@ -38,7 +38,7 @@ function SellerStandingNotice() {
                 </strong>
                 {" "}At {standing.blockAt}, your shop is blocked and shoppers can no longer see it or buy from it.
             </p>
-            <p>A complaint counts against you when Vendly decides it in the buyer's favour and you did not agree to the refund yourself. Answer complaints quickly and fairly to avoid this.</p>
+            <p>A complaint counts against you when StoreHatch decides it in the buyer's favour and you did not agree to the refund yourself. Answer complaints quickly and fairly to avoid this.</p>
             <ul>
                 {standing.recent.map((strike) => (
                     <li key={strike.disputeId}>

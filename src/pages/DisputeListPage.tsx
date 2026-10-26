@@ -18,7 +18,7 @@ const DETAIL_PATHS: Record<DisputeViewer, string> = {
 
 const INTRO: Record<DisputeViewer, string> = {
     buyer: "Problems you have reported with your orders, and where each one stands.",
-    seller: "Complaints from buyers about your orders, and the refunds you have offered. Answer them quickly: Vendly decides complaints that go unanswered.",
+    seller: "Complaints from buyers about your orders, and the refunds you have offered. Answer them quickly: StoreHatch decides complaints that go unanswered.",
     admin: "Complaints that need a decision are shown first. Choose a status to see the others."
 }
 

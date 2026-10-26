@@ -17,7 +17,7 @@ function RolePage(){
         <div className="form-page">
             <div className="auth-brand"><Logo size="large" /></div>
             <h1>Create an account</h1>
-            <p>How would you like to use Vendly?</p>
+            <p>How would you like to use StoreHatch?</p>
             <div className="role-options">
                 <button type="button" className="role-card" onClick={handleConsumerClick}>
                     <span className="role-card-title">I want to shop</span>

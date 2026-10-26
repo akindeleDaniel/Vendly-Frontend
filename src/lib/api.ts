@@ -79,7 +79,7 @@ function reportExpiredSession(path: string) {
     }
 }
 
-// Calls the Vendly backend. `path` must start with "/" (for example "/cart").
+// Calls the StoreHatch backend. `path` must start with "/" (for example "/cart").
 // Request options are passed to fetch unchanged, so each call still decides
 // its own method, headers, body, credentials and abort signal.
 //

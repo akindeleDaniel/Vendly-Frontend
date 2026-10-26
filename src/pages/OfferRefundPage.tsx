@@ -12,7 +12,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { SellerOrder } from "../types/order"
 
 // Where a seller offers a buyer a refund on an order, for example when an item cannot be sent.
-// The buyer is not asked to accept: Vendly issues the refund once the offer is made.
+// The buyer is not asked to accept: StoreHatch issues the refund once the offer is made.
 function OfferRefundPage() {
     useDocumentTitle("Offer a refund")
     const navigate = useNavigate()
@@ -61,7 +61,7 @@ function OfferRefundPage() {
             <p className="page-back"><Link to={`/seller/orders/${order.id}`} className="back-link">Back to the order</Link></p>
             <h1>Offer a refund</h1>
             <p className="page-intro">
-                Offer {order.delivery.fullName} a refund on order {order.id}. Once you send it, Vendly reviews it and issues the refund through the payment provider. The amount is then recovered from your later sales.
+                Offer {order.delivery.fullName} a refund on order {order.id}. Once you send it, StoreHatch reviews it and issues the refund through the payment provider. The amount is then recovered from your later sales.
             </p>
 
             <section aria-label="The order" className="card summary-card">
