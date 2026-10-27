@@ -145,7 +145,7 @@ function ListingCard({ listing, editingId, editFormData, hasChanges, isSaving, s
               {!isEditable && !allowAddToCart && listing.sellerName && (
                 <p className="product-meta">Sold by {listing.sellerName}</p>
               )}
-              {(isEditable || allowAddToCart) && listing.description && (
+              {isEditable && listing.description && (
                 <p className="product-description">{listing.description}</p>
               )}
               {isEditable && <p className="product-meta">{listing.category}</p>}

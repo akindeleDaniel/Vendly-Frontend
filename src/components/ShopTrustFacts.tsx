@@ -5,6 +5,8 @@ type ShopTrustFactsProps = {
     trust: ShopTrust
     // A short version for shop rows and the product page: deliveries and the verified payout only.
     compact?: boolean
+    // Separate cards with a short note under each, for the top of the shop page.
+    cards?: boolean
 }
 
 function plural(count: number, one: string, many: string): string {
@@ -32,9 +34,30 @@ function complaintsLine(trust: ShopTrust): string | null {
 }
 
 // What earlier buyers' orders say about a shop. A zero that would look discouraging is shown as "New shop".
-function ShopTrustFacts({ trust, compact = false }: ShopTrustFactsProps) {
+function ShopTrustFacts({ trust, compact = false, cards = false }: ShopTrustFactsProps) {
     const since = sellingSince(trust.sellingSince)
     const complaints = complaintsLine(trust)
+    const delivered = trust.confirmedDeliveries > 0
+
+    if (cards) {
+        return (
+            <ul className="trust-cards">
+                <li>
+                    <PackageCheck aria-hidden="true" size={22} />
+                    <span><b>{delivered ? `${plural(trust.confirmedDeliveries, "order", "orders")} delivered` : "New shop"}</b>{delivered ? "Confirmed by buyers" : "No delivered orders yet"}</span>
+                </li>
+                {trust.payoutVerified && (
+                    <li><ShieldCheck aria-hidden="true" size={22} /><span><b>Payout verified</b>Bank account checked</span></li>
+                )}
+                {since && (
+                    <li><CalendarDays aria-hidden="true" size={22} /><span><b>Since {since}</b>Selling on StoreHatch</span></li>
+                )}
+                {complaints && (
+                    <li><MessagesSquare aria-hidden="true" size={22} /><span><b>{complaints}</b>{complaints === "No complaints" ? "From buyers so far" : "Raised by buyers"}</span></li>
+                )}
+            </ul>
+        )
+    }
 
     return (
         <ul className={compact ? "trust-facts is-compact" : "trust-facts"}>
