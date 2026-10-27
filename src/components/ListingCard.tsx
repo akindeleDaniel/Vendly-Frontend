@@ -140,6 +140,7 @@ function ListingCard({ listing, editingId, editFormData, hasChanges, isSaving, s
               </h3>
               <p className="product-price">{listing.hasPriceRange ? "From " : ""}{formatMinorUnits(toMinorUnits(listing.price))}</p>
               {listing.hasOptions && <p className="product-meta">Several options</p>}
+              {(listing.deliveredCount ?? 0) > 0 && <p className="product-meta">Delivered to {listing.deliveredCount} {listing.deliveredCount === 1 ? "buyer" : "buyers"}</p>}
               {(listing.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={listing.ratingAverage} count={listing.ratingCount} /></p>}
               {!isEditable && !allowAddToCart && listing.sellerName && (
                 <p className="product-meta">Sold by {listing.sellerName}</p>

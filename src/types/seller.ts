@@ -8,6 +8,8 @@ export type SellerProfile = {
   shippingCost: string
 }
 
+import type { ShopTrust } from "./trust"
+
 export type ShopSummary = {
   id: number | string
   businessName: string
@@ -16,4 +18,5 @@ export type ShopSummary = {
   location?: string | null
   logoUrl?: string | null
   slug: string
+  trust?: ShopTrust
 }

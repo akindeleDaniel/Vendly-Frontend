@@ -416,6 +416,14 @@ function DiscoveryPage ({ userName = "" }: DiscoveryPageProps) {
                       <span className="shop-row-meta">
                         {shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")}
                       </span>
+                      {shop.trust && (
+                        <span className="shop-row-meta">
+                          {shop.trust.confirmedDeliveries > 0
+                            ? `${shop.trust.confirmedDeliveries.toLocaleString("en-NG")} ${shop.trust.confirmedDeliveries === 1 ? "order" : "orders"} delivered`
+                            : "New shop"}
+                          {shop.trust.payoutVerified ? " · Verified payout account" : ""}
+                        </span>
+                      )}
                     </span>
                     <ChevronRightIcon />
                   </Link>

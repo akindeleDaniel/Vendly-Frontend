@@ -555,3 +555,34 @@
   font-weight: 400;
   color: var(--color-text-muted);
 }
+
+/* Trust numbers worked out from real orders */
+.trust-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+
+.trust-facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trust-facts svg {
+  flex: none;
+  color: var(--color-forest);
+}
+
+.trust-facts.is-compact {
+  gap: 2px var(--space-3);
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}

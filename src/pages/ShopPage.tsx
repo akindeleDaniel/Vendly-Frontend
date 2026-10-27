@@ -12,6 +12,8 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
 import { ALL_STATES } from "../lib/shippingApi"
 import ReviewList from "../components/ReviewList"
+import ShopTrustFacts from "../components/ShopTrustFacts"
+import type { ShopTrust } from "../types/trust"
 import StarRating from "../components/StarRating"
 
 type ShopProfile = {
@@ -24,6 +26,7 @@ type ShopProfile = {
     ratingAverage?: number | null
     ratingCount?: number
     foodOrderType?: "NOW" | "PRE_ORDER" | "BOTH"
+    trust?: ShopTrust
     deliversEverywhere?: boolean
     shippingRates?: Array<{ state: string, cost: string | null }>// cost null: no delivery to that state
 }
@@ -183,6 +186,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
                         </p>
                     )}
                     {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
+                    {profile.trust && <ShopTrustFacts trust={profile.trust} />}
                     {profile.foodOrderType === "PRE_ORDER" && <p className="shop-delivery">Food is by pre-order only: ask for a ready time at checkout.</p>}
                     {profile.foodOrderType === "BOTH" && <p className="shop-delivery">Takes pre-orders for food as well as orders for now.</p>}
                     {profile.shippingPolicy && (profile.shippingRates ?? []).length === 0 && (

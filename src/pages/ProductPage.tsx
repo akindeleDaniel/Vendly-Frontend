@@ -6,6 +6,7 @@ import OptionPicker from "../components/OptionPicker"
 import PhotoGallery from "../components/PhotoGallery"
 import ReviewList from "../components/ReviewList"
 import StarRating from "../components/StarRating"
+import ShopTrustFacts from "../components/ShopTrustFacts"
 import { apiFetch } from "../lib/api"
 import { buyableChoice, findChoiceById, hasOptions } from "../lib/listingOptions"
 import { photosOf } from "../lib/listingPhotos"
@@ -183,6 +184,8 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                             Sold by <Link to={`/shop/${encodeURIComponent(product.sellerSlug)}`}>{product.sellerName}</Link>
                         </p>
                     )}
+                    {(product.deliveredCount ?? 0) > 0 && <p className="product-meta">This product was delivered to {product.deliveredCount} {product.deliveredCount === 1 ? "buyer" : "buyers"}.</p>}
+                    {product.shopTrust && <ShopTrustFacts trust={product.shopTrust} compact />}
 
                     <h2 className="order-section-title">About this product</h2>
                     <p className="product-detail-description">{product.description}</p>

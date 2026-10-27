@@ -16,6 +16,8 @@ export type ListingOption = {
   sizes: ListingSize[]
 }
 
+import type { ShopTrust } from "./trust"
+
 export type Listing = {
   id: number
   title: string
@@ -30,6 +32,8 @@ export type Listing = {
   stockQuantity: number
   sellerSlug?: string | null
   sellerName?: string | null
+  deliveredCount?: number // buyer-confirmed, unrefunded orders that contained this product
+  shopTrust?: ShopTrust // on the product page: the shop's trust numbers
   hasOptions?: boolean // the product is bought through one of its options
   hasPriceRange?: boolean // its options differ in price, so `price` is the lowest ("from")
   options?: ListingOption[] // on the product page and the seller's own list
