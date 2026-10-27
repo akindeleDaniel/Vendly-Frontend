@@ -63,6 +63,18 @@
   --radius-md: 12px;
   --radius-lg: 16px;                /* cards */
   --radius-pill: 999px;
+  --radius-xl: 22px;                /* big panels and dialogs, as on the landing page */
+
+  /* Depth: soft, low shadows. Cards rest on --shadow-sm and lift to --shadow-md on hover. */
+  --shadow-sm: 0 1px 2px rgba(16, 40, 31, 0.06), 0 2px 8px rgba(16, 40, 31, 0.05);
+  --shadow-md: 0 8px 24px rgba(16, 40, 31, 0.10);
+  --shadow-lg: 0 24px 60px rgba(16, 40, 31, 0.16);   /* dialogs only */
+
+  /* Motion: short and gentle. Nothing the user triggers takes longer than 300ms. */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 150ms;           /* hover, focus, colour changes */
+  --duration-base: 220ms;           /* cards lifting, panels, dropdowns */
+  --duration-slow: 500ms;           /* photos easing in */
 
   /* Layout */
   --tap-size: 44px;                 /* minimum height of anything tappable */
