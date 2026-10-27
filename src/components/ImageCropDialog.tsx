@@ -2,11 +2,12 @@ import { useEffect, useId, useRef, useState } from "react"
 import { RotateIcon } from "./Icons"
 import Notice from "./Notice"
 
-// A square crop screen with no extra package. The photo sits under a fixed square frame: drag to
-// move it, use the slider or pinch to zoom, and turn it with the rotate button. "Done" saves a
-// smaller square copy, which is also what shoppers see on the product cards and shop logos.
+// A crop screen with no extra package. The photo sits under a fixed frame (square by default, or wide
+// for a shop banner): drag to move it, use the slider or pinch to zoom, and turn it with the rotate
+// button. "Done" saves a smaller copy of exactly what the frame shows, which is what shoppers see.
 
-const MAX_OUTPUT_SIZE = 1000// pixels on each side of the saved image
+const MAX_OUTPUT_SIZE = 1000// pixels across the shorter side of a square image
+const MAX_OUTPUT_WIDTH = 1800// pixels across a wide image, such as a banner
 const MIN_OUTPUT_SIZE = 200
 const MAX_ZOOM = 4
 const KEY_STEP = 12// pixels the arrow keys move the photo
@@ -15,6 +16,7 @@ type Point = { x: number, y: number }
 
 type ImageCropDialogProps = {
     file: File
+    aspect?: number // width divided by height of the crop: 1 is square, 3 is a 3:1 banner
     onCancel: () => void
     onDone: (croppedFile: File) => void
 }
@@ -22,13 +24,13 @@ type ImageCropDialogProps = {
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
 // Keeps the photo covering the whole frame, so there is never an empty gap inside it.
-function clampOffset(offset: Point, displayWidth: number, displayHeight: number, frame: number): Point {
-    const maxX = Math.max((displayWidth - frame) / 2, 0)
-    const maxY = Math.max((displayHeight - frame) / 2, 0)
+function clampOffset(offset: Point, displayWidth: number, displayHeight: number, frameWidth: number, frameHeight: number): Point {
+    const maxX = Math.max((displayWidth - frameWidth) / 2, 0)
+    const maxY = Math.max((displayHeight - frameHeight) / 2, 0)
     return { x: clamp(offset.x, -maxX, maxX), y: clamp(offset.y, -maxY, maxY) }
 }
 
-function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
+function ImageCropDialog({ file, aspect = 1, onCancel, onDone }: ImageCropDialogProps) {
     const titleId = useId()
     const dialogRef = useRef<HTMLDialogElement>(null)
     const frameRef = useRef<HTMLDivElement>(null)
@@ -83,7 +85,7 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
         }
     }, [file])
 
-    // The frame is a CSS square; its measured width is the frame size in pixels.
+    // The frame keeps its shape in CSS; its measured width is the frame size in pixels.
     useEffect(() => {
         const frame = frameRef.current
         if (!frame) {
@@ -105,18 +107,20 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
     const turnedSideways = rotation % 180 !== 0
     const shownWidth = image ? (turnedSideways ? image.naturalHeight : image.naturalWidth) : 0
     const shownHeight = image ? (turnedSideways ? image.naturalWidth : image.naturalHeight) : 0
-    const coverScale = image ? Math.max(frameSize / shownWidth, frameSize / shownHeight) : 1
+    const frameHeight = frameSize / aspect
+    const coverScale = image ? Math.max(frameSize / shownWidth, frameHeight / shownHeight) : 1
     const scale = coverScale * zoom
     const displayWidth = shownWidth * scale
     const displayHeight = shownHeight * scale
-    const position = clampOffset(offset, displayWidth, displayHeight, frameSize)
+    const position = clampOffset(offset, displayWidth, displayHeight, frameSize, frameHeight)
 
     function moveBy(dx: number, dy: number) {
         setOffset((previous) => clampOffset(
             { x: previous.x + dx, y: previous.y + dy },
             displayWidth,
             displayHeight,
-            frameSize
+            frameSize,
+            frameHeight
         ))
     }
 
@@ -186,7 +190,7 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
         setOffset({ x: 0, y: 0 })
     }
 
-    // Draws exactly what the frame shows into a square canvas and turns it into a file.
+    // Draws exactly what the frame shows into a canvas of the same shape and turns it into a file.
     async function createCroppedFile(): Promise<File> {
         if (!image) {
             throw new Error("The photo has not loaded.")
@@ -195,12 +199,13 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
         const keepsTransparency = file.type === "image/png" || file.type === "image/gif"
         const outputType = keepsTransparency ? "image/png" : "image/jpeg"
         const sourcePixelsAcrossFrame = frameSize / scale
-        const size = Math.round(clamp(sourcePixelsAcrossFrame, MIN_OUTPUT_SIZE, MAX_OUTPUT_SIZE))
-        const outputScale = size / frameSize
+        const width = Math.round(clamp(sourcePixelsAcrossFrame, MIN_OUTPUT_SIZE, aspect === 1 ? MAX_OUTPUT_SIZE : MAX_OUTPUT_WIDTH))
+        const height = Math.round(width / aspect)
+        const outputScale = width / frameSize
 
         const canvas = document.createElement("canvas")
-        canvas.width = size
-        canvas.height = size
+        canvas.width = width
+        canvas.height = height
         const context = canvas.getContext("2d")
         if (!context) {
             throw new Error("This browser cannot crop images.")
@@ -208,10 +213,10 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
 
         if (!keepsTransparency) {
             context.fillStyle = "#ffffff"
-            context.fillRect(0, 0, size, size)
+            context.fillRect(0, 0, width, height)
         }
         context.imageSmoothingQuality = "high"
-        context.translate(size / 2 + position.x * outputScale, size / 2 + position.y * outputScale)
+        context.translate(width / 2 + position.x * outputScale, height / 2 + position.y * outputScale)
         context.rotate((rotation * Math.PI) / 180)
         context.scale(scale * outputScale, scale * outputScale)
         context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2)
@@ -253,7 +258,7 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
         >
             <div className="crop-dialog-body">
                 <h2 id={titleId} className="crop-title">Crop photo</h2>
-                <p className="crop-help">Drag the photo to position it and zoom to fit. Shoppers will see this square.</p>
+                <p className="crop-help">Drag the photo to position it and zoom to fit. Shoppers will see {aspect === 1 ? "this square" : "exactly this area"}.</p>
 
                 {loadFailed ? (
                     <Notice kind="error">We could not open that image. Please cancel and choose another one.</Notice>
@@ -262,7 +267,8 @@ function ImageCropDialog({ file, onCancel, onDone }: ImageCropDialogProps) {
                         <div className="crop-stage">
                             <div
                                 ref={frameRef}
-                                className="crop-frame"
+                                className={aspect === 1 ? "crop-frame" : "crop-frame crop-frame-wide"}
+                                style={aspect === 1 ? undefined : { aspectRatio: String(aspect) }}
                                 tabIndex={0}
                                 role="group"
                                 aria-label="Crop area. Use the arrow keys to move the photo, and plus or minus to zoom."

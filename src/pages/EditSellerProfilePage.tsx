@@ -10,6 +10,9 @@ import type { FoodOrderType } from "../types/preOrder"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 import ImagePicker from "../components/ImagePicker"
+import BrandingFields from "../components/BrandingFields"
+import { EMPTY_BRANDING_FORM, brandingBody, brandingChanged, brandingFormFrom } from "../lib/branding"
+import type { BrandingForm } from "../types/branding"
 
 type LoadStatus = "loading" | "ready" | "error"
 
@@ -32,6 +35,11 @@ function EditSellerProfilePage (){
     const [savedProfile, setSavedProfile] = useState<SellerProfile | null>(null)// last values loaded from or saved to the server, used to detect edits
     const [currentLogoUrl, setCurrentLogoUrl] = useState<string>("")
     const [logoFile, setLogoFile] = useState<File | null>(null)// only filled if the seller picks a new logo
+    const [branding, setBranding] = useState<BrandingForm>(EMPTY_BRANDING_FORM)
+    const [savedBranding, setSavedBranding] = useState<BrandingForm>(EMPTY_BRANDING_FORM)
+    const [bannerUrl, setBannerUrl] = useState<string | null>(null)// the saved banner
+    const [bannerFile, setBannerFile] = useState<File | null>(null)// a new banner, uploaded on save
+    const [removeBanner, setRemoveBanner] = useState(false)
     const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading")
     const [loadAttempt, setLoadAttempt] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -84,6 +92,10 @@ function EditSellerProfilePage (){
                 setFoodOrderType(loadedFoodOrderType)
                 setSavedFoodOrderType(loadedFoodOrderType)
                 setCurrentLogoUrl(data.logoUrl ?? "")
+                const loadedBranding = brandingFormFrom(data.branding)
+                setBranding(loadedBranding)
+                setSavedBranding(loadedBranding)
+                setBannerUrl(data.branding?.bannerUrl ?? null)
                 setLoadStatus("ready")
             }catch {
                 if (!controller.signal.aborted) {
@@ -103,6 +115,9 @@ function EditSellerProfilePage (){
         savedProfile !== null &&
         (
             logoFile !== null ||
+            bannerFile !== null ||
+            removeBanner ||
+            brandingChanged(branding, savedBranding) ||
             foodOrderType !== savedFoodOrderType ||
             formData.businessName.trim() !== savedProfile.businessName.trim() ||
             formData.state !== savedProfile.state ||
@@ -138,6 +153,15 @@ function EditSellerProfilePage (){
                 logoUrl = uploadedUrl
             }
 
+            let nextBannerUrl = removeBanner ? null : bannerUrl
+            if (bannerFile !== null) {
+                nextBannerUrl = await uploadImage(bannerFile)
+                if (nextBannerUrl === null) {
+                    setError("The banner could not be uploaded. Please check your connection and try again.")
+                    return
+                }
+            }
+
             const response = await apiFetch("/seller/profile", {
                 method: "PATCH",
                 headers: {
@@ -145,6 +169,7 @@ function EditSellerProfilePage (){
                 },
                 body: JSON.stringify({
                     ...buildSellerProfileBody(formData, logoUrl),
+                    ...brandingBody(branding, nextBannerUrl),
                     ...(foodOrderType !== savedFoodOrderType ? { foodOrderType } : {})
                 }),
                 credentials: "include"
@@ -160,6 +185,10 @@ function EditSellerProfilePage (){
             setSavedFoodOrderType(foodOrderType)
             setCurrentLogoUrl(logoUrl)
             setLogoFile(null)
+            setSavedBranding(branding)
+            setBannerUrl(nextBannerUrl)
+            setBannerFile(null)
+            setRemoveBanner(false)
             navigate("/seller/myListing")
         }catch {
             setError("Something went wrong. Please check your connection and try again.")
@@ -213,6 +242,14 @@ function EditSellerProfilePage (){
                     label="Change logo (optional)"
                     currentUrl={currentLogoUrl || undefined}
                     onChange={setLogoFile}
+                    disabled={isSubmitting}
+                />
+                <BrandingFields
+                    form={branding}
+                    setForm={setBranding}
+                    bannerUrl={removeBanner ? null : bannerUrl}
+                    onBannerFile={(file) => { setBannerFile(file); if (file) setRemoveBanner(false) }}
+                    onRemoveBanner={() => { setRemoveBanner(true); setBannerFile(null) }}
                     disabled={isSubmitting}
                 />
                 {hasChanges && validationError && <Notice kind="error">{validationError}</Notice>}

@@ -8,12 +8,13 @@ type ImagePickerProps = {
     onChange: (file: File | null) => void
     currentUrl?: string // an image that already exists; shown until a new one is chosen
     disabled?: boolean
+    aspect?: number // width divided by height of the crop; 1 (square) unless given
 }
 
 // Choose an image, crop it to a square, and see the result. A file that is the wrong type or too
 // large is rejected with a clear message. Only the cropped copy is passed on, so what the seller
 // sees in the preview is exactly what gets uploaded and shown to shoppers.
-function ImagePicker({ label, onChange, currentUrl, disabled }: ImagePickerProps) {
+function ImagePicker({ label, onChange, currentUrl, disabled, aspect = 1 }: ImagePickerProps) {
     const labelId = useId()
     const helpId = useId()
     const inputRef = useRef<HTMLInputElement>(null)
@@ -68,8 +69,8 @@ function ImagePicker({ label, onChange, currentUrl, disabled }: ImagePickerProps
             <p id={labelId} className="image-picker-label">{label}</p>
             <div className="image-picker-body">
                 {shownUrl
-                    ? <img className="image-preview" src={shownUrl} alt={previewUrl ? "Preview of the cropped image" : "Current image"} />
-                    : <span className="image-preview image-preview-empty" aria-hidden="true">No image</span>}
+                    ? <img className={aspect === 1 ? "image-preview" : "image-preview image-preview-wide"} src={shownUrl} alt={previewUrl ? "Preview of the cropped image" : "Current image"} />
+                    : <span className={aspect === 1 ? "image-preview image-preview-empty" : "image-preview image-preview-wide image-preview-empty"} aria-hidden="true">No image</span>}
                 <div className="image-picker-actions">
                     <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled} aria-describedby={helpId}>
                         {shownUrl ? "Change image" : "Choose image"}
@@ -87,11 +88,12 @@ function ImagePicker({ label, onChange, currentUrl, disabled }: ImagePickerProps
                     onChange={handleChange}
                 />
             </div>
-            <p id={helpId} className="image-picker-help">JPG, PNG, WebP or GIF, up to 10 MB. You can crop it to a square next.</p>
+            <p id={helpId} className="image-picker-help">JPG, PNG, WebP or GIF, up to 10 MB. You can crop it to {aspect === 1 ? "a square" : "a wide banner"} next.</p>
             {error && <Notice kind="error">{error}</Notice>}
             {pendingFile && (
                 <ImageCropDialog
                     file={pendingFile}
+                    aspect={aspect}
                     onCancel={() => setPendingFile(null)}
                     onDone={handleCropDone}
                 />

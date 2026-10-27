@@ -14,6 +14,8 @@ import { ALL_STATES } from "../lib/shippingApi"
 import ReviewList from "../components/ReviewList"
 import ShopTrustFacts from "../components/ShopTrustFacts"
 import type { ShopTrust } from "../types/trust"
+import type { ShopBranding } from "../types/branding"
+import { MessageCircle } from "lucide-react"
 import StarRating from "../components/StarRating"
 
 type ShopProfile = {
@@ -27,6 +29,7 @@ type ShopProfile = {
     ratingCount?: number
     foodOrderType?: "NOW" | "PRE_ORDER" | "BOTH"
     trust?: ShopTrust
+    branding?: ShopBranding
     deliversEverywhere?: boolean
     shippingRates?: Array<{ state: string, cost: string | null }>// cost null: no delivery to that state
 }
@@ -173,10 +176,26 @@ function ShopPage ({ userRole }: ShopPageProps) {
                 </p>
             )}
 
-            <section aria-labelledby="shop-name" className="card shop-header">
+            {profile.branding?.bannerUrl && (
+                <img className="shop-banner" src={profile.branding.bannerUrl} alt="" width="1800" height="600" />
+            )}
+
+            <section
+                aria-labelledby="shop-name"
+                className={`card shop-header${profile.branding ? " has-brand" : ""}${profile.branding?.brandColor.light ? " is-light-brand" : ""}`}
+                style={profile.branding ? { borderTopColor: profile.branding.brandColor.background } : undefined}
+            >
                 {profile.logoUrl
                     ? <img className="avatar avatar-lg" src={profile.logoUrl} alt="" />
-                    : <span className="avatar avatar-lg avatar-initial" aria-hidden="true">{profile.businessName.charAt(0).toUpperCase()}</span>}
+                    : (
+                        <span
+                            className="avatar avatar-lg avatar-initial"
+                            aria-hidden="true"
+                            style={profile.branding ? { background: profile.branding.brandColor.background, color: profile.branding.brandColor.text } : undefined}
+                        >
+                            {profile.businessName.charAt(0).toUpperCase()}
+                        </span>
+                    )}
                 <div>
                     <h1 id="shop-name">{profile.businessName}</h1>
                     {profile.location && (
@@ -186,7 +205,37 @@ function ShopPage ({ userRole }: ShopPageProps) {
                         </p>
                     )}
                     {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
+                    {profile.branding?.about && <p className="shop-about">{profile.branding.about}</p>}
                     {profile.trust && <ShopTrustFacts trust={profile.trust} />}
+                    {profile.branding && (() => {
+                        const { social, whatsapp } = profile.branding
+                        const links = [
+                            { name: "Instagram", link: social.instagram },
+                            { name: "TikTok", link: social.tiktok },
+                            { name: "Facebook", link: social.facebook },
+                            { name: "X", link: social.x }
+                        ].filter((entry) => entry.link !== null)
+
+                        if (links.length === 0 && !whatsapp) {
+                            return null
+                        }
+
+                        return (
+                            <div className="shop-links">
+                                {whatsapp && (
+                                    <a className="btn btn-primary btn-whatsapp" href={whatsapp.url} target="_blank" rel="noopener noreferrer">
+                                        <MessageCircle aria-hidden="true" size={18} />
+                                        Chat on WhatsApp
+                                    </a>
+                                )}
+                                {links.map((entry) => (
+                                    <a key={entry.name} className="shop-social" href={entry.link!.url} target="_blank" rel="noopener noreferrer">
+                                        {entry.name}<span className="visually-hidden"> (@{entry.link!.handle}, opens in a new tab)</span>
+                                    </a>
+                                ))}
+                            </div>
+                        )
+                    })()}
                     {profile.foodOrderType === "PRE_ORDER" && <p className="shop-delivery">Food is by pre-order only: ask for a ready time at checkout.</p>}
                     {profile.foodOrderType === "BOTH" && <p className="shop-delivery">Takes pre-orders for food as well as orders for now.</p>}
                     {profile.shippingPolicy && (profile.shippingRates ?? []).length === 0 && (
