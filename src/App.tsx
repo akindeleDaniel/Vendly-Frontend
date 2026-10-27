@@ -208,7 +208,7 @@ function App() {
     <BrowserRouter>
       <SkipLink />
       <ScrollToTop />
-      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} hasPassword={hasPassword} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
+      <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} hasPassword={hasPassword} userName={authStatus === "authenticated" ? userName : ""} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
       <main id="main" tabIndex={-1}>
         <Routes>

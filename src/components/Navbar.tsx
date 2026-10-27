@@ -4,7 +4,9 @@ import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
 import LogoutDialog from "./LogoutDialog"
 import SellerMenu from "./SellerMenu"
-import { HomeIcon } from "./Icons"
+import { ChevronLeftIcon, HomeIcon } from "./Icons"
+import { BRAND_WORDMARK } from "../lib/brand"
+import { UserRound } from "lucide-react"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 import { fetchUnreadComplaintCount } from "../lib/disputeApi"
 import { listPreOrders } from "../lib/preOrderApi"
@@ -17,13 +19,14 @@ type NavbarProps = {
     userRole: UserRole | null
     isAdmin: boolean
     hasPassword: boolean
+    userName: string // for "Hi Balake" in the strip above a shop
     onLogout: () => Promise<void>
     onLogoutAll: () => Promise<void>
 }
 
-function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogoutAll}: NavbarProps){
+function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout, onLogoutAll}: NavbarProps){
 
-    const {pathname} = useLocation()
+    const {pathname, search} = useLocation()
     const navigate = useNavigate()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -105,18 +108,43 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
         return null
     }
 
+    // A shop page is the shop's own site: StoreHatch shrinks to a thin strip above it, with a way back to
+    // the search the shopper came from. The shop's header has the cart.
+    const isShopPage = pathname.startsWith("/shop/")
+    const firstName = userName.trim().split(/\s+/)[0]
+    const backToSearch = (() => {
+        const from = new URLSearchParams(search)
+        const back = new URLSearchParams()
+        for (const key of ["category", "search"]) {
+            const value = from.get(key)
+            if (value) {
+                back.set(key, value)
+            }
+        }
+        const query = back.toString()
+        return query ? `/?${query}` : "/"
+    })()
+
     return(
         <>
-            <header className="site-header">
+            <header className={isShopPage ? "site-header is-shop-strip" : "site-header"}>
                 <div className="header-brand">
                     {authStatus === "authenticated" && userRole === "SELLER" && <SellerMenu />}
-                    <Logo />
+                    {isShopPage ? (
+                        <Link to={backToSearch} className="back-link strip-back">
+                            <ChevronLeftIcon />
+                            Back to <span className="strip-wordmark">{BRAND_WORDMARK}</span>
+                        </Link>
+                    ) : <Logo />}
                 </div>
                 {/* Account links are not shown until the session check has finished, so the wrong links never flash. */}
                 {authStatus !== "loading" && (
                     <nav aria-label="Account" className="header-actions">
                         {authStatus === "authenticated" ? (
                             <>
+                                {isShopPage && firstName && (
+                                    <span className="strip-hi"><UserRound aria-hidden="true" size={16} />Hi {firstName}</span>
+                                )}
                                 {/* On the cart page the cart icon would point to itself, so a Home icon takes its place. */}
                                 {userRole === "CONSUMER" && pathname !== "/orders" && (
                                     <Link to="/orders" className="header-link">
@@ -134,7 +162,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, onLogout, onLogout
                                         <HomeIcon size={24} />
                                     </Link>
                                 )}
-                                {userRole === "CONSUMER" && pathname !== "/cart" && (
+                                {userRole === "CONSUMER" && pathname !== "/cart" && !isShopPage && (
                                     <Link to="/cart" className="icon-link" aria-label="Cart" title="Cart">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                                             <path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.6a1 1 0 0 0 1-.8L19.5 8H6.2" />

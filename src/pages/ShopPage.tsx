@@ -1,66 +1,31 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Link, useParams } from "react-router-dom"
+import { ArrowRight, MapPin, MessageCircle, Search, ShoppingBag, Star, Truck } from "lucide-react"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
-import { useParams } from "react-router-dom"
 import type { Listing } from "../types/listing"
 import type { UserRole } from "../types/user"
+import type { ShopProfile } from "../types/shop"
 import ListingCard from "../components/ListingCard"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import Notice from "../components/Notice"
-import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
+import ShopReviews from "../components/ShopReviews"
+import ShopTrustFacts from "../components/ShopTrustFacts"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
-import { formatNaira } from "../lib/money"
-import { ALL_STATES } from "../lib/shippingApi"
-import ReviewList from "../components/ReviewList"
-import ShopTrustFacts from "../components/ShopTrustFacts"
-import type { ShopTrust } from "../types/trust"
-import type { ShopBranding } from "../types/branding"
-import { MessageCircle } from "lucide-react"
-import StarRating from "../components/StarRating"
+import {
+    deliveryHeadline, deliveryRates, deliveryReach, firstParagraph, isRecentlyAdded, newestFirst, shopCategories, shopColorStyle
+} from "../lib/shopHome"
 
-type ShopProfile = {
-    businessName: string
-    location: string
-    logoUrl: string
-    slug: string
-    shippingPolicy?: "FREE" | "FIXED"
-    shippingCost?: string | null// a naira amount, or null for free delivery
-    ratingAverage?: number | null
-    ratingCount?: number
-    foodOrderType?: "NOW" | "PRE_ORDER" | "BOTH"
-    trust?: ShopTrust
-    branding?: ShopBranding
-    deliversEverywhere?: boolean
-    shippingRates?: Array<{ state: string, cost: string | null }>// cost null: no delivery to that state
-}
+const PAGE_SIZE = 12// products shown at first, and added by "Show more products"
+const NEW_IN_COUNT = 4
+const RATES_SHOWN = 4
 
 type ShopPageProps = {
     userRole: UserRole | null
 }
 
+// A shop's own home page: its colour, banner, categories, newest products, story, every product,
+// reviews, delivery fees and a footer, like a standalone shop website.
 function ShopPage ({ userRole }: ShopPageProps) {
-    const navigate = useNavigate()
-    const [searchParams] = useSearchParams()
-
-    const handleBackToCategory = () => {
-  const category = searchParams.get("category")
-  const search = searchParams.get("search")
-
-  const nextSearchParams = new URLSearchParams()
-
-  if (category) {
-    nextSearchParams.set("category", category)
-  }
-
-  if (search) {
-    nextSearchParams.set("search", search)
-  }
-
-  const query = nextSearchParams.toString()
-
-  navigate(query ? `/?${query}` : "/")
-}
-
     const { slug } = useParams()
     const [profile, setProfile] = useState<ShopProfile | null>(null)
     const [profileSlug, setProfileSlug] = useState<string | null>(null)
@@ -68,36 +33,28 @@ function ShopPage ({ userRole }: ShopPageProps) {
     const [listings, setListings] = useState<Listing[]>([])
     const [notFoundSlug, setNotFoundSlug] = useState<string | null>(null)
     const pendingCartResult = usePendingCartAdd(userRole)// adds the product a visitor chose before logging in
-    const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
     const [searchText, setSearchText] = useState("")
-    const search = searchText.trim()
+    const [category, setCategory] = useState("")// "" shows every category
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+    const [showAllRates, setShowAllRates] = useState(false)
+    const [cartCount, setCartCount] = useState(0)
 
     useEffect(() => {
         if (!slug) {
             return
         }
         const shopSlug = slug
-
         const controller = new AbortController()
 
         async function fetchShop() {
-            setIsLoading(true)
             setNotFoundSlug(null)
             setLoadError("")
 
-            try{
-                const query = new URLSearchParams()
-                if (search) {
-                    query.set("search", search)
-                }
-                const queryString = query.toString()
-                const response = await apiFetch(
-                    `/seller/shop/${encodeURIComponent(shopSlug)}${queryString ? `?${queryString}` : ""}`,
-                    { signal: controller.signal }
-                )
-                if(!response.ok){
+            try {
+                const response = await apiFetch(`/seller/shop/${encodeURIComponent(shopSlug)}`, { signal: controller.signal })
+                if (!response.ok) {
                     if (!controller.signal.aborted) {
                         if (response.status === 404) {
                             setNotFoundSlug(shopSlug)
@@ -116,22 +73,73 @@ function ShopPage ({ userRole }: ShopPageProps) {
                 setProfile(data.profile)
                 setProfileSlug(shopSlug)
                 setListings(data.listings)
-            }catch{
+            } catch {
                 if (!controller.signal.aborted) {
                     setLoadError("We could not load this shop. Please check your connection and try again.")
-                }
-            }finally{
-                if (!controller.signal.aborted) {
-                    setIsLoading(false)
                 }
             }
         }
 
         fetchShop()
         return () => controller.abort()
-    }, [slug, search, loadAttempt])
+    }, [slug, loadAttempt])
 
-    if(notFoundSlug === slug){
+    // How many things are in the shopper's cart, for the badge on the shop's cart button. Checked again
+    // after a product chosen before logging in has been added.
+    useEffect(() => {
+        if (userRole !== "CONSUMER") {
+            return
+        }
+        const controller = new AbortController()
+
+        apiFetch("/cart", { credentials: "include", signal: controller.signal })
+            .then((response) => response.ok ? response.json() : null)
+            .then((data: { cart?: { cartItems?: Array<{ quantity: number }> } | null } | null) => {
+                if (!controller.signal.aborted) {
+                    setCartCount((data?.cart?.cartItems ?? []).reduce((total, item) => total + item.quantity, 0))
+                }
+            })
+            .catch(() => {
+                // The badge simply stays hidden.
+            })
+        return () => controller.abort()
+    }, [userRole, pendingCartResult])
+
+    const categories = useMemo(() => shopCategories(listings), [listings])
+    const newIn = useMemo(() => newestFirst(listings).slice(0, NEW_IN_COUNT), [listings])
+
+    // Search and the category buttons only narrow "All products"; the rest of the page stays as it is.
+    const search = searchText.trim().toLowerCase()
+    const matching = listings.filter((listing) =>
+        (category === "" || listing.category === category) &&
+        (search === "" || listing.title.toLowerCase().includes(search))
+    )
+
+    function chooseCategory(name: string) {
+        setCategory(name)
+        setVisibleCount(PAGE_SIZE)
+    }
+
+    // Glides to a section (straight there for people who ask for less motion). The sections keep clear
+    // of the sticky header through scroll-margin-top in shop.css.
+    function jumpTo(id: string, focusId?: string) {
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
+        if (focusId) {
+            document.getElementById(focusId)?.focus({ preventScroll: true })
+        }
+    }
+
+    // A link to a section of this page that glides there instead of jumping.
+    const sectionLink = (id: string) => ({
+        href: `#${id}`,
+        onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+            event.preventDefault()
+            jumpTo(id)
+        }
+    })
+
+    if (notFoundSlug === slug) {
         return (
             <div>
                 <h1>Store not found</h1>
@@ -141,7 +149,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
         )
     }
 
-    if(!profile || profileSlug !== slug){
+    if (!profile || profileSlug !== slug) {
         if (loadError) {
             return (
                 <div>
@@ -156,156 +164,322 @@ function ShopPage ({ userRole }: ShopPageProps) {
         }
 
         return (
-            <div>
-                <p role="status">Loading...</p>
+            <div className="shop-home shop-loading" aria-busy="true">
+                <p role="status" className="visually-hidden">Loading the shop...</p>
+                <div className="skeleton shop-loading-hero" />
+                <div className="shop-wrap shop-loading-row">
+                    <div className="skeleton" /><div className="skeleton" /><div className="skeleton" /><div className="skeleton" />
+                </div>
             </div>
         )
     }
 
-    return (
-        <div>
-            <button type="button" className="back-link" onClick={handleBackToCategory}>
-                <ChevronLeftIcon />
-                Back to search
-            </button>
+    const branding = profile.branding
+    const about = branding?.about?.trim() ?? ""
+    const intro = firstParagraph(about)
+    const whatsapp = branding?.whatsapp ?? null
+    const socials = branding
+        ? [
+            { name: "Instagram", link: branding.social.instagram },
+            { name: "TikTok", link: branding.social.tiktok },
+            { name: "Facebook", link: branding.social.facebook },
+            { name: "X", link: branding.social.x }
+        ].flatMap((entry) => entry.link ? [{ name: entry.name, url: entry.link.url, handle: entry.link.handle }] : [])
+        : []
+    const headline = deliveryHeadline(profile)
+    const rates = deliveryRates(profile)
+    const ratingCount = profile.ratingCount ?? 0
+    const initial = profile.businessName.charAt(0).toUpperCase()
+    const showCategories = categories.length >= 2
+    const showNewIn = listings.length > NEW_IN_COUNT
+    const showAbout = about !== "" || socials.length > 0
+    const foodNote = profile.foodOrderType === "PRE_ORDER"
+        ? "Food is by pre-order only: ask for a ready time at checkout."
+        : profile.foodOrderType === "BOTH" ? "Takes pre-orders for food as well as orders for now." : ""
 
-            {pendingCartResult && (
-                <p role={pendingCartResult.isError ? "alert" : "status"} className={`alert ${pendingCartResult.isError ? "alert-error" : "alert-success"}`}>
-                    {pendingCartResult.text}
-                    {!pendingCartResult.isError && <>{" "}<Link to="/cart">View cart</Link></>}
+    const sections = [
+        showNewIn && { id: "shop-new", label: "New in" },
+        { id: "shop-all", label: "All products" },
+        showAbout && { id: "shop-about", label: "About" },
+        { id: "shop-reviews", label: "Reviews" },
+        { id: "shop-delivery", label: "Delivery" }
+    ].filter((section): section is { id: string, label: string } => Boolean(section))
+
+    const whatsappButton = (className: string) => whatsapp && (
+        <a className={className} href={whatsapp.url} target="_blank" rel="noopener noreferrer">
+            <MessageCircle aria-hidden="true" size={18} />
+            Chat on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
+        </a>
+    )
+
+    const heroText = (
+        <>
+            <h1 id="shop-name">{profile.businessName}</h1>
+            {intro && <p className="shop-hero-intro">{intro}</p>}
+            <p className="shop-hero-facts">
+                {ratingCount > 0 && typeof profile.ratingAverage === "number" && (
+                    <span><Star aria-hidden="true" size={16} className="shop-star" />{profile.ratingAverage.toFixed(1)} from {ratingCount} {ratingCount === 1 ? "review" : "reviews"}</span>
+                )}
+                {profile.location && <span><MapPin aria-hidden="true" size={16} />{profile.location}</span>}
+            </p>
+            {foodNote && <p className="shop-hero-note">{foodNote}</p>}
+            <div className="shop-actions">
+                <a className="shop-btn is-inverse" {...sectionLink("shop-all")}>Shop now</a>
+                {whatsappButton("shop-btn is-inverse-outline")}
+            </div>
+        </>
+    )
+
+    return (
+        <div className="shop-home" style={shopColorStyle(branding?.brandColor)}>
+            {headline && (
+                <p className="shop-announce">
+                    <Truck aria-hidden="true" size={18} />
+                    {headline}
                 </p>
             )}
 
-            {profile.branding?.bannerUrl && (
-                <img className="shop-banner" src={profile.branding.bannerUrl} alt="" width="1800" height="600" />
+            <header className="shop-bar">
+                <div className="shop-wrap shop-bar-row">
+                    <a className="shop-brand" href="#shop-name" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }) }}>
+                        {profile.logoUrl
+                            ? <img className="shop-brand-logo" src={profile.logoUrl} alt="" />
+                            : <span className="shop-brand-logo is-initial" aria-hidden="true">{initial}</span>}
+                        <span className="shop-brand-name">{profile.businessName}</span>
+                    </a>
+                    <nav className="shop-nav" aria-label="Shop">
+                        {sections.map((section) => <a key={section.id} {...sectionLink(section.id)}>{section.label}</a>)}
+                    </nav>
+                    <div className="shop-bar-tools">
+                        <button type="button" className="shop-icon-btn" aria-label="Search this shop" onClick={() => jumpTo("shop-all", "shop-search")}>
+                            <Search aria-hidden="true" size={20} />
+                        </button>
+                        {userRole === "CONSUMER" && (
+                            <Link to="/cart" className="shop-icon-btn" aria-label={cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart"} title="Cart">
+                                <ShoppingBag aria-hidden="true" size={20} />
+                                {cartCount > 0 && <span className="shop-cart-count" aria-hidden="true">{cartCount > 99 ? "99+" : cartCount}</span>}
+                            </Link>
+                        )}
+                    </div>
+                </div>
+                <nav className="shop-nav-scroll" aria-label="Shop sections">
+                    {sections.map((section) => <a key={section.id} {...sectionLink(section.id)}>{section.label}</a>)}
+                </nav>
+            </header>
+
+            {pendingCartResult && (
+                <div className="shop-wrap">
+                    <p role={pendingCartResult.isError ? "alert" : "status"} className={`alert ${pendingCartResult.isError ? "alert-error" : "alert-success"}`}>
+                        {pendingCartResult.text}
+                        {!pendingCartResult.isError && <>{" "}<Link to="/cart">View cart</Link></>}
+                    </p>
+                </div>
             )}
 
-            <section
-                aria-labelledby="shop-name"
-                className={`card shop-header${profile.branding ? " has-brand" : ""}${profile.branding?.brandColor.light ? " is-light-brand" : ""}`}
-                style={profile.branding ? { borderTopColor: profile.branding.brandColor.background } : undefined}
-            >
-                {profile.logoUrl
-                    ? <img className="avatar avatar-lg" src={profile.logoUrl} alt="" />
-                    : (
-                        <span
-                            className="avatar avatar-lg avatar-initial"
-                            aria-hidden="true"
-                            style={profile.branding ? { background: profile.branding.brandColor.background, color: profile.branding.brandColor.text } : undefined}
-                        >
-                            {profile.businessName.charAt(0).toUpperCase()}
-                        </span>
-                    )}
-                <div>
-                    <h1 id="shop-name">{profile.businessName}</h1>
-                    {profile.location && (
-                        <p className="shop-location">
-                            <MapPinIcon />
-                            {profile.location}
-                        </p>
-                    )}
-                    {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
-                    {profile.branding?.about && <p className="shop-about">{profile.branding.about}</p>}
-                    {profile.trust && <ShopTrustFacts trust={profile.trust} />}
-                    {profile.branding && (() => {
-                        const { social, whatsapp } = profile.branding
-                        const links = [
-                            { name: "Instagram", link: social.instagram },
-                            { name: "TikTok", link: social.tiktok },
-                            { name: "Facebook", link: social.facebook },
-                            { name: "X", link: social.x }
-                        ].filter((entry) => entry.link !== null)
+            {branding?.bannerUrl ? (
+                <section className="shop-hero" aria-labelledby="shop-name">
+                    <img className="shop-hero-img" src={branding.bannerUrl} alt="" width="1800" height="600" />
+                    <div className="shop-hero-over">
+                        <div className="shop-wrap">
+                            <div className="shop-hero-card">{heroText}</div>
+                        </div>
+                    </div>
+                </section>
+            ) : (
+                <section className="shop-hero-plain" aria-labelledby="shop-name">
+                    <div className="shop-wrap">
+                        {profile.logoUrl
+                            ? <img className="shop-hero-logo" src={profile.logoUrl} alt="" />
+                            : <span className="shop-hero-logo is-initial" aria-hidden="true">{initial}</span>}
+                        {heroText}
+                    </div>
+                </section>
+            )}
 
-                        if (links.length === 0 && !whatsapp) {
-                            return null
-                        }
+            {profile.trust && (
+                <section className="shop-wrap shop-trust" aria-label="This shop's record">
+                    <ShopTrustFacts trust={profile.trust} cards />
+                </section>
+            )}
 
-                        return (
-                            <div className="shop-links">
-                                {whatsapp && (
-                                    <a className="btn btn-primary btn-whatsapp" href={whatsapp.url} target="_blank" rel="noopener noreferrer">
-                                        <MessageCircle aria-hidden="true" size={18} />
-                                        Chat on WhatsApp
-                                    </a>
-                                )}
-                                {links.map((entry) => (
-                                    <a key={entry.name} className="shop-social" href={entry.link!.url} target="_blank" rel="noopener noreferrer">
-                                        {entry.name}<span className="visually-hidden"> (@{entry.link!.handle}, opens in a new tab)</span>
-                                    </a>
-                                ))}
-                            </div>
-                        )
-                    })()}
-                    {profile.foodOrderType === "PRE_ORDER" && <p className="shop-delivery">Food is by pre-order only: ask for a ready time at checkout.</p>}
-                    {profile.foodOrderType === "BOTH" && <p className="shop-delivery">Takes pre-orders for food as well as orders for now.</p>}
-                    {profile.shippingPolicy && (profile.shippingRates ?? []).length === 0 && (
-                        <p className="shop-delivery">
-                            {profile.shippingPolicy === "FIXED" && profile.shippingCost
-                                ? `Delivery: ${formatNaira(profile.shippingCost)} per order`
-                                : "Free delivery"}
-                        </p>
-                    )}
-                    {(profile.shippingRates ?? []).length > 0 && (() => {
-                        const served = (profile.shippingRates ?? []).filter((rate) => rate.cost !== null)
-                        const defaultFee = profile.shippingPolicy === "FIXED" && profile.shippingCost ? formatNaira(profile.shippingCost) : "Free"
-                        const fee = (cost: string) => Number(cost) === 0 ? "Free" : formatNaira(cost)
+            {showCategories && (
+                <section className="shop-wrap shop-section" aria-labelledby="shop-cats-heading">
+                    <h2 id="shop-cats-heading" className="shop-heading">Shop by category</h2>
+                    <ul className="shop-cats">
+                        {categories.map((entry) => (
+                            <li key={entry.name}>
+                                <button type="button" className="shop-cat" onClick={() => { chooseCategory(entry.name); jumpTo("shop-all") }}>
+                                    {entry.imageUrl ? <img src={entry.imageUrl} alt="" loading="lazy" /> : <span className="shop-cat-empty" aria-hidden="true" />}
+                                    <span className="shop-cat-label">
+                                        {entry.name}
+                                        <small>{entry.count} {entry.count === 1 ? "item" : "items"}</small>
+                                    </span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
-                        return (
-                            <details className="shop-delivery shop-rates">
-                                <summary>
-                                    {profile.deliversEverywhere ? "Delivers to every state" : `Delivers to ${served.length} ${served.length === 1 ? "state" : "states"}`}. See delivery fees
-                                </summary>
-                                <ul>
-                                    {served.map((rate) => <li key={rate.state}><span>{rate.state}</span><span>{fee(rate.cost as string)}</span></li>)}
-                                    {profile.deliversEverywhere && (profile.shippingRates ?? []).length < ALL_STATES.length && <li><span>Other states</span><span>{defaultFee}</span></li>}
-                                </ul>
-                            </details>
-                        )
-                    })()}
-                </div>
-            </section>
-
-            <form role="search" className="search-form" onSubmit={(event) => event.preventDefault()}>
-                <label className="search-field">
-                    <span className="visually-hidden">Search this shop</span>
-                    <SearchIcon />
-                    <input
-                        type="search"
-                        placeholder="Search this shop"
-                        value={searchText}
-                        onChange={(event) => setSearchText(event.currentTarget.value)}
-                    />
-                </label>
-            </form>
-
-            <section aria-labelledby="shop-products">
-                <h2 id="shop-products">Products</h2>
-                {loadError && (
-                    <Notice kind="error">
-                        <p>{loadError}</p>
-                        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
-                    </Notice>
-                )}
-                {isLoading && <p role="status">Loading products...</p>}
-                {!isLoading && listings.length === 0 && (
-                    <p>{search ? "No products match your search." : "This shop has no products yet."}</p>
-                )}
-                {!isLoading && listings.length > 0 && (
+            {showNewIn && (
+                <section id="shop-new" className="shop-wrap shop-section" aria-labelledby="shop-new-heading">
+                    <div className="shop-section-head">
+                        <h2 id="shop-new-heading" className="shop-heading">New in</h2>
+                        <a className="shop-see-all" {...sectionLink("shop-all")}>See everything<ArrowRight aria-hidden="true" size={18} /></a>
+                    </div>
                     <ul className="product-grid">
-                        {listings.map((listing) => (
-                            <li key={listing.id}>
-                                <ListingCard
-                                    isEditable={false}
-                                    allowAddToCart
-                                    listing={listing}
-                                />
+                        {newIn.map((listing) => (
+                            <li key={listing.id} className="shop-product">
+                                <ListingCard isEditable={false} allowAddToCart listing={listing} />
+                                {isRecentlyAdded(listing) && <span className="shop-new-badge">New</span>}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+
+            {showAbout && (
+                <section id="shop-about" className="shop-wrap shop-section" aria-labelledby="shop-about-heading">
+                    <div className="shop-story">
+                        <p className="shop-eyebrow">About the shop</p>
+                        <h2 id="shop-about-heading" className="shop-heading">{profile.businessName}</h2>
+                        {about && <p className="shop-story-text">{about}</p>}
+                        <div className="shop-actions">
+                            {whatsappButton("shop-btn is-brand")}
+                            {socials.map((social) => (
+                                <a key={social.name} className="shop-btn is-plain" href={social.url} target="_blank" rel="noopener noreferrer">
+                                    {social.name}<span className="visually-hidden"> (@{social.handle}, opens in a new tab)</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            <section id="shop-all" className="shop-wrap shop-section" aria-labelledby="shop-all-heading">
+                <div className="shop-section-head">
+                    <h2 id="shop-all-heading" className="shop-heading">All products</h2>
+                    <span className="shop-count">{listings.length} {listings.length === 1 ? "product" : "products"}</span>
+                </div>
+                <div className="shop-tools">
+                    <form role="search" className="search-form shop-search" onSubmit={(event) => event.preventDefault()}>
+                        <label className="search-field">
+                            <span className="visually-hidden">Search this shop</span>
+                            <Search aria-hidden="true" size={20} />
+                            <input
+                                id="shop-search"
+                                type="search"
+                                placeholder={`Search ${profile.businessName}`}
+                                value={searchText}
+                                onChange={(event) => { setSearchText(event.currentTarget.value); setVisibleCount(PAGE_SIZE) }}
+                            />
+                        </label>
+                    </form>
+                    {categories.length >= 2 && (
+                        <div className="shop-chips" role="group" aria-label="Category">
+                            <button type="button" className="shop-chip" aria-pressed={category === ""} onClick={() => chooseCategory("")}>All</button>
+                            {categories.map((entry) => (
+                                <button key={entry.name} type="button" className="shop-chip" aria-pressed={category === entry.name} onClick={() => chooseCategory(entry.name)}>
+                                    {entry.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {listings.length === 0 && <p>This shop has no products yet.</p>}
+                {listings.length > 0 && matching.length === 0 && <p role="status">No products match your search.</p>}
+                {matching.length > 0 && (
+                    <ul className="product-grid">
+                        {matching.slice(0, visibleCount).map((listing) => (
+                            <li key={listing.id} className="shop-product">
+                                <ListingCard isEditable={false} allowAddToCart listing={listing} />
                             </li>
                         ))}
                     </ul>
                 )}
+                {matching.length > visibleCount && (
+                    <div className="shop-more">
+                        <button type="button" className="shop-btn is-plain" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+                            Show more products
+                        </button>
+                    </div>
+                )}
             </section>
 
-            <ReviewList kind="shop" subject={profile.slug} />
+            <section id="shop-reviews" className="shop-wrap shop-section" aria-labelledby="shop-reviews-heading">
+                <ShopReviews slug={profile.slug} />
+            </section>
+
+            <section id="shop-delivery" className="shop-wrap shop-section shop-help" aria-label="Delivery and help">
+                <div className="shop-panel">
+                    <h2 className="shop-panel-title">Where we deliver</h2>
+                    <p className="shop-muted">{deliveryReach(profile)}</p>
+                    {rates.length > 0 ? (
+                        <>
+                            <ul className="shop-rates-list">
+                                {(showAllRates ? rates : rates.slice(0, RATES_SHOWN)).map((rate) => (
+                                    <li key={rate.state}><span>{rate.state}</span><b>{rate.fee}</b></li>
+                                ))}
+                            </ul>
+                            {rates.length > RATES_SHOWN && (
+                                <button type="button" className="btn-text shop-see-all" aria-expanded={showAllRates} onClick={() => setShowAllRates((open) => !open)}>
+                                    {showAllRates ? "Show fewer" : `See all ${rates.length} delivery fees`}
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        headline && <p>{headline}</p>
+                    )}
+                </div>
+                <div className="shop-panel is-tinted">
+                    <h2 className="shop-panel-title">Questions before you buy?</h2>
+                    {whatsapp
+                        ? <p>Ask {profile.businessName} about sizes, colours or delivery times on WhatsApp.</p>
+                        : <p>Look through the reviews above, or check the product page for details and stock.</p>}
+                    {whatsappButton("shop-btn is-brand")}
+                    <p className="shop-muted shop-safety">Always pay through StoreHatch checkout, never by bank transfer in a chat. That way your order is covered if something goes wrong.</p>
+                </div>
+            </section>
+
+            <footer className="shop-footer">
+                <div className="shop-wrap">
+                    <div className="shop-footer-grid">
+                        <div className="shop-footer-about">
+                            <p className="shop-footer-name">{profile.businessName}</p>
+                            {intro && <p>{intro}</p>}
+                            {profile.location && <p className="shop-footer-place"><MapPin aria-hidden="true" size={16} />{profile.location}</p>}
+                        </div>
+                        <nav aria-label="Shop links">
+                            <h2>Shop</h2>
+                            <ul>
+                                {sections.map((section) => <li key={section.id}><a {...sectionLink(section.id)}>{section.label}</a></li>)}
+                            </ul>
+                        </nav>
+                        {(socials.length > 0 || whatsapp) && (
+                            <nav aria-label="Follow the shop">
+                                <h2>Follow</h2>
+                                <ul>
+                                    {whatsapp && <li><a href={whatsapp.url} target="_blank" rel="noopener noreferrer">WhatsApp</a></li>}
+                                    {socials.map((social) => (
+                                        <li key={social.name}><a href={social.url} target="_blank" rel="noopener noreferrer">{social.name}</a></li>
+                                    ))}
+                                </ul>
+                            </nav>
+                        )}
+                        <nav aria-label="Help">
+                            <h2>Help</h2>
+                            <ul>
+                                {userRole === "CONSUMER" && <li><Link to="/orders">My orders</Link></li>}
+                                <li><Link to="/">Browse StoreHatch</Link></li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <div className="shop-footer-base">
+                        <span>Payments for {profile.businessName} are handled by StoreHatch.</span>
+                        <Link to="/seller/register">Start your own shop on StoreHatch</Link>
+                    </div>
+                </div>
+            </footer>
         </div>
     )
 }
