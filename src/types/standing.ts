@@ -11,4 +11,6 @@ export type SellerStanding = {
   blockedAt: string | null
   blockReason: string | null
   recent: Array<{ disputeId: number, orderId: number, reason: string, resolvedAt: string }>
+  // What the seller still owes for refunds charged to them. Above the limit, new orders are paused.
+  debt?: { amountOwed: string, limit: string | null, ordersPaused: boolean }
 }

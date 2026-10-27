@@ -2,10 +2,22 @@ import { Link } from "react-router-dom"
 import Notice from "./Notice"
 import { fetchMyStanding } from "../lib/standingApi"
 import { formatShortDate } from "../lib/orderApi"
+import { formatNaira } from "../lib/money"
 import { useApiResource } from "../lib/useApiResource"
 
+// Shoppers are not told why; the seller is, so they can put it right.
+function OrdersPausedNotice({ amountOwed }: { amountOwed: string }) {
+    return (
+        <Notice kind="warning">
+            <p><strong>New orders are paused until you repay what you owe for refunds.</strong> You owe {formatNaira(amountOwed)}.</p>
+            <p>Your shop stays visible, and the orders you already have carry on as normal.</p>
+            <Link to="/seller/liabilities" className="btn">See what you owe</Link>
+        </Notice>
+    )
+}
+
 // What a seller needs to know about their standing, at the top of My store. Nothing is shown while
-// there is nothing to say: only a warning, a block, or strikes that are building up.
+// there is nothing to say: only paused orders, a warning, a block, or strikes that are building up.
 function SellerStandingNotice() {
     const { state } = useApiResource("my-standing", (signal) => fetchMyStanding(signal))
 
@@ -25,11 +37,15 @@ function SellerStandingNotice() {
         )
     }
 
+    const paused = standing.debt?.ordersPaused ? <OrdersPausedNotice amountOwed={standing.debt.amountOwed} /> : null
+
     if (standing.strikes === 0) {
-        return null
+        return paused
     }
 
     return (
+        <>
+        {paused}
         <Notice kind={standing.warned ? "warning" : "info"}>
             <p>
                 <strong>
@@ -47,6 +63,7 @@ function SellerStandingNotice() {
                 ))}
             </ul>
         </Notice>
+        </>
     )
 }
 

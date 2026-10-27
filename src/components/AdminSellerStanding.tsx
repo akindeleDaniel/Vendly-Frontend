@@ -5,6 +5,7 @@ import Notice from "./Notice"
 import { failureMessage } from "../lib/apiRequest"
 import { MESSAGE_MAX_LENGTH, validateMessage } from "../lib/disputeMessage"
 import { formatShortDate } from "../lib/orderApi"
+import { formatNaira } from "../lib/money"
 import { blockSeller, fetchSellerStanding, unblockSeller } from "../lib/standingApi"
 import { useApiResource } from "../lib/useApiResource"
 
@@ -79,6 +80,12 @@ function AdminSellerStanding({ userId }: { userId: number }) {
                     : standing.warned ? <span className="badge badge-warning">Warned</span> : <span className="badge">Good standing</span>}
             </div>
             <dl className="detail-list">
+                {standing.debt && (
+                    <>
+                        <div><dt>Owed for refunds</dt><dd>{formatNaira(standing.debt.amountOwed)}{standing.debt.limit !== null ? ` (limit ${formatNaira(standing.debt.limit)})` : " (no limit set)"}</dd></div>
+                        <div><dt>New orders</dt><dd>{standing.debt.ordersPaused ? "Paused until the debt is repaid" : "Allowed"}</dd></div>
+                    </>
+                )}
                 <div><dt>Lost complaints</dt><dd>{standing.strikes} in the last {standing.windowDays} days (warned at {standing.warnAt}, blocked at {standing.blockAt})</dd></div>
                 {standing.blocked && standing.blockedAt && <div><dt>Blocked</dt><dd>{formatShortDate(standing.blockedAt)}</dd></div>}
                 {standing.blocked && standing.blockReason && <div><dt>Reason</dt><dd>{standing.blockReason}</dd></div>}
