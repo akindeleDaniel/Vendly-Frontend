@@ -8,7 +8,7 @@ export function useCartCount(userRole: UserRole | null, refresh?: unknown): numb
     const [count, setCount] = useState(0)
 
     useEffect(() => {
-        if (userRole !== "CONSUMER") {
+        if (userRole === null) {
             return
         }
         const controller = new AbortController()
@@ -26,5 +26,5 @@ export function useCartCount(userRole: UserRole | null, refresh?: unknown): numb
         return () => controller.abort()
     }, [userRole, refresh])
 
-    return userRole === "CONSUMER" ? count : 0
+    return userRole !== null ? count : 0
 }

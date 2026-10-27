@@ -714,3 +714,30 @@
   max-width: 100%;
   height: 88px;
 }
+
+/* The line under "Create your StoreHatch account" */
+.auth-lead {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* My store before the shop is set up */
+.setup-shop {
+  max-width: 640px;
+  padding: var(--space-6) var(--space-5);
+}
+
+.setup-shop h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+}
+
+.setup-shop > p {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.setup-shop .action-row {
+  margin-bottom: var(--space-4);
+}

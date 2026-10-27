@@ -29,7 +29,8 @@ export function useGoogleSignIn(onLogin: (role: UserRole) => void, fixedRole?: U
                 onLogin(outcome.role)
                 break
             case "role-required":
-                setStep({ kind: "role", credential, name: outcome.name, email: outcome.email })
+                // Every account can sell and buy, so a new person is not asked which: they get the same account as everyone.
+                void submit(credential, "SELLER")
                 break
             case "link-required":
                 setStep({ kind: "link", credential, email: outcome.email })

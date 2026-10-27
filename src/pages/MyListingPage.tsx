@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { markShopSetupPromptDismissed } from "../lib/shopSetupPrompt"
 import type {ListingFormData, Listing} from "../types/listing"
 import ListingCard from "../components/ListingCard"
 import CreateListingForm, { type CreateListingFormData } from "../components/CreateListingForm"
@@ -39,6 +40,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const [view, setView] = useState<"on-sale" | "archived">("on-sale")
     const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
     const [isArchiving, setIsArchiving] = useState(false)
+    const [needsShop, setNeedsShop] = useState(false)// no shop yet: listings need one, so setup is offered first
     
     const [formData, setFormData] =useState<CreateListingFormData>({
     title: "",
@@ -386,8 +388,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     return
                 }
 
-                if (profileResponse.status === 404) {// no store profile yet, so the seller still has to onboard
-                    navigate("/seller/onboarding", { replace: true })
+                if (profileResponse.status === 404) {// no shop yet: offered on the page, not forced
+                    setNeedsShop(true)
                     return
                 }
 
@@ -424,6 +426,25 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const archivedListings = listings.filter((listing) => listing.archivedAt)
     // With nothing archived left, the Archived tab is gone, so the page goes back to the listings on sale.
     const shownListings = view === "archived" && archivedListings.length > 0 ? archivedListings : onSaleListings
+
+    // Without a shop there is nothing to list yet: setting one up is required to add a listing, and
+    // shopping stays open in the meantime.
+    if (needsShop) {
+        return (
+            <div>
+                <Greeting name={userName} />
+                <section className="card setup-shop" aria-labelledby="setup-shop-heading">
+                    <h1 id="setup-shop-heading">Set up your shop to start selling</h1>
+                    <p>Add your shop's name, where you are and how you deliver. Then you can add your first products.</p>
+                    <div className="action-row">
+                        <Link to="/seller/onboarding" className="btn btn-primary btn-lg">Set up my shop</Link>
+                        <Link to="/" className="btn btn-lg" onClick={markShopSetupPromptDismissed}>Browse products</Link>
+                    </div>
+                    <p className="field-help">You can shop on StoreHatch with this same account while you decide.</p>
+                </section>
+            </div>
+        )
+    }
 
     return (
         <div>

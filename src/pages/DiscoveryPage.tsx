@@ -6,6 +6,7 @@ import Pagination from "../components/Pagination"
 import { CATEGORIES } from "../data/categories"
 import { pickCategoryPhotos } from "../data/categoryPhotos"
 import { apiFetch, getErrorMessage } from "../lib/api"
+import { becomeSeller } from "../lib/accountApi"
 import type { Listing } from "../types/listing"
 import type { ShopSummary } from "../types/seller"
 import type { UserRole } from "../types/user"
@@ -14,6 +15,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 type DiscoveryPageProps = {
   userName?: string
   userRole?: UserRole | null
+  onBecameSeller?: () => void
 }
 
 type ConsumerLocation = {
@@ -48,7 +50,7 @@ function categoryPath(category: string, search?: string): string {
 //   2. ?view=new     -> every product, newest first
 //   3. ?search=...   -> product results across all categories
 //   4. ?category=... -> products in that category (optionally searched) and its shops
-function DiscoveryPage ({ userName = "", userRole = null }: DiscoveryPageProps) {
+function DiscoveryPage ({ userName = "", userRole = null, onBecameSeller }: DiscoveryPageProps) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get("category")
@@ -76,6 +78,8 @@ function DiscoveryPage ({ userName = "", userRole = null }: DiscoveryPageProps) 
   const [shopRetryCount, setShopRetryCount] = useState(0)
   const [consumerLocation, setConsumerLocation] = useState<ConsumerLocation | null>(null)
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("not-requested")
+  const [isOpeningShop, setIsOpeningShop] = useState(false)
+  const [openShopError, setOpenShopError] = useState("")
   const showProducts = selectedCategory !== null || search !== "" || isNewView
   const isHome = !showProducts
   // Results are tagged with the filters they were fetched for, so results from older filters are
@@ -337,6 +341,22 @@ function DiscoveryPage ({ userName = "", userRole = null }: DiscoveryPageProps) 
 
   const firstName = userName.trim().split(/\s+/)[0]
 
+  // A signed-in buyer opens a shop with the same account: it becomes a seller account (which can still
+  // shop), then shop setup starts.
+  async function openShop() {
+    setIsOpeningShop(true)
+    setOpenShopError("")
+    const outcome = await becomeSeller()
+    setIsOpeningShop(false)
+
+    if (outcome.kind === "ok") {
+      onBecameSeller?.()
+      navigate("/seller/onboarding")
+    } else {
+      setOpenShopError(outcome.message)
+    }
+  }
+
   const allCategories = (heading: string) => (
     <nav className="all-categories" aria-label="All categories">
       <h3>{heading}</h3>
@@ -435,9 +455,12 @@ function DiscoveryPage ({ userName = "", userRole = null }: DiscoveryPageProps) 
           <section className="browse-section browse-sell" aria-labelledby="sell-heading">
             <div>
               <h2 id="sell-heading">Have something to sell?</h2>
-              <p>Open your own shop on StoreHatch in minutes. No commission on sales.</p>
+              <p>{userRole === "CONSUMER" ? "Open a shop with this same account, in minutes. No commission on sales." : "Open your own shop on StoreHatch in minutes. No commission on sales."}</p>
             </div>
-            <Link to="/seller/register" className="btn btn-lg">Start your shop</Link>
+            {userRole === "CONSUMER"
+              ? <button type="button" className="btn btn-lg" onClick={openShop} disabled={isOpeningShop}>{isOpeningShop ? "Opening..." : "Start your shop"}</button>
+              : <Link to="/register" className="btn btn-lg">Start your shop</Link>}
+            {openShopError && <p role="alert" className="browse-sell-error">{openShopError}</p>}
           </section>
         )}
       </div>

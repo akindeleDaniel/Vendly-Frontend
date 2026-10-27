@@ -53,7 +53,7 @@ export function ShopBar({ profile, sections, sectionLink, homeLink, onSearch, us
                     <button type="button" className="shop-icon-btn" aria-label="Search this shop" onClick={onSearch}>
                         <Search aria-hidden="true" size={20} />
                     </button>
-                    {userRole === "CONSUMER" && (
+                    {userRole !== null && (
                         <Link to="/cart" className="shop-icon-btn" aria-label={cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart"} title="Cart">
                             <ShoppingBag aria-hidden="true" size={20} />
                             {cartCount > 0 && <span className="shop-cart-count" aria-hidden="true">{cartCount > 99 ? "99+" : cartCount}</span>}
@@ -109,7 +109,7 @@ export function ShopFooter({ profile, sections, sectionLink, userRole }: ShopFoo
                     <nav aria-label="Help">
                         <h2>Help</h2>
                         <ul>
-                            {userRole === "CONSUMER" && <li><Link to="/orders">My orders</Link></li>}
+                            {userRole !== null && <li><Link to="/orders">My orders</Link></li>}
                             <li><Link to="/">Browse StoreHatch</Link></li>
                         </ul>
                     </nav>

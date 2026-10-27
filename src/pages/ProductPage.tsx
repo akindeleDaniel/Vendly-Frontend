@@ -196,7 +196,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const product = state.listing
     const withOptions = hasOptions(product)
     const stock = describeStock(withOptions && choice ? choice.stockQuantity : product.stockQuantity)
-    const showCartControls = userRole !== "SELLER"
+    const showCartControls = true// every account can buy; the backend refuses a seller's own products
     const needsChoice = withOptions && choice === null
     const photos = photosOf(product)
     const optionPhoto = selectedOption?.imageUrl ?? null

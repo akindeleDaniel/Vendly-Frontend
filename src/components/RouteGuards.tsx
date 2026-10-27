@@ -48,6 +48,12 @@ export function RequireRole({ role, authStatus, userRole, onRetry, children }: G
     return <>{children}</>
 }
 
+// Buying pages (cart, checkout, orders, complaints, pre-orders): any shopper or seller account, since
+// every account can buy. The backend checks it too, and keeps sellers away from their own shop.
+export function RequireBuyer(props: GuardProps & { children: React.ReactNode }) {
+    return <RequireSession {...props} />
+}
+
 // Pages for any signed-in person, whatever their role.
 export function RequireSession({ authStatus, onRetry, children }: GuardProps) {
     if (authStatus === "loading") {
@@ -137,7 +143,7 @@ export function RedirectIfAuthenticated({ authStatus, userRole, children }: Omit
     if (authStatus === "authenticated") {
         // A consumer who was asked to log in from a storefront goes back there; the storefront
         // then adds the product they chose.
-        const pendingCartItem = userRole === "CONSUMER" ? readPendingCartItem() : null
+        const pendingCartItem = userRole ? readPendingCartItem() : null
         if (pendingCartItem) {
             return <Navigate to={pendingCartItem.returnTo} replace />
         }

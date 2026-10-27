@@ -34,7 +34,8 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
     const [awaitingCount, setAwaitingCount] = useState(0)
     const [unreadComplaints, setUnreadComplaints] = useState(0)
     const [showPreOrders, setShowPreOrders] = useState(false)// a buyer who has asked for a pre-order
-    const isConsumer = authStatus === "authenticated" && userRole === "CONSUMER"
+    // Every account can buy, sellers included, so the buyer links show for both.
+    const isConsumer = authStatus === "authenticated" && (userRole === "CONSUMER" || userRole === "SELLER")
 
     // Orders the seller has reported delivered that the shopper has not confirmed yet. Checked when
     // the shopper moves between pages, so the count follows what they confirm.
@@ -156,7 +157,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                                     <span className="strip-hi"><UserRound aria-hidden="true" size={16} />Hi {firstName}</span>
                                 )}
                                 {/* On the cart page the cart icon would point to itself, so a Home icon takes its place. */}
-                                {userRole === "CONSUMER" && pathname !== "/orders" && (
+                                {isConsumer && pathname !== "/orders" && (
                                     <Link to="/orders" className="header-link">
                                         My orders
                                         {awaitingCount > 0 && (
@@ -164,15 +165,15 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                                         )}
                                     </Link>
                                 )}
-                                {userRole === "CONSUMER" && showPreOrders && pathname !== "/pre-orders" && (
+                                {isConsumer && showPreOrders && pathname !== "/pre-orders" && (
                                     <Link to="/pre-orders" className="header-link">Pre-orders</Link>
                                 )}
-                                {userRole === "CONSUMER" && pathname === "/cart" && (
+                                {isConsumer && pathname === "/cart" && (
                                     <Link to="/" className="icon-link" aria-label="Home" title="Home">
                                         <HomeIcon size={24} />
                                     </Link>
                                 )}
-                                {userRole === "CONSUMER" && pathname !== "/cart" && !isShopPage && (
+                                {isConsumer && pathname !== "/cart" && !isShopPage && (
                                     <Link to="/cart" className="icon-link" aria-label="Cart" title="Cart">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                                             <path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.6a1 1 0 0 0 1-.8L19.5 8H6.2" />
@@ -181,7 +182,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                                         </svg>
                                     </Link>
                                 )}
-                                {userRole === "CONSUMER" && unreadComplaints > 0 && pathname !== "/disputes" && (
+                                {isConsumer && unreadComplaints > 0 && pathname !== "/disputes" && (
                                     <Link to="/disputes" className="header-link">
                                         Complaints
                                         <span className="count-badge count-badge-new" aria-label={`${unreadComplaints} with something new`}>{unreadComplaints} new</span>

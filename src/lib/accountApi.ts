@@ -105,6 +105,19 @@ export type RegisterOutcome =
     | ErrorOutcome
 
 // Registering does not log anyone in: the backend emails a 6-digit code that must be entered first.
+// Turns the signed-in buyer's account into one that can also sell (POST /users/become-seller). Their
+// orders, cart and history stay; they can still shop. Returns the new role.
+export async function becomeSeller(): Promise<{ kind: "ok", role: UserRole } | ErrorOutcome> {
+    const result = await apiRequest<unknown>("/users/become-seller", { method: "POST", body: {} })
+
+    if (result.kind !== "ok") {
+        return errorOf(result)
+    }
+
+    const role = readRole(result.data)
+    return role ? { kind: "ok", role } : { kind: "error", message: "Please refresh the page and try again." }
+}
+
 export async function registerAccount(input: { name: string, email: string, password: string, role: UserRole }): Promise<RegisterOutcome> {
     const result = await apiRequest<unknown>("/users/register", { method: "POST", body: input })
 

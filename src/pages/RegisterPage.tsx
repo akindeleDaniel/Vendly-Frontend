@@ -30,9 +30,9 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
         email: "",
         password: ""
     })
-    useDocumentTitle(role === "SELLER" ? "Create a seller account" : "Create an account")
+    useDocumentTitle("Create your account")
     const passwordHintId = useId()
-    const registerPrompt = role === "CONSUMER" && readPendingCartItem() ? "Create a shopper account to add this item to your cart." : ""
+    const registerPrompt = readPendingCartItem() ? "Create an account to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
     const [codeSentTo, setCodeSentTo] = useState<string | null>(null)// set once the confirmation code has been emailed
@@ -95,7 +95,8 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
     }
 
     return(
-        <AuthShell title={role === "SELLER" ? "Create a seller account" : "Create a shopper account"}>
+        <AuthShell title="Create your StoreHatch account">
+            <p className="auth-lead">Open your own shop, and shop from others, with one account. You can set up your shop now or later.</p>
             {registerPrompt && <Notice kind="info">{registerPrompt}</Notice>}
             <form onSubmit={handleSubmit} className="card form-card">
                 <label>

@@ -20,7 +20,7 @@ export function usePendingCartAdd(userRole: UserRole | null): PendingCartResult 
             return
         }
 
-        if (userRole !== "CONSUMER") {
+        if (userRole === null) {
             clearPendingCartItem()
             return
         }

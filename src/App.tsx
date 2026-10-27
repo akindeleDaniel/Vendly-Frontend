@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
-import RolePage from "./pages/RolePage"
 import DiscoveryPage from "./pages/DiscoveryPage"
 import MyListingPage from "./pages/MyListingPage"
 import SellerOnboardingPage from "./pages/SellerOnboardingPage"
@@ -32,6 +31,8 @@ import NotFoundPage from "./pages/NotFoundPage"
 import ProductPage from "./pages/ProductPage"
 import PasswordPage from "./pages/PasswordPage"
 import SetPasswordPrompt from "./components/SetPasswordPrompt"
+import ShopSetupPrompt from "./components/ShopSetupPrompt"
+import { clearShopSetupPromptDismissed } from "./lib/shopSetupPrompt"
 import { clearPasswordPromptDismissed } from "./lib/passwordPrompt"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import AdminLiabilitiesPage from "./pages/AdminLiabilitiesPage"
@@ -42,7 +43,7 @@ import DisputeListPage from "./pages/DisputeListPage"
 import NewDisputePage from "./pages/NewDisputePage"
 import OfferRefundPage from "./pages/OfferRefundPage"
 import SellerLiabilitiesPage from "./pages/SellerLiabilitiesPage"
-import { RedirectIfAuthenticated, RequireAdmin, RequireRole, RequireSession, RequireSuperAdmin } from "./components/RouteGuards"
+import { RedirectIfAuthenticated, RequireAdmin, RequireBuyer, RequireRole, RequireSession, RequireSuperAdmin } from "./components/RouteGuards"
 import AdminPlatformPage from "./pages/AdminPlatformPage"
 import AdminTeamPage from "./pages/AdminTeamPage"
 import AdminAuditLogPage from "./pages/AdminAuditLogPage"
@@ -90,13 +91,11 @@ function App() {
   }
 
   function handleLogin(role: UserRole) {
-    if (role !== "CONSUMER") {
-      clearPendingCartItem()// only a shopper can complete a remembered add-to-cart
-    }
     setUserRole(role)
     setAuthStatus("authenticated")
     setSessionExpired(false)
     clearPasswordPromptDismissed()
+    clearShopSetupPromptDismissed()
     setLoginCount((count) => count + 1)
     void refreshAccountFlags()
   }
@@ -210,13 +209,14 @@ function App() {
       <ScrollToTop />
       <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} hasPassword={hasPassword} userName={authStatus === "authenticated" ? userName : ""} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
+      <ShopSetupPrompt key={`shop-${loginCount}`} authStatus={authStatus} userRole={userRole} />
       <main id="main" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} userRole={userRole} />} />
+          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} userRole={userRole} onBecameSeller={() => setUserRole("SELLER")} />} />
 
-          <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
+          <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
-          <Route path="/consumer/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="CONSUMER"/></RedirectIfAuthenticated>} />
+          <Route path="/consumer/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
           <Route path="/seller/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
@@ -248,9 +248,9 @@ function App() {
 
           <Route path="/seller/pre-orders/:id" element={<RequireRole role="SELLER" {...guardProps}><PreOrderDetailPage viewer="seller" /></RequireRole>} />
 
-          <Route path="/pre-orders" element={<RequireRole role="CONSUMER" {...guardProps}><PreOrderListPage viewer="buyer" /></RequireRole>} />
+          <Route path="/pre-orders" element={<RequireBuyer {...guardProps}><PreOrderListPage viewer="buyer" /></RequireBuyer>} />
 
-          <Route path="/pre-orders/:id" element={<RequireRole role="CONSUMER" {...guardProps}><PreOrderDetailPage viewer="buyer" /></RequireRole>} />
+          <Route path="/pre-orders/:id" element={<RequireBuyer {...guardProps}><PreOrderDetailPage viewer="buyer" /></RequireBuyer>} />
 
           <Route path="/seller/reviews" element={<RequireRole role="SELLER" {...guardProps}><SellerReviewsPage /></RequireRole>} />
 
@@ -264,19 +264,19 @@ function App() {
 
           <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
 
-          <Route path="/cart" element={<RequireRole role="CONSUMER" {...guardProps}><CartPage /></RequireRole>} />
+          <Route path="/cart" element={<RequireBuyer {...guardProps}><CartPage /></RequireBuyer>} />
 
-          <Route path="/checkout" element={<RequireRole role="CONSUMER" {...guardProps}><CheckoutPage /></RequireRole>} />
+          <Route path="/checkout" element={<RequireBuyer {...guardProps}><CheckoutPage /></RequireBuyer>} />
 
-          <Route path="/orders" element={<RequireRole role="CONSUMER" {...guardProps}><MyOrdersPage /></RequireRole>} />
+          <Route path="/orders" element={<RequireBuyer {...guardProps}><MyOrdersPage /></RequireBuyer>} />
 
-          <Route path="/orders/:id" element={<RequireRole role="CONSUMER" {...guardProps}><OrderDetailPage /></RequireRole>} />
+          <Route path="/orders/:id" element={<RequireBuyer {...guardProps}><OrderDetailPage /></RequireBuyer>} />
 
-          <Route path="/orders/:checkoutId/seller-orders/:orderId/complaint" element={<RequireRole role="CONSUMER" {...guardProps}><NewDisputePage /></RequireRole>} />
+          <Route path="/orders/:checkoutId/seller-orders/:orderId/complaint" element={<RequireBuyer {...guardProps}><NewDisputePage /></RequireBuyer>} />
 
-          <Route path="/disputes" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeListPage viewer="buyer" /></RequireRole>} />
+          <Route path="/disputes" element={<RequireBuyer {...guardProps}><DisputeListPage viewer="buyer" /></RequireBuyer>} />
 
-          <Route path="/disputes/:id" element={<RequireRole role="CONSUMER" {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireRole>} />
+          <Route path="/disputes/:id" element={<RequireBuyer {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireBuyer>} />
 
           <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminDashboardPage /></AdminShell></RequireAdmin>} />
 
@@ -306,7 +306,7 @@ function App() {
 
           <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage userName={userName} /></RequireRole>} />
+          <Route path="/checkout/payment-return" element={<RequireBuyer {...guardProps}><PaymentReturnPage userName={userName} /></RequireBuyer>} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
