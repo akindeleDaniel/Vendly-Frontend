@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { AlertTriangle, ArrowLeft, Check, ChevronRight, Clock, MessageCircle, ShoppingBag } from "lucide-react"
+import { AlertTriangle, Check, ChevronRight, Clock, MessageCircle, ShoppingBag } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import Notice from "../components/Notice"
 import { failureMessage } from "../lib/apiRequest"
@@ -11,11 +11,19 @@ import type { DisputeViewer } from "../lib/disputeApi"
 import { formatNaira } from "../lib/money"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { DisputeGroup, DisputePage, DisputeSummary } from "../types/dispute"
+import BackArrow from "../components/BackArrow"
 
 const DETAIL_PATHS: Record<DisputeViewer, string> = {
     buyer: "/disputes",
     seller: "/seller/disputes",
     admin: "/admin/complaints"
+}
+
+// Where the back arrow goes: the page each person reaches their complaints from.
+const BACK_LINKS: Record<DisputeViewer, { to: string, label: string }> = {
+    buyer: { to: "/orders", label: "Back to my orders" },
+    seller: { to: "/seller/myListing", label: "Back to my store" },
+    admin: { to: "/admin", label: "Back to the admin dashboard" }
 }
 
 const INTRO: Record<DisputeViewer, string> = {
@@ -149,7 +157,7 @@ function DisputeListPage({ viewer }: { viewer: DisputeViewer }) {
 
     return (
         <div className="complaints-page">
-            {viewer === "buyer" && <Link to="/orders" className="order-back"><ArrowLeft size={18} aria-hidden="true" />My orders</Link>}
+            <BackArrow to={BACK_LINKS[viewer].to} label={BACK_LINKS[viewer].label} />
             <div className="complaints-head">
                 <h1>Complaints</h1>
                 <p>{INTRO[viewer]}</p>

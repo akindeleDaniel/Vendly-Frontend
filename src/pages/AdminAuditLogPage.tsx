@@ -7,6 +7,7 @@ import { fetchAuditLog } from "../lib/platformApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { AUDIT_ACTION_LABELS } from "../types/platform"
+import BackArrow from "../components/BackArrow"
 
 function PersonLink({ person }: { person: { id: number, name: string, email: string | null } }) {
     // A deleted account has no email, and its person page no longer exists.
@@ -22,6 +23,7 @@ function AdminAuditLogPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Audit log</h1>
 
             {state.kind === "loading" && <p role="status">Loading...</p>}

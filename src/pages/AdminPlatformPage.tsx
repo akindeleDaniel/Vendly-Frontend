@@ -6,6 +6,7 @@ import { fetchPlatformSummary } from "../lib/platformApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { SalesFigures } from "../types/platform"
+import BackArrow from "../components/BackArrow"
 
 function Figure({ label, value }: { label: string, value: string | number }) {
     return <div><dt>{label}</dt><dd>{value}</dd></div>
@@ -31,6 +32,7 @@ function AdminPlatformPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Platform</h1>
 
             {state.kind === "loading" && <p role="status">Counting...</p>}

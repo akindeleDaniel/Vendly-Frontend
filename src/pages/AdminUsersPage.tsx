@@ -6,6 +6,7 @@ import { listAdminUsers } from "../lib/adminLookupApi"
 import { formatShortDate } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import BackArrow from "../components/BackArrow"
 
 // Finds a person by id, name, email or shop name.
 function AdminUsersPage() {
@@ -28,6 +29,7 @@ function AdminUsersPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Find a person</h1>
 
             <form role="search" onSubmit={applySearch} className="search-form">

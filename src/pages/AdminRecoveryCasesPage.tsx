@@ -9,6 +9,7 @@ import { readRefundFailure } from "../lib/refundErrors"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { RecoveryCase } from "../types/refund"
+import BackArrow from "../components/BackArrow"
 
 // A payment that was verified but could not become orders, for example because the stock ran out
 // while the shopper was paying. The money has to go back or the case has to be explained.
@@ -116,6 +117,7 @@ function AdminRecoveryCasesPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Recovery cases</h1>
             <p>Payments that were verified but could not become orders. Each one needs a refund or an explanation.</p>
             <label className="field-inline">

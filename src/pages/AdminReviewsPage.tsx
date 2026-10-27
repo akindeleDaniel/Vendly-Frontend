@@ -9,6 +9,7 @@ import { listAdminReviews, setReviewHidden } from "../lib/reviewApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { AdminReview, AdminReviewStatus, SellerReviewType } from "../types/review"
+import BackArrow from "../components/BackArrow"
 
 const STATUS_FILTERS: Array<{ value: AdminReviewStatus, label: string }> = [
     { value: "reported", label: "Reported" },
@@ -85,6 +86,7 @@ function AdminReviewsPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Reviews</h1>
 
             <div className="filter-row">

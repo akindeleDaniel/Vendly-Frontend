@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
-import { AlertTriangle, ArrowLeft, Lock } from "lucide-react"
+import { useParams } from "react-router-dom"
+import { AlertTriangle, Lock } from "lucide-react"
 import AdminDisputeDecision from "../components/AdminDisputeDecision"
 import DisputeDetailView from "../components/DisputeDetailView"
 import DisputeMessageForm from "../components/DisputeMessageForm"
@@ -15,6 +15,7 @@ import ReopenDisputePanel from "../components/ReopenDisputePanel"
 import type { DisputeViewer } from "../lib/disputeApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { Dispute } from "../types/dispute"
+import BackArrow from "../components/BackArrow"
 
 const LIST_PATHS: Record<DisputeViewer, string> = {
     buyer: "/disputes",
@@ -68,7 +69,7 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
         return failureMessage(result)
     }
 
-    const backLink = <Link to={LIST_PATHS[viewer]} className="order-back"><ArrowLeft size={18} aria-hidden="true" />Complaints</Link>
+    const backLink = <BackArrow to={LIST_PATHS[viewer]} label="Back to complaints" />
 
     if (state.kind === "loading") {
         return <p role="status">Loading the complaint...</p>

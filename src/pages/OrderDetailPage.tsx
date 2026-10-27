@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
-import { AlertTriangle, ArrowLeft, CalendarDays, RotateCcw, Truck } from "lucide-react"
+import { AlertTriangle, CalendarDays, RotateCcw, Truck } from "lucide-react"
 import { OrderItemRow, OrderNote, OrderProgress } from "../components/BuyerOrderParts"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import Notice from "../components/Notice"
@@ -13,6 +13,7 @@ import { fetchMyOrder, formatProvider, hasAmount } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { CustomerOrder } from "../types/order"
+import BackArrow from "../components/BackArrow"
 
 type SellerOrder = CustomerOrder["sellerOrders"][number]
 
@@ -176,7 +177,7 @@ function OrderDetailPage() {
     }, [id, attempt])
 
     const back = (
-        <Link to="/orders" className="order-back"><ArrowLeft size={18} aria-hidden="true" />My orders</Link>
+        <BackArrow to="/orders" label="Back to my orders" />
     )
 
     if (outcome === null) {

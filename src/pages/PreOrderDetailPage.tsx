@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ArrowLeft, Check, Clock } from "lucide-react"
+import { Check, Clock } from "lucide-react"
 import { OrderItemRow, OrderProgress } from "../components/BuyerOrderParts"
 import InlineConfirm from "../components/InlineConfirm"
 import Notice from "../components/Notice"
@@ -18,6 +18,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { ORDER_MAX_VALUE } from "../lib/limits"
 import { PRE_ORDER_NOTE_MAX_LENGTH } from "../types/preOrder"
 import type { PreOrder } from "../types/preOrder"
+import BackArrow from "../components/BackArrow"
 
 const LIST_PATHS: Record<PreOrderViewer, string> = {
     buyer: "/pre-orders",
@@ -130,7 +131,7 @@ function PreOrderDetailPage({ viewer }: { viewer: PreOrderViewer }) {
     const { id = "" } = useParams()
     const { state, setData, reload } = useApiResource(`${viewer}|${id}`, (signal) => getPreOrder(viewer, id, signal))
 
-    const back = <Link to={LIST_PATHS[viewer]} className="order-back"><ArrowLeft size={18} aria-hidden="true" />Pre-orders</Link>
+    const back = <BackArrow to={LIST_PATHS[viewer]} label="Back to pre-orders" />
 
     if (state.kind === "loading") {
         return <div className="complaints-page" aria-busy="true">{back}<p role="status">Loading the pre-order...</p></div>

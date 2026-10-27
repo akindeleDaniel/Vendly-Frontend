@@ -14,6 +14,7 @@ import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
+import BackArrow from "../components/BackArrow"
 
 type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "error"
 
@@ -553,7 +554,7 @@ function CheckoutPage() {
     <div className="checkout-page">
       <div className="checkout-top">
         {!isSubmitting
-          ? <Link to="/cart" className="back-link"><ArrowLeft aria-hidden="true" size={18} />Back to cart</Link>
+          ? <BackArrow to="/cart" label="Back to cart" />
           : <span />}
         <CheckoutSteps current="delivery" />
       </div>

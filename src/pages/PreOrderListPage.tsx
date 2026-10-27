@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom"
-import { ArrowLeft, CalendarCheck, Check, Clock, CreditCard, ShoppingBag, X } from "lucide-react"
+import { CalendarCheck, Check, Clock, CreditCard, ShoppingBag, X } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import Notice from "../components/Notice"
 import Pagination from "../components/Pagination"
@@ -12,6 +12,7 @@ import type { PreOrderViewer } from "../lib/preOrderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { PreOrder, PreOrderGroup } from "../types/preOrder"
+import BackArrow from "../components/BackArrow"
 
 const DETAIL_PATHS: Record<PreOrderViewer, string> = {
     buyer: "/pre-orders",
@@ -123,9 +124,7 @@ function PreOrderListPage({ viewer }: { viewer: PreOrderViewer }) {
 
     return (
         <div className="complaints-page">
-            <Link to={viewer === "buyer" ? "/orders" : "/seller/myListing"} className="order-back">
-                <ArrowLeft size={18} aria-hidden="true" />{viewer === "buyer" ? "My orders" : "My store"}
-            </Link>
+            <BackArrow to={viewer === "buyer" ? "/orders" : "/seller/myListing"} label={viewer === "buyer" ? "Back to my orders" : "Back to my store"} />
             <div className="complaints-head">
                 <h1>Pre-orders</h1>
                 <p>{INTRO[viewer]}</p>

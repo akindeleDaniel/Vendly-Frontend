@@ -8,6 +8,7 @@ import { addAdmin, fetchTeam, revokeAdmin, setSuperAdmin } from "../lib/platform
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { TeamMember } from "../types/platform"
+import BackArrow from "../components/BackArrow"
 
 type TeamResult = ApiResult<{ team: TeamMember[] }>
 
@@ -149,6 +150,7 @@ function AdminTeamPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Team</h1>
 
             {state.kind === "loading" && <p role="status">Loading the team...</p>}

@@ -12,6 +12,7 @@ import type { RefundFailure } from "../lib/refundErrors"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { AdminRefund } from "../types/refund"
+import BackArrow from "../components/BackArrow"
 
 const STATUS_FILTERS = [
     { value: "", label: "All" },
@@ -217,6 +218,7 @@ function AdminRefundsPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Refunds</h1>
             <IssueRefundForm key={orderFromSearch} onIssued={reload} initialOrderId={orderFromSearch} />
 

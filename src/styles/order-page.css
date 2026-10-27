@@ -6,15 +6,6 @@
   margin: 0 auto;
 }
 
-.order-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--tap-size);
-  font-weight: 700;
-  text-decoration: none;
-}
-
 .order-title-row {
   margin: var(--space-1) 0 var(--space-6);
 }

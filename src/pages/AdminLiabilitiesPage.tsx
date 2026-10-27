@@ -9,6 +9,7 @@ import { formatShortDate } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { AdminLiability, LiabilityStatus } from "../types/refund"
+import BackArrow from "../components/BackArrow"
 
 const STATUS_LABELS: Record<LiabilityStatus, string> = {
     OPEN: "Still owed",
@@ -136,6 +137,7 @@ function AdminLiabilitiesPage() {
 
     return (
         <div>
+            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Owed by sellers</h1>
             <p>Refunds charged to sellers. They are recovered from the sellers' later sales, up to a share of each sale.</p>
             <label className="field-inline">
