@@ -1,8 +1,10 @@
-import { useId, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
+import { Mail } from "lucide-react"
+import PasswordField from "../components/PasswordField"
 import { readPendingCartItem } from "../lib/pendingCartItem"
 import type { UserRole } from "../types/user"
-import { checkPassword, registerAccount, resendCode, verifyCode } from "../lib/accountApi"
+import { MIN_PASSWORD_LENGTH, checkPassword, registerAccount, resendCode, verifyCode } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import AuthShell from "../components/AuthShell"
 import CodeEntryForm from "../components/CodeEntryForm"
@@ -31,7 +33,6 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
         password: ""
     })
     useDocumentTitle("Create your account")
-    const passwordHintId = useId()
     const registerPrompt = readPendingCartItem() ? "Create an account to add this item to your cart." : ""
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState("")
@@ -80,7 +81,7 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
 
     if (codeSentTo !== null) {
         return (
-            <AuthShell title="Check your email">
+            <AuthShell title="Check your email" icon={<Mail size={30} />}>
                 <CodeEntryForm
                     email={codeSentTo}
                     verify={(code) => verifyCode("VERIFY_EMAIL", codeSentTo, code)}
@@ -95,48 +96,52 @@ function RegisterPage ({onLogin, role}: RegisterPageProps){
     }
 
     return(
-        <AuthShell title="Create your StoreHatch account">
-            <p className="auth-lead">Open your own shop, and shop from others, with one account. You can set up your shop now or later.</p>
+        <AuthShell
+            title="Create your StoreHatch account"
+            lead="Open your own shop, and shop from others, with one account. You can set up your shop now or later."
+        >
             {registerPrompt && <Notice kind="info">{registerPrompt}</Notice>}
-            <form onSubmit={handleSubmit} className="card form-card">
-                <label>
-                    Name
-                    <input name="name"
-                        autoComplete="name"
-                        maxLength={80}
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <label>
-                    Email
-                    <input name="email"
-                        type="email"
-                        autoComplete="email"
-                        maxLength={254}
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <label>
-                    Password
-                    <input name="password"
-                        type="password"
-                        autoComplete="new-password"
-                        aria-describedby={passwordHintId}
-                        value={formData.password}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <p id={passwordHintId} className="field-help">At least 10 characters. Avoid common passwords.</p>
+            <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                    <label htmlFor="register-name">Your name</label>
+                    <div className="auth-input">
+                        <input id="register-name" name="name"
+                            autoComplete="name"
+                            maxLength={80}
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                        />
+                    </div>
+                </div>
+                <div className="auth-field">
+                    <label htmlFor="register-email">Email</label>
+                    <div className="auth-input">
+                        <input id="register-email" name="email"
+                            type="email"
+                            autoComplete="email"
+                            maxLength={254}
+                            placeholder="you@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                        />
+                    </div>
+                </div>
+                <PasswordField
+                    label="Password"
+                    name="password"
+                    autoComplete="new-password"
+                    value={formData.password}
+                    onChange={(password) => setFormData({ ...formData, password })}
+                    minLength={MIN_PASSWORD_LENGTH}
+                />
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || wait.remaining > 0}>
-                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSubmitting ? "Registering..." : "Create account"}
+                <button type="submit" className="btn btn-primary auth-submit" disabled={isSubmitting || wait.remaining > 0}>
+                    {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSubmitting ? "Creating your account..." : "Create account"}
                 </button>
-                <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
+                <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} text="signup_with" />
                 {google.error && <Notice kind="error">{google.error}</Notice>}
             </form>
-            <p className="form-footer">Already have an account? <Link to={"/login"}>Log in</Link></p>
+            <p className="auth-foot">Already have an account? <Link to="/login">Log in</Link></p>
         </AuthShell>
     )
 }

@@ -1,0 +1,444 @@
+/* The sign-in screens (log in, create an account, the emailed code, reset password): a green panel
+   about StoreHatch beside the form on wide screens, the form alone under the logo on phones. */
+
+/* Edge to edge, out of the page's centred column, the same way the shop pages do it. */
+body:has(.auth-page) {
+  overflow-x: clip;
+}
+
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100svh;
+  margin: 0 calc(50% - 50vw) calc(-1 * var(--space-8));
+  background: var(--color-cream);
+}
+
+@media (min-width: 900px) {
+  .auth-page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    height: 100svh;
+  }
+
+  .auth-main {
+    overflow-y: auto;
+  }
+}
+
+/* The panel */
+.auth-panel {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .auth-panel {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-5);
+    height: 100svh;
+    padding: var(--space-5) var(--space-8);
+    overflow: hidden;
+    background: var(--color-forest);
+    color: var(--color-cream);
+  }
+}
+
+.auth-panel-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: flex-start;
+  min-height: var(--tap-size);
+  color: var(--color-cream);
+  text-decoration: none;
+}
+
+.auth-panel-brand:hover {
+  color: var(--color-cream);
+}
+
+.auth-panel-brand span {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.auth-mosaic {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 460px;
+  height: clamp(180px, 32svh, 320px);
+}
+
+.auth-mosaic > span {
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.auth-mosaic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auth-mosaic-main {
+  grid-row: 1 / span 2;
+}
+
+.auth-mosaic-main img {
+  object-position: 62% 30%;
+}
+
+.auth-mosaic-top img {
+  object-position: 55% 25%;
+}
+
+.auth-mosaic-bottom img {
+  object-position: 50% 55%;
+}
+
+/* The photos move a little inside their frames: a slow pan and zoom, each on its own loop so they
+   never move together. They stay still for people who ask for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-mosaic img {
+    animation: auth-drift 9s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .auth-mosaic-top img {
+    animation-name: auth-drift-left;
+    animation-duration: 11s;
+    animation-delay: -4s;
+  }
+
+  .auth-mosaic-bottom img {
+    animation-duration: 13s;
+    animation-delay: -8s;
+  }
+}
+
+@keyframes auth-drift {
+  from {
+    transform: scale(1.04) translate3d(-1.5%, 1%, 0);
+  }
+
+  to {
+    transform: scale(1.1) translate3d(1.5%, -1.5%, 0);
+  }
+}
+
+@keyframes auth-drift-left {
+  from {
+    transform: scale(1.1) translate3d(1.5%, 0, 0);
+  }
+
+  to {
+    transform: scale(1.04) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+.auth-panel h2 {
+  max-width: 440px;
+  margin: 0;
+  color: var(--color-cream);
+  font-size: 2.375rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.auth-panel p {
+  max-width: 420px;
+  margin: var(--space-3) 0 0;
+  color: #d6e5dc;
+  line-height: 1.55;
+}
+
+.auth-promises {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-promises li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-promises li span {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-amber);
+  color: var(--color-charcoal);
+}
+
+/* The form side */
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-3) var(--gutter) var(--space-5);
+}
+
+.auth-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+@media (min-width: 900px) {
+  .auth-topbar {
+    justify-content: flex-end;
+  }
+
+  .auth-phone-logo {
+    display: none;
+  }
+}
+
+.auth-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-size);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-center {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+@media (min-width: 900px) {
+  .auth-center {
+    align-items: center;
+  }
+}
+
+.auth-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-box h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+
+
+.auth-lead {
+  margin: calc(var(--space-1) * -1) 0 var(--space-1);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.auth-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.auth-field label,
+.auth-label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.auth-aside-link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.auth-input {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  padding: 0 4px 0 14px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 10px;
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.auth-input:focus-within {
+  border-color: var(--color-forest);
+  box-shadow: 0 0 0 3px var(--color-forest-tint);
+}
+
+.auth-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: var(--text-base);
+}
+
+.auth-input input:focus-visible {
+  outline: 0;
+}
+
+.auth-eye {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.auth-eye:hover {
+  background: var(--color-placeholder);
+  color: var(--color-charcoal);
+}
+
+.auth-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.auth-check svg {
+  flex: none;
+}
+
+.auth-check.is-ok {
+  color: var(--color-success);
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 10px;
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.auth-foot {
+  margin: 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.auth-foot a {
+  font-weight: 700;
+}
+
+/* The code boxes on these screens: larger, and left to right under the heading */
+.auth-page .code-form {
+  text-align: left;
+}
+
+.auth-page .code-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auth-page .code-box {
+  max-width: none;
+  height: 60px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 1.625rem;
+  font-weight: 800;
+}
+
+.auth-page .code-box:focus-visible {
+  border-color: var(--color-forest);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--color-forest-tint);
+}
+
+.auth-page .code-actions {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+@media (max-width: 400px) {
+  .auth-page .code-boxes {
+    gap: 6px;
+  }
+
+  .auth-page .code-box {
+    height: 52px;
+    font-size: 1.375rem;
+  }
+}
+
+.auth-page .google-section {
+  gap: var(--space-3);
+}
+
+.auth-page .auth-divider {
+  margin: 0;
+}

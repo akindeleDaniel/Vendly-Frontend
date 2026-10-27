@@ -5,13 +5,15 @@ type GoogleSignInButtonProps = {
     // Called with Google's sign-in token when the person finishes choosing a Google account.
     onCredential: (credential: string) => void
     disabled?: boolean
+    // Google's own wording: "Continue with Google" or, on the sign-up page, "Sign up with Google".
+    text?: "continue_with" | "signup_with"
 }
 
 // Google only issues its sign-in token through its own button, so this draws that button in the
-// style the rest of the page uses (outlined, pill-shaped, "Continue with Google", full width) and
+// style the rest of the page uses (outlined, rectangular, "Continue with Google", full width) and
 // leaves the rest to Google. It is hidden when the site has no Google client id, or when Google's
 // script cannot load.
-function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButtonProps) {
+function GoogleSignInButton({ onCredential, disabled, text = "continue_with" }: GoogleSignInButtonProps) {
     const clientId = getGoogleClientId()
     const wrapRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLDivElement>(null)
@@ -79,8 +81,8 @@ function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButtonProps)
             google.accounts.id.renderButton(target!, {
                 theme: "outline",
                 size: "large",
-                shape: "pill",
-                text: "continue_with",
+                shape: "rectangular",
+                text,
                 logo_alignment: "left",
                 width
             })
@@ -90,7 +92,7 @@ function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButtonProps)
         const observer = new ResizeObserver(draw)
         observer.observe(wrap)
         return () => observer.disconnect()
-    }, [isReady])
+    }, [isReady, text])
 
     if (!clientId || hasFailed) {
         return null

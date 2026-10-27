@@ -715,13 +715,6 @@
   height: 88px;
 }
 
-/* The line under "Create your StoreHatch account" */
-.auth-lead {
-  margin: 0 0 var(--space-4);
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
 /* My store before the shop is set up */
 .setup-shop {
   max-width: 640px;

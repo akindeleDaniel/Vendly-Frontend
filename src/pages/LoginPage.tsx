@@ -10,7 +10,9 @@ import GoogleSignInButton from "../components/GoogleSignInButton"
 import GoogleSteps from "../components/GoogleSteps"
 import { useGoogleSignIn } from "../lib/useGoogleSignIn"
 import { useRetryAfter } from "../lib/useRetryAfter"
+import { Mail } from "lucide-react"
 import Notice from "../components/Notice"
+import PasswordField from "../components/PasswordField"
 import type { CodePurpose } from "../lib/accountApi"
 
 type ExistingUser = {
@@ -90,7 +92,7 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
 
     if (codeStep !== null) {
         return (
-            <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter the code we emailed you" : "Confirm your email"}>
+            <AuthShell title={codeStep.purpose === "LOGIN" ? "Enter the code we emailed you" : "Confirm your email"} icon={<Mail size={30} />}>
                 <CodeEntryForm
                     email={codeStep.email}
                     verify={(code) => verifyCode(codeStep.purpose, codeStep.email, code)}
@@ -106,38 +108,39 @@ function LoginPage ({onLogin, sessionExpired}: LoginPageProps){
     }
 
     return(
-        <AuthShell title="Log in">
+        <AuthShell title="Welcome back" lead="Log in to your shop and your orders.">
             {passwordWasReset && <Notice kind="success">Your password has been changed. Log in with your new password.</Notice>}
             {sessionExpired && <Notice kind="info">Your session has expired. Please log in again.</Notice>}
             {loginPrompt && !sessionExpired && <Notice kind="info">{loginPrompt}</Notice>}
-            <form onSubmit={handleSubmit} className="card form-card">
-                <label>
-                    Email
-                    <input name="email"
-                        type="email"
-                        autoComplete="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
-                <label>
-                    Password
-                    <input name="password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
-                    />
-                </label>
+            <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                    <label htmlFor="login-email">Email</label>
+                    <div className="auth-input">
+                        <input id="login-email" name="email"
+                            type="email"
+                            autoComplete="email"
+                            placeholder="you@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, [e.target.name]: e.target.value})}
+                        />
+                    </div>
+                </div>
+                <PasswordField
+                    label="Password"
+                    name="password"
+                    autoComplete="current-password"
+                    value={formData.password}
+                    onChange={(password) => setFormData({ ...formData, password })}
+                    labelAside={<Link to="/forgot-password" className="auth-aside-link">Forgot password?</Link>}
+                />
                 {error && <Notice kind="error">{error}</Notice>}
-                <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || wait.remaining > 0}>
+                <button type="submit" className="btn btn-primary auth-submit" disabled={isSubmitting || wait.remaining > 0}>
                     {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isSubmitting ? "Logging in..." : "Log in"}
                 </button>
                 <GoogleSignInButton onCredential={google.handleCredential} disabled={google.isWorking || isSubmitting} />
                 {google.error && <Notice kind="error">{google.error}</Notice>}
-                <p className="form-footer"><Link to="/forgot-password">Forgot your password?</Link></p>
             </form>
-            <p className="form-footer">Don't have an account? <Link to={"/register"}>Register</Link></p>
+            <p className="auth-foot">New to StoreHatch? <Link to="/register">Create an account</Link></p>
         </AuthShell>
     )
 }

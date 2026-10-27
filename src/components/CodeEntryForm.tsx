@@ -80,15 +80,15 @@ function CodeEntryForm({ email, verify, resend, submitLabel, notice, backLabel, 
     }
 
     return (
-        <form onSubmit={handleSubmit} className="card form-card stack-form code-form">
+        <form onSubmit={handleSubmit} className="auth-form code-form">
             {notice && <Notice kind="info">{notice}</Notice>}
             <p id={helpId} className="code-intro">
-                Sent to <strong>{email}</strong>. It expires in 10 minutes. You may need to check your spam folder.
+                We sent a 6-digit code to <strong>{email}</strong>. It expires in 10 minutes. Check your spam folder if you can't see it.
             </p>
             <CodeInput value={code} onChange={setCode} disabled={isChecking} invalid={error !== ""} describedBy={helpId} />
             {error && <Notice kind="error">{error}</Notice>}
             {resendMessage && <Notice kind="success">{resendMessage}</Notice>}
-            <button type="submit" className="btn-block btn-lg" disabled={isChecking || code.length !== CODE_LENGTH || wait.remaining > 0}>
+            <button type="submit" className="btn btn-primary auth-submit" disabled={isChecking || code.length !== CODE_LENGTH || wait.remaining > 0}>
                 {wait.remaining > 0 ? `Try again in ${wait.remaining}s` : isChecking ? "Checking..." : submitLabel}
             </button>
             <div className="code-actions">

@@ -110,6 +110,12 @@ The "Shop by category" tiles show five of the 11 photos in `public/images/catego
 - `home-armchair.jpg`: unsplash.com/photos/a-comfortable-armchair-with-blankets-and-pillows-3eFjPyC9qyw
 - `books-stack.jpg`: unsplash.com/photos/a-stack-of-books-sitting-next-to-each-other-b53HdbIUOhM
 
+The sign-in pages show three other photos, in `public/images/auth/`, beside the forms (`src/components/AuthShell.tsx`). Keep them different from the category photos and the landing page's. Also from Unsplash, on the same terms:
+
+- `shopper-phone.jpg`: unsplash.com/photos/a-woman-in-a-green-dress-holding-a-cell-phone-86h-VV5jYmg
+- `shopper-bags.jpg`: unsplash.com/photos/woman-holding-shopping-bag-in-a-mall-b93xqmwDOv0
+- `tailor.jpg`: unsplash.com/photos/a-tailor-sews-at-his-sewing-machine-bhRcP1KqS0g
+
 ## Authentication
 
 The backend sets a session cookie, and the app learns who is signed in from `GET /users/check` when it starts (`src/App.tsx`). That check has four outcomes: loading, authenticated, unauthenticated (a 401), and error (a network or server failure, which is not treated as being logged out and offers a retry).

@@ -1,3 +1,4 @@
+import { Mail } from "lucide-react"
 import AuthShell from "./AuthShell"
 import CodeEntryForm from "./CodeEntryForm"
 import Notice from "./Notice"
@@ -37,7 +38,7 @@ function GoogleSteps({ google }: { google: GoogleSignIn }) {
 
     if (step.kind === "link") {
         return (
-            <AuthShell title="Confirm it is you">
+            <AuthShell title="Confirm it is you" icon={<Mail size={30} />}>
                 <CodeEntryForm
                     email={step.email}
                     notice="An account with this email already exists. We emailed you a code so that only the owner can link Google to it."
@@ -59,7 +60,7 @@ function GoogleSteps({ google }: { google: GoogleSignIn }) {
     }
 
     return (
-        <AuthShell title="Enter the code we emailed you">
+        <AuthShell title="Enter the code we emailed you" icon={<Mail size={30} />}>
             <CodeEntryForm
                 email={step.email}
                 notice="Administrator accounts always need a code, even with Google."
