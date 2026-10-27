@@ -1,4 +1,5 @@
 import { useId, useState } from "react"
+import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import { formatNaira } from "../lib/money"
 import { ALL_STATES, checkDeliveryChoices, choicesFromRates, fetchShippingRates, saveDeliveryChoices } from "../lib/shippingApi"
@@ -161,6 +162,7 @@ function DeliveryFeesPage() {
 
     return (
         <div className="form-page-wide">
+            <BackArrow to="/seller/myListing" label="Back to my store" />
             <h1>Delivery</h1>
             <p className="page-intro">Choose where you deliver and what it costs. Buyers see the fee for their state before they pay.</p>
 

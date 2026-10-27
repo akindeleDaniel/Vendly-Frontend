@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import BackArrow from "../components/BackArrow"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
@@ -62,7 +63,7 @@ function NewDisputePage() {
 
     return (
         <div className="form-page-wide">
-            <p className="page-back"><Link to={backTo} className="back-link">Back to the order</Link></p>
+            <BackArrow to={backTo} label="Back to the order" />
             <h1>Report a problem</h1>
             <p className="page-intro">
                 Tell us what went wrong with your order from {sellerOrder.seller?.businessName ?? "the seller"}. The seller is asked to respond first, and StoreHatch steps in if you cannot agree.

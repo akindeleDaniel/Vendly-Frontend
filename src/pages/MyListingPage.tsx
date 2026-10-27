@@ -14,22 +14,28 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import Notice from "../components/Notice"
 import Greeting from "../components/Greeting"
 import SellerStandingNotice from "../components/SellerStandingNotice"
+import StoreOverview, { StoreShortcuts } from "../components/StoreOverview"
+import type { StoreProfile } from "../components/StoreOverview"
+import StoreProductRow from "../components/StoreProductRow"
+import { toStoreProfile } from "../lib/storeProfile"
+import { LOW_STOCK_THRESHOLD } from "../lib/stock"
+import { Plus, ShoppingBag } from "lucide-react"
+
+type ProductView = "on-sale" | "low" | "archived"
 
 function MyListingsPage({ userName = "" }: { userName?: string }) {
     const navigate = useNavigate()
     useDocumentTitle("My store")
 
     const [listings, setListings] = useState<Listing[]>([])
-    const [storeLogoUrl, setStoreLogoUrl] = useState<string>("")
-    const [storeName, setStoreName] = useState<string>("")
-    const [storeSlug, setStoreSlug] = useState<string>("")
+    const [profile, setProfile] = useState<StoreProfile | null>(null)
+    const [isAddOpen, setIsAddOpen] = useState(false)
     const [photos, setPhotos] = useState<ListingPhoto[]>([])
     const [editPhotos, setEditPhotos] = useState<ListingPhoto[]>([])
     const [optionDrafts, setOptionDrafts] = useState<OptionDraft[] | null>(null)// null: the new product has no options
     const [editOptions, setEditOptionsState] = useState<OptionDraft[] | null>(null)
     const [editOptionsTouched, setEditOptionsTouched] = useState(false)
     const [formKey, setFormKey] = useState(0)
-    const [linkCopied, setLinkCopied] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [isCreating, setIsCreating] = useState(false)
     const [createError, setCreateError] = useState("")
@@ -37,7 +43,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
-    const [view, setView] = useState<"on-sale" | "archived">("on-sale")
+    const [view, setView] = useState<ProductView>("on-sale")
     const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
     const [isArchiving, setIsArchiving] = useState(false)
     const [needsShop, setNeedsShop] = useState(false)// no shop yet: listings need one, so setup is offered first
@@ -58,24 +64,6 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     category: "",
     stockQuantity: ""
   })
-
-  const handleCopyShopLink = async () => {
-      if (!storeSlug) return
-
-      const shopUrl = `${window.location.origin}/shop/${storeSlug}`
-
-      try {
-          await navigator.clipboard.writeText(shopUrl)
-
-          setLinkCopied(true)
-
-          setTimeout(() => {
-              setLinkCopied(false)
-          }, 2000)
-      } catch {
-          // Keep the UI unchanged if copying fails.
-      }
-  }
 
   async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>)//this function is because whenever we click the submit button it reloads the page
    {
@@ -143,6 +131,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
       setPhotos([])
       setOptionDrafts(null)
       setFormKey(formKey + 1)// starts the form (and its photo picker) afresh
+      setIsAddOpen(false)
+      setView("on-sale")
     }catch {
       setCreateError("Something went wrong. Please check your connection and try again.")
     }finally{
@@ -402,14 +392,12 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     return
                 }
 
-                const profile = await profileResponse.json()
+                const profile: unknown = await profileResponse.json()
                 const myListings = await listingsResponse.json()
                 if (controller.signal.aborted) {
                     return
                 }
-                setStoreLogoUrl(profile.logoUrl)
-                setStoreName(profile.businessName)
-                setStoreSlug(profile.slug)
+                setProfile(toStoreProfile(profile))
                 setListings(myListings)
             } catch {
                 if (!controller.signal.aborted) {
@@ -423,9 +411,18 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     }, [navigate, loadAttempt])
     
     const onSaleListings = listings.filter((listing) => !listing.archivedAt)
+    const lowListings = onSaleListings.filter((listing) => listing.stockQuantity <= LOW_STOCK_THRESHOLD)
     const archivedListings = listings.filter((listing) => listing.archivedAt)
-    // With nothing archived left, the Archived tab is gone, so the page goes back to the listings on sale.
-    const shownListings = view === "archived" && archivedListings.length > 0 ? archivedListings : onSaleListings
+    // An empty tab other than On sale is gone, so the page goes back to the products on sale.
+    const shownListings = view === "archived" && archivedListings.length > 0
+        ? archivedListings
+        : view === "low" && lowListings.length > 0 ? lowListings : onSaleListings
+    const shownView: ProductView = shownListings === onSaleListings ? "on-sale" : view
+
+    function openAddForm() {
+        setIsAddOpen(true)
+        window.requestAnimationFrame(() => document.getElementById("add-product")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+    }
 
     // Without a shop there is nothing to list yet: setting one up is required to add a listing, and
     // shopping stays open in the meantime.
@@ -446,57 +443,57 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
         )
     }
 
+    const firstName = userName.trim().split(/\s+/)[0] ?? ""
+    const tabs: Array<{ value: ProductView, label: string, count: number }> = [
+        { value: "on-sale", label: "On sale", count: onSaleListings.length },
+        ...(lowListings.length > 0 ? [{ value: "low" as const, label: "Low or sold out", count: lowListings.length }] : []),
+        ...(archivedListings.length > 0 ? [{ value: "archived" as const, label: "Archived", count: archivedListings.length }] : [])
+    ]
+
     return (
-        <div>
+        <div className="store-page">
             {loadError && (
               <Notice kind="error">
                 <p>{loadError}</p>
-                <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+                <button type="button" className="btn" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
               </Notice>
             )}
 
-            <Greeting name={userName} />
             <SellerStandingNotice />
 
-            <section aria-labelledby="store-heading" className="card shop-header store-header">
-              {storeLogoUrl
-                ? <img className="avatar avatar-lg" src={storeLogoUrl} alt="" />
-                : <span className="avatar avatar-lg avatar-initial" aria-hidden="true">{(storeName || "S").charAt(0).toUpperCase()}</span>}
-              <div>
-                <h1 id="store-heading">{storeName || "My store"}</h1>
-                {storeSlug && (
-                  <p className="shop-location">
-                    Your shop link: <Link to={`/shop/${storeSlug}`}>/shop/{storeSlug}</Link>
-                  </p>
-                )}
-                <div className="action-row">
-                  {storeSlug && (
-                    <button type="button" onClick={handleCopyShopLink}>
-                      {linkCopied ? "Copied!" : "Copy shop link"}
-                    </button>
-                  )}
-                </div>
+            {profile && (
+                <StoreOverview firstName={firstName} profile={profile} productsOnSale={onSaleListings.length} productsLow={lowListings.length} />
+            )}
+
+            <section aria-labelledby="products-heading">
+              <div className="store-section-title">
+                <h2 id="products-heading">Your products</h2>
+                <button type="button" className="btn btn-primary" onClick={openAddForm} aria-controls="add-product" aria-expanded={isAddOpen}>
+                  <Plus size={18} aria-hidden="true" />Add a product
+                </button>
               </div>
-            </section>
 
-            <section aria-labelledby="add-listing-heading" className="card form-card store-section">
-              <h2 id="add-listing-heading">Add a listing</h2>
-              {createError && <Notice kind="error">{createError}</Notice>}
-              <CreateListingForm
-                key={formKey}
-                formData={formData}
-                handleSubmit={handleSubmit}
-                setFormData={setFormData}
-                photos={photos}
-                setPhotos={setPhotos}
-                optionDrafts={optionDrafts}
-                setOptionDrafts={setOptionDrafts}
-                isCreating={isCreating}
-              />
-            </section>
+              {isAddOpen && (
+                <section id="add-product" aria-labelledby="add-listing-heading" className="store-add">
+                  <div className="store-add-head">
+                    <h3 id="add-listing-heading">Add a product</h3>
+                    <button type="button" className="btn-text" onClick={() => setIsAddOpen(false)}>Close</button>
+                  </div>
+                  {createError && <Notice kind="error">{createError}</Notice>}
+                  <CreateListingForm
+                    key={formKey}
+                    formData={formData}
+                    handleSubmit={handleSubmit}
+                    setFormData={setFormData}
+                    photos={photos}
+                    setPhotos={setPhotos}
+                    optionDrafts={optionDrafts}
+                    setOptionDrafts={setOptionDrafts}
+                    isCreating={isCreating}
+                  />
+                </section>
+              )}
 
-            <section aria-labelledby="listings-heading">
-              <h2 id="listings-heading">Your listings</h2>
               {deleteError && <Notice kind="error">{deleteError}</Notice>}
               {archivePrompt && (
                 <Notice kind="warning">
@@ -508,50 +505,81 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     <button type="button" className="btn btn-primary" disabled={isArchiving} onClick={handleArchive}>
                       {isArchiving ? "Archiving..." : "Archive it"}
                     </button>
-                    <button type="button" disabled={isArchiving} onClick={() => setArchivePrompt(null)}>Cancel</button>
+                    <button type="button" className="btn" disabled={isArchiving} onClick={() => setArchivePrompt(null)}>Cancel</button>
                   </div>
                 </Notice>
               )}
-              {archivedListings.length > 0 && (
-                <div className="view-tabs" role="group" aria-label="Which listings to show">
-                  <button type="button" aria-pressed={view === "on-sale"} className={view === "on-sale" ? "view-tab is-active" : "view-tab"} onClick={() => setView("on-sale")}>
-                    On sale ({onSaleListings.length})
-                  </button>
-                  <button type="button" aria-pressed={view === "archived"} className={view === "archived" ? "view-tab is-active" : "view-tab"} onClick={() => setView("archived")}>
-                    Archived ({archivedListings.length})
-                  </button>
-                </div>
-              )}
-              {shownListings.length === 0 ? (
-                <p>{view === "archived" ? "You have no archived listings." : "You have no listings yet. Add your first one above."}</p>
-              ) : (
-                <div className="product-grid">
-                  {shownListings.map((listing) => (
-                    <ListingCard
-                      isEditable={true}
-                      listing={listing}
-                      editingId={editingId}
-                      editFormData={editFormData}
-                      hasChanges={listing.id === editingId && hasListingChanges(listing)}
-                      isSaving={isSaving}
-                      saveError={listing.id === editingId ? saveError : ""}
-                      setEditFormData={setEditFormData}
-                      editPhotos={editPhotos}
-                      setEditPhotos={setEditPhotos}
-                      editOptions={editOptions}
-                      setEditOptions={setEditOptions}
-                      handleEditClick={handleEditClick}
-                      handleDelete={handleDelete}
-                      isArchived={view === "archived"}
-                      handleRestore={handleRestore}
-                      handleCancel={handleCancel}
-                      handleSave={handleSave}
-                      key={listing.id}
-                    />
+
+              {tabs.length > 1 && (
+                <div className="orders-filters" aria-label="Show products">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      className={`orders-filter${tab.value === shownView ? " is-active" : ""}`}
+                      aria-pressed={tab.value === shownView}
+                      onClick={() => setView(tab.value)}
+                    >
+                      {tab.label}<span className="orders-filter-count">{tab.count}</span>
+                    </button>
                   ))}
                 </div>
               )}
+
+              {shownListings.length === 0 ? (
+                <div className="store-empty">
+                  <span className="store-empty-icon" aria-hidden="true"><ShoppingBag size={30} /></span>
+                  <h3>No products yet</h3>
+                  <p>Add your first product with a few clear photos, a price and how many you have. You can add options like sizes and colours too.</p>
+                  {!isAddOpen && <button type="button" className="btn btn-primary" onClick={openAddForm}>Add your first product</button>}
+                </div>
+              ) : (
+                <div className="store-products">
+                  <div className="store-products-head" aria-hidden="true">
+                    <span /><span>Product</span><span>Price</span><span>Stock</span><span>Status</span><span />
+                  </div>
+                  <ul>
+                    {shownListings.map((listing) => (
+                      <li key={listing.id}>
+                        <StoreProductRow
+                          listing={listing}
+                          isArchived={shownView === "archived"}
+                          onEdit={() => handleEditClick(listing)}
+                          onDelete={() => handleDelete(listing.id)}
+                          onRestore={() => handleRestore(listing.id)}
+                        />
+                        {listing.id === editingId && (
+                          <div className="store-edit">
+                            <ListingCard
+                              isEditable={true}
+                              listing={listing}
+                              editingId={editingId}
+                              editFormData={editFormData}
+                              hasChanges={hasListingChanges(listing)}
+                              isSaving={isSaving}
+                              saveError={saveError}
+                              setEditFormData={setEditFormData}
+                              editPhotos={editPhotos}
+                              setEditPhotos={setEditPhotos}
+                              editOptions={editOptions}
+                              setEditOptions={setEditOptions}
+                              handleEditClick={handleEditClick}
+                              handleDelete={handleDelete}
+                              isArchived={shownView === "archived"}
+                              handleRestore={handleRestore}
+                              handleCancel={handleCancel}
+                              handleSave={handleSave}
+                            />
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
+
+            <StoreShortcuts />
         </div>
     )
 }

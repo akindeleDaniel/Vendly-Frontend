@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from "react"
+import BackArrow from "../components/BackArrow"
 import { Link, useNavigate } from "react-router-dom"
 import AccountCheckStatus from "../components/AccountCheckStatus"
 import BankPicker from "../components/BankPicker"
 import ChangeBankAccountForm from "../components/ChangeBankAccountForm"
-import { ChevronLeftIcon } from "../components/Icons"
 import Notice from "../components/Notice"
 import {
     PROVIDER_NAMES,
@@ -259,11 +259,7 @@ function PayoutSettingsPage({ hasPassword }: { hasPassword: boolean }) {
 
     return (
         <div className="form-page-wide">
-            <p className="page-back">
-                <Link to="/seller/myListing" className="back-link">
-                    <ChevronLeftIcon /> Back to my store
-                </Link>
-            </p>
+            <BackArrow to="/seller/myListing" label="Back to my store" />
             <h1>Payout settings</h1>
             <p className="page-intro">
                 This is the bank account your sales are paid into. StoreHatch never asks for your bank login, PIN, OTP or BVN.

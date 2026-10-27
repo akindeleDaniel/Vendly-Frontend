@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import BackArrow from "../components/BackArrow"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import Notice from "../components/Notice"
 import OrderItemList from "../components/OrderItemList"
@@ -58,7 +59,7 @@ function OfferRefundPage() {
 
     return (
         <div className="form-page-wide">
-            <p className="page-back"><Link to={`/seller/orders/${order.id}`} className="back-link">Back to the order</Link></p>
+            <BackArrow to={`/seller/orders/${order.id}`} label="Back to the order" />
             <h1>Offer a refund</h1>
             <p className="page-intro">
                 Offer {order.delivery.fullName} a refund on order {order.id}. Once you send it, StoreHatch reviews it and issues the refund through the payment provider. The amount is then recovered from your later sales.

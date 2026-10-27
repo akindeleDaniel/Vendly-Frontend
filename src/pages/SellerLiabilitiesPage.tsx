@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import BackArrow from "../components/BackArrow"
 import { Link } from "react-router-dom"
 import Notice from "../components/Notice"
 import { failureMessage } from "../lib/apiRequest"
@@ -70,7 +71,7 @@ function SellerLiabilitiesPage() {
         }
     }
 
-    const back = <p className="page-back"><Link to="/seller/payouts" className="back-link">Back to payout settings</Link></p>
+    const back = <BackArrow to="/seller/payouts" label="Back to payout settings" />
 
     if (state.kind === "loading") {
         return <p role="status">Loading...</p>

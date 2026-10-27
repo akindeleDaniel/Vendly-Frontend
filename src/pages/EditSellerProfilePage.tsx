@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import BackArrow from "../components/BackArrow"
 import { Link, useNavigate } from "react-router-dom"
 import { uploadImage } from "../lib/uploadImage"
 import type { SellerProfile } from "../types/seller"
@@ -204,6 +205,7 @@ function EditSellerProfilePage (){
     if (loadStatus === "error") {
         return (
             <div className="form-page-wide">
+                <BackArrow to="/seller/myListing" label="Back to my store" />
                 <h1>Edit your store</h1>
                 <Notice kind="error">
                     <p>We could not load your store details. Please check your connection and try again.</p>
@@ -218,6 +220,7 @@ function EditSellerProfilePage (){
 
     return(
         <div className="form-page-wide">
+            <BackArrow to="/seller/myListing" label="Back to my store" />
             <h1>Edit your store</h1>
             <form onSubmit={handleSubmit} className="card form-card">
                 <SellerProfileFields formData={formData} setFormData={setFormData} showShipping={false} />

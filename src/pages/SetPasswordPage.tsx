@@ -1,5 +1,5 @@
 import { useId, useState } from "react"
-import { Link } from "react-router-dom"
+import BackArrow from "../components/BackArrow"
 import CodeInput, { CODE_LENGTH } from "../components/CodeInput"
 import Notice from "../components/Notice"
 import { checkPassword, sendSetPasswordCode, setPassword } from "../lib/accountApi"
@@ -82,7 +82,7 @@ function SetPasswordPage({ backTo, onPasswordSet }: SetPasswordPageProps) {
         }
     }
 
-    const back = <p className="page-back"><Link to={backTo} className="back-link">Back</Link></p>
+    const back = <BackArrow to={backTo} label="Back" />
 
     if (step === "done") {
         return (

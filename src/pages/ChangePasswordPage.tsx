@@ -1,5 +1,5 @@
 import { useId, useState } from "react"
-import { Link } from "react-router-dom"
+import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import { changePassword, checkPassword } from "../lib/accountApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -60,7 +60,7 @@ function ChangePasswordPage({ backTo }: { backTo: string }) {
 
     return (
         <div className="form-page-wide">
-            <p className="page-back"><Link to={backTo} className="back-link">Back</Link></p>
+            <BackArrow to={backTo} label="Back" />
             <h1>Change your password</h1>
             <form onSubmit={handleSubmit} className="card form-card stack-form">
                 <label>
