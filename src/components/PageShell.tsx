@@ -23,7 +23,8 @@ export function ScrollToTop() {
     const { pathname } = useLocation()
 
     useEffect(() => {
-        window.scrollTo(0, 0)
+        window.scrollTo({ top: 0, behavior: "instant" })// not the shop pages' smooth scrolling
+
     }, [pathname])
 
     return null

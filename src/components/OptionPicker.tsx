@@ -9,24 +9,39 @@ type OptionPickerProps = {
     onSize: (label: string) => void
 }
 
-// Choose a colour (or other option) and then, if it comes in sizes, a size. Choices that are sold out
-// are shown but cannot be picked.
+// Choose an option (for example a colour) and then, if it comes in sizes, a size. Options with a photo
+// show as photo swatches, the rest by name. Choices that are sold out are shown but cannot be picked.
 function OptionPicker({ options, optionLabel, sizeLabel, onOption, onSize }: OptionPickerProps) {
     const selected = options.find((option) => option.label === optionLabel) ?? null
+    const allHavePhotos = options.every((option) => option.imageUrl)
 
     return (
         <div className="option-picker">
             <fieldset className="option-group">
-                <legend>Choose an option{selected ? `: ${selected.label}` : ""}</legend>
+                <legend>Option: <span>{selected ? selected.label : "choose one"}</span></legend>
                 <div className="option-choices">
                     {options.map((option) => {
                         const isSoldOut = optionStock(option) === 0
-                        return (
+                        const isSelected = option.label === optionLabel
+                        return allHavePhotos ? (
                             <button
                                 key={option.label}
                                 type="button"
-                                className={`option-choice${option.label === optionLabel ? " is-selected" : ""}`}
-                                aria-pressed={option.label === optionLabel}
+                                className={`option-swatch${isSelected ? " is-selected" : ""}`}
+                                aria-pressed={isSelected}
+                                aria-label={isSoldOut ? `${option.label}, sold out` : option.label}
+                                title={option.label}
+                                disabled={isSoldOut}
+                                onClick={() => onOption(option.label)}
+                            >
+                                <img src={option.imageUrl as string} alt="" loading="lazy" />
+                            </button>
+                        ) : (
+                            <button
+                                key={option.label}
+                                type="button"
+                                className={`option-choice${isSelected ? " is-selected" : ""}`}
+                                aria-pressed={isSelected}
                                 disabled={isSoldOut}
                                 onClick={() => onOption(option.label)}
                             >
@@ -41,19 +56,19 @@ function OptionPicker({ options, optionLabel, sizeLabel, onOption, onSize }: Opt
 
             {selected && selected.sizes.length > 0 && (
                 <fieldset className="option-group">
-                    <legend>Choose a size{sizeLabel ? `: ${sizeLabel}` : ""}</legend>
+                    <legend>Size: <span>{sizeLabel ?? "choose one"}</span></legend>
                     <div className="option-choices">
                         {selected.sizes.map((size) => (
                             <button
                                 key={size.label}
                                 type="button"
-                                className={`option-choice${size.label === sizeLabel ? " is-selected" : ""}`}
+                                className={`option-size${size.label === sizeLabel ? " is-selected" : ""}`}
                                 aria-pressed={size.label === sizeLabel}
+                                aria-label={size.stockQuantity === 0 ? `${size.label}, sold out` : undefined}
                                 disabled={size.stockQuantity === 0}
                                 onClick={() => onSize(size.label)}
                             >
-                                <span>{size.label}</span>
-                                {size.stockQuantity === 0 && <span className="option-choice-note">Sold out</span>}
+                                {size.label}
                             </button>
                         ))}
                     </div>

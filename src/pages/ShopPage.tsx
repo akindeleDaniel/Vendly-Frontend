@@ -1,22 +1,25 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useParams } from "react-router-dom"
-import { ArrowRight, MapPin, MessageCircle, Search, ShoppingBag, Star, Truck } from "lucide-react"
+import { Link, useLocation, useParams } from "react-router-dom"
+import { ArrowRight, MapPin, MessageCircle, Search, Star } from "lucide-react"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import type { Listing } from "../types/listing"
 import type { UserRole } from "../types/user"
 import type { ShopProfile } from "../types/shop"
 import ListingCard from "../components/ListingCard"
 import Notice from "../components/Notice"
-import ShopReviews from "../components/ShopReviews"
+import ReviewsPreview from "../components/ReviewsPreview"
 import ShopTrustFacts from "../components/ShopTrustFacts"
+import { ShopAnnounce, ShopBar, ShopFooter } from "../components/ShopChrome"
+import type { SectionLink } from "../components/ShopChrome"
 import { apiFetch } from "../lib/api"
+import { useCartCount } from "../lib/useCartCount"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import {
-    deliveryHeadline, deliveryRates, deliveryReach, firstParagraph, isRecentlyAdded, newestFirst, shopCategories, shopColorStyle
+    NEW_IN_COUNT, deliveryHeadline, deliveryRates, deliveryReach, firstParagraph, isRecentlyAdded, newestFirst, scrollToSection,
+    shopCategories, shopColorStyle, shopSections, shopSocials
 } from "../lib/shopHome"
 
 const PAGE_SIZE = 12// products shown at first, and added by "Show more products"
-const NEW_IN_COUNT = 4
 const RATES_SHOWN = 4
 
 type ShopPageProps = {
@@ -39,7 +42,8 @@ function ShopPage ({ userRole }: ShopPageProps) {
     const [category, setCategory] = useState("")// "" shows every category
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
     const [showAllRates, setShowAllRates] = useState(false)
-    const [cartCount, setCartCount] = useState(0)
+    const cartCount = useCartCount(userRole, pendingCartResult)// checked again after a product chosen before logging in is added
+    const { hash } = useLocation()
 
     useEffect(() => {
         if (!slug) {
@@ -84,26 +88,14 @@ function ShopPage ({ userRole }: ShopPageProps) {
         return () => controller.abort()
     }, [slug, loadAttempt])
 
-    // How many things are in the shopper's cart, for the badge on the shop's cart button. Checked again
-    // after a product chosen before logging in has been added.
+    // A link from a product page (for example /shop/adunni#shop-reviews) opens the shop at that part,
+    // once the shop has loaded and the part exists.
     useEffect(() => {
-        if (userRole !== "CONSUMER") {
-            return
+        if (hash && profileSlug === slug) {
+            const frame = window.requestAnimationFrame(() => scrollToSection(hash.slice(1)))
+            return () => window.cancelAnimationFrame(frame)
         }
-        const controller = new AbortController()
-
-        apiFetch("/cart", { credentials: "include", signal: controller.signal })
-            .then((response) => response.ok ? response.json() : null)
-            .then((data: { cart?: { cartItems?: Array<{ quantity: number }> } | null } | null) => {
-                if (!controller.signal.aborted) {
-                    setCartCount((data?.cart?.cartItems ?? []).reduce((total, item) => total + item.quantity, 0))
-                }
-            })
-            .catch(() => {
-                // The badge simply stays hidden.
-            })
-        return () => controller.abort()
-    }, [userRole, pendingCartResult])
+    }, [hash, profileSlug, slug])
 
     const categories = useMemo(() => shopCategories(listings), [listings])
     const newIn = useMemo(() => newestFirst(listings).slice(0, NEW_IN_COUNT), [listings])
@@ -120,20 +112,12 @@ function ShopPage ({ userRole }: ShopPageProps) {
         setVisibleCount(PAGE_SIZE)
     }
 
-    // Glides to a section (straight there for people who ask for less motion). The sections keep clear
-    // of the sticky header through scroll-margin-top in shop.css.
-    function jumpTo(id: string, focusId?: string) {
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
-        if (focusId) {
-            document.getElementById(focusId)?.focus({ preventScroll: true })
-        }
-    }
+    const jumpTo = scrollToSection
 
     // A link to a section of this page that glides there instead of jumping.
-    const sectionLink = (id: string) => ({
+    const sectionLink: SectionLink = (id) => ({
         href: `#${id}`,
-        onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+        onClick: (event) => {
             event.preventDefault()
             jumpTo(id)
         }
@@ -178,32 +162,18 @@ function ShopPage ({ userRole }: ShopPageProps) {
     const about = branding?.about?.trim() ?? ""
     const intro = firstParagraph(about)
     const whatsapp = branding?.whatsapp ?? null
-    const socials = branding
-        ? [
-            { name: "Instagram", link: branding.social.instagram },
-            { name: "TikTok", link: branding.social.tiktok },
-            { name: "Facebook", link: branding.social.facebook },
-            { name: "X", link: branding.social.x }
-        ].flatMap((entry) => entry.link ? [{ name: entry.name, url: entry.link.url, handle: entry.link.handle }] : [])
-        : []
+    const socials = shopSocials(profile)
     const headline = deliveryHeadline(profile)
     const rates = deliveryRates(profile)
     const ratingCount = profile.ratingCount ?? 0
     const initial = profile.businessName.charAt(0).toUpperCase()
+    const sections = shopSections(profile, listings.length)
     const showCategories = categories.length >= 2
-    const showNewIn = listings.length > NEW_IN_COUNT
-    const showAbout = about !== "" || socials.length > 0
+    const showNewIn = sections.some((section) => section.id === "shop-new")
+    const showAbout = sections.some((section) => section.id === "shop-about")
     const foodNote = profile.foodOrderType === "PRE_ORDER"
         ? "Food is by pre-order only: ask for a ready time at checkout."
         : profile.foodOrderType === "BOTH" ? "Takes pre-orders for food as well as orders for now." : ""
-
-    const sections = [
-        showNewIn && { id: "shop-new", label: "New in" },
-        { id: "shop-all", label: "All products" },
-        showAbout && { id: "shop-about", label: "About" },
-        { id: "shop-reviews", label: "Reviews" },
-        { id: "shop-delivery", label: "Delivery" }
-    ].filter((section): section is { id: string, label: string } => Boolean(section))
 
     const whatsappButton = (className: string) => whatsapp && (
         <a className={className} href={whatsapp.url} target="_blank" rel="noopener noreferrer">
@@ -232,40 +202,17 @@ function ShopPage ({ userRole }: ShopPageProps) {
 
     return (
         <div className="shop-home" style={shopColorStyle(branding?.brandColor)}>
-            {headline && (
-                <p className="shop-announce">
-                    <Truck aria-hidden="true" size={18} />
-                    {headline}
-                </p>
-            )}
+            <ShopAnnounce headline={headline} />
 
-            <header className="shop-bar">
-                <div className="shop-wrap shop-bar-row">
-                    <a className="shop-brand" href="#shop-name" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }) }}>
-                        {profile.logoUrl
-                            ? <img className="shop-brand-logo" src={profile.logoUrl} alt="" />
-                            : <span className="shop-brand-logo is-initial" aria-hidden="true">{initial}</span>}
-                        <span className="shop-brand-name">{profile.businessName}</span>
-                    </a>
-                    <nav className="shop-nav" aria-label="Shop">
-                        {sections.map((section) => <a key={section.id} {...sectionLink(section.id)}>{section.label}</a>)}
-                    </nav>
-                    <div className="shop-bar-tools">
-                        <button type="button" className="shop-icon-btn" aria-label="Search this shop" onClick={() => jumpTo("shop-all", "shop-search")}>
-                            <Search aria-hidden="true" size={20} />
-                        </button>
-                        {userRole === "CONSUMER" && (
-                            <Link to="/cart" className="shop-icon-btn" aria-label={cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart"} title="Cart">
-                                <ShoppingBag aria-hidden="true" size={20} />
-                                {cartCount > 0 && <span className="shop-cart-count" aria-hidden="true">{cartCount > 99 ? "99+" : cartCount}</span>}
-                            </Link>
-                        )}
-                    </div>
-                </div>
-                <nav className="shop-nav-scroll" aria-label="Shop sections">
-                    {sections.map((section) => <a key={section.id} {...sectionLink(section.id)}>{section.label}</a>)}
-                </nav>
-            </header>
+            <ShopBar
+                profile={profile}
+                sections={sections}
+                sectionLink={sectionLink}
+                homeLink={{ href: "#shop-name", onClick: (event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }) } }}
+                onSearch={() => jumpTo("shop-all", "shop-search")}
+                userRole={userRole}
+                cartCount={cartCount}
+            />
 
             {pendingCartResult && (
                 <div className="shop-wrap">
@@ -407,7 +354,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
             </section>
 
             <section id="shop-reviews" className="shop-wrap shop-section" aria-labelledby="shop-reviews-heading">
-                <ShopReviews slug={profile.slug} />
+                <ReviewsPreview kind="shop" subject={profile.slug} heading="What buyers say" headingId="shop-reviews-heading" />
             </section>
 
             <section id="shop-delivery" className="shop-wrap shop-section shop-help" aria-label="Delivery and help">
@@ -441,45 +388,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
                 </div>
             </section>
 
-            <footer className="shop-footer">
-                <div className="shop-wrap">
-                    <div className="shop-footer-grid">
-                        <div className="shop-footer-about">
-                            <p className="shop-footer-name">{profile.businessName}</p>
-                            {intro && <p>{intro}</p>}
-                            {profile.location && <p className="shop-footer-place"><MapPin aria-hidden="true" size={16} />{profile.location}</p>}
-                        </div>
-                        <nav aria-label="Shop links">
-                            <h2>Shop</h2>
-                            <ul>
-                                {sections.map((section) => <li key={section.id}><a {...sectionLink(section.id)}>{section.label}</a></li>)}
-                            </ul>
-                        </nav>
-                        {(socials.length > 0 || whatsapp) && (
-                            <nav aria-label="Follow the shop">
-                                <h2>Follow</h2>
-                                <ul>
-                                    {whatsapp && <li><a href={whatsapp.url} target="_blank" rel="noopener noreferrer">WhatsApp</a></li>}
-                                    {socials.map((social) => (
-                                        <li key={social.name}><a href={social.url} target="_blank" rel="noopener noreferrer">{social.name}</a></li>
-                                    ))}
-                                </ul>
-                            </nav>
-                        )}
-                        <nav aria-label="Help">
-                            <h2>Help</h2>
-                            <ul>
-                                {userRole === "CONSUMER" && <li><Link to="/orders">My orders</Link></li>}
-                                <li><Link to="/">Browse StoreHatch</Link></li>
-                            </ul>
-                        </nav>
-                    </div>
-                    <div className="shop-footer-base">
-                        <span>Payments for {profile.businessName} are handled by StoreHatch.</span>
-                        <Link to="/seller/register">Start your own shop on StoreHatch</Link>
-                    </div>
-                </div>
-            </footer>
+            <ShopFooter profile={profile} sections={sections} sectionLink={sectionLink} userRole={userRole} />
         </div>
     )
 }

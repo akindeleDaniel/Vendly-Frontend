@@ -108,9 +108,9 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
         return null
     }
 
-    // A shop page is the shop's own site: StoreHatch shrinks to a thin strip above it, with a way back to
-    // the search the shopper came from. The shop's header has the cart.
-    const isShopPage = pathname.startsWith("/shop/")
+    // A shop page (and a product inside it) is the shop's own site: StoreHatch shrinks to a thin strip
+    // above it, with a way back to the search the shopper came from. The shop's header has the cart.
+    const isShopPage = pathname.startsWith("/shop/") || pathname.startsWith("/product/")
     const firstName = userName.trim().split(/\s+/)[0]
     const backToSearch = (() => {
         const from = new URLSearchParams(search)

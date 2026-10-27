@@ -8,6 +8,16 @@ import { ALL_STATES } from "./shippingApi"
 
 const NEW_FOR_DAYS = 30
 
+// Glides to a part of the page (straight there for people who ask for less motion), then optionally
+// moves focus into it. The parts keep clear of the sticky shop header through scroll-margin-top in shop.css.
+export function scrollToSection(id: string, focusId?: string) {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" })
+    if (focusId) {
+        document.getElementById(focusId)?.focus({ preventScroll: true })
+    }
+}
+
 // The shop's colour as CSS variables for its page. A shop that has not picked one gets Forest.
 // Light colours (Cream, Beige) take charcoal for words and outlines, so they still pass contrast.
 export function shopColorStyle(color: BrandColor | undefined): CSSProperties {
@@ -96,6 +106,69 @@ export function deliveryHeadline(profile: ShopProfile): string {
         return `Free delivery to ${free.length} states. ${reach}`
     }
     return reach
+}
+
+// One line for the product page, for example "Delivery: free in Lagos, from ₦2,500 elsewhere".
+export function deliverySummary(profile: ShopProfile): string {
+    const rates = profile.shippingRates ?? []
+
+    if (rates.length === 0) {
+        return profile.shippingPolicy === "FIXED" && profile.shippingCost
+            ? `Delivery: ${formatNaira(profile.shippingCost)} per order`
+            : "Free delivery"
+    }
+
+    const served = rates.filter((rate) => rate.cost !== null)
+    const free = served.filter((rate) => Number(rate.cost) === 0)
+    const paid = served.filter((rate) => Number(rate.cost) > 0).map((rate) => Number(rate.cost))
+    const lowest = paid.length > 0 ? formatNaira(String(Math.min(...paid))) : null
+
+    if (!lowest) {
+        return "Free delivery"
+    }
+    if (free.length === 1) {
+        return `Delivery: free in ${free[0].state}, from ${lowest} elsewhere`
+    }
+    if (free.length > 1) {
+        return `Delivery: free in ${free.length} states, from ${lowest} elsewhere`
+    }
+    return `Delivery from ${lowest}`
+}
+
+export type ShopSocial = { name: string, url: string, handle: string }
+
+export function shopSocials(profile: ShopProfile): ShopSocial[] {
+    const social = profile.branding?.social
+    if (!social) {
+        return []
+    }
+
+    return [
+        { name: "Instagram", link: social.instagram },
+        { name: "TikTok", link: social.tiktok },
+        { name: "Facebook", link: social.facebook },
+        { name: "X", link: social.x }
+    ].flatMap((entry) => entry.link ? [{ name: entry.name, url: entry.link.url, handle: entry.link.handle }] : [])
+}
+
+export const NEW_IN_COUNT = 4
+
+export type ShopSection = { id: string, label: string }
+
+// The parts of a shop's home page, for its header and footer links. "New in" only shows when it would
+// not just repeat every product; About only when there is something to say.
+export function shopSections(profile: ShopProfile, listingCount: number): ShopSection[] {
+    const sections: ShopSection[] = []
+
+    if (listingCount > NEW_IN_COUNT) {
+        sections.push({ id: "shop-new", label: "New in" })
+    }
+    sections.push({ id: "shop-all", label: "All products" })
+    if ((profile.branding?.about?.trim() ?? "") !== "" || shopSocials(profile).length > 0) {
+        sections.push({ id: "shop-about", label: "About" })
+    }
+    sections.push({ id: "shop-reviews", label: "Reviews" }, { id: "shop-delivery", label: "Delivery" })
+    return sections
 }
 
 // "We deliver to N states" for the delivery panel, without the free part.

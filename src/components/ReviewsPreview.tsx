@@ -3,19 +3,30 @@ import { Check } from "lucide-react"
 import Notice from "./Notice"
 import ReviewList from "./ReviewList"
 import StarRating from "./StarRating"
-import { fetchShopReviews } from "../lib/reviewApi"
+import { fetchListingReviews, fetchShopReviews } from "../lib/reviewApi"
 import { formatShortDate } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 
 const PREVIEW_COUNT = 3
 
-// The shop page's reviews: the average and the three newest reviews, with a button that opens them all.
-function ShopReviews({ slug }: { slug: string }) {
+type ReviewsPreviewProps = {
+    kind: "product" | "shop"
+    subject: string // the listing's id, or the shop's slug
+    heading: string // for example "What buyers say"
+    headingId: string // the section around it is labelled by this heading
+}
+
+// Reviews on a shop or product page: the average and the three newest reviews, with a button that
+// opens them all.
+function ReviewsPreview({ kind, subject, heading, headingId }: ReviewsPreviewProps) {
     const [showAll, setShowAll] = useState(false)
-    const { state, reload } = useApiResource(`shop-reviews|${slug}`, (signal) => fetchShopReviews(slug, 1, signal))
+    const { state, reload } = useApiResource(
+        `reviews-preview|${kind}|${subject}`,
+        (signal) => kind === "product" ? fetchListingReviews(subject, 1, signal) : fetchShopReviews(subject, 1, signal)
+    )
 
     if (showAll) {
-        return <ReviewList kind="shop" subject={slug} />
+        return <ReviewList kind={kind} subject={subject} />
     }
 
     if (state.kind === "loading") {
@@ -36,7 +47,7 @@ function ShopReviews({ slug }: { slug: string }) {
     if (summary.count === 0) {
         return (
             <div className="shop-panel shop-reviews-empty">
-                <h2 id="shop-reviews-heading">No reviews yet</h2>
+                <h2 id={headingId}>No reviews yet</h2>
                 <p>Buyers can leave a review once their order is delivered, so the first ones will show here.</p>
             </div>
         )
@@ -45,7 +56,7 @@ function ShopReviews({ slug }: { slug: string }) {
     return (
         <div className="shop-reviews">
             <div>
-                <h2 id="shop-reviews-heading" className="shop-heading">What buyers say</h2>
+                <h2 id={headingId} className="shop-heading">{heading}</h2>
                 <p className="shop-reviews-average">{summary.average?.toFixed(1)}</p>
                 <StarRating average={summary.average} count={summary.count} showCount={false} />
                 <p className="shop-reviews-note">
@@ -74,4 +85,4 @@ function ShopReviews({ slug }: { slug: string }) {
     )
 }
 
-export default ShopReviews
+export default ReviewsPreview

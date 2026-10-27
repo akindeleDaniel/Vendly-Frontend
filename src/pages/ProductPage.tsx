@@ -1,22 +1,30 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import { ArrowRight, Check, ChevronRight, MessageCircle, ShieldCheck, ShoppingBag, Truck } from "lucide-react"
 import { ChevronLeftIcon } from "../components/Icons"
+import ListingCard from "../components/ListingCard"
 import Notice from "../components/Notice"
 import OptionPicker from "../components/OptionPicker"
 import PhotoGallery from "../components/PhotoGallery"
-import ReviewList from "../components/ReviewList"
+import ReviewsPreview from "../components/ReviewsPreview"
 import StarRating from "../components/StarRating"
-import ShopTrustFacts from "../components/ShopTrustFacts"
+import { ShopAnnounce, ShopBar, ShopFooter } from "../components/ShopChrome"
+import type { SectionLink } from "../components/ShopChrome"
 import { apiFetch } from "../lib/api"
 import { buyableChoice, findChoiceById, hasOptions } from "../lib/listingOptions"
 import { photosOf } from "../lib/listingPhotos"
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
+import { deliveryHeadline, deliverySummary, newestFirst, scrollToSection, shopColorStyle, shopSections } from "../lib/shopHome"
 import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
+import { useCartCount } from "../lib/useCartCount"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import type { Listing } from "../types/listing"
+import type { ShopProfile } from "../types/shop"
 import type { AuthStatus, UserRole } from "../types/user"
+
+const MORE_COUNT = 4
 
 type ProductPageProps = {
     userRole: UserRole | null
@@ -29,14 +37,30 @@ type LoadState =
     | { kind: "not-found" }
     | { kind: "error", message: string }
 
-// One product on its own page: a larger photo, the full description, stock and Add to cart. It is
-// the same Add to cart as on a storefront card, including the trip through login for a visitor.
+type ShopData = { slug: string, profile: ShopProfile, listings: Listing[] }
+
+// The WhatsApp chat with the product's name and link already typed in.
+function askAboutUrl(chatUrl: string, title: string): string {
+    try {
+        const url = new URL(chatUrl)
+        url.searchParams.set("text", `Hi, I have a question about "${title}": ${window.location.href}`)
+        return url.toString()
+    } catch {
+        return chatUrl
+    }
+}
+
+// One product on its own page, inside its shop's website: the shop's colour, header and footer around
+// large photos, the options, Add to cart, delivery, the seller, reviews and more from the same shop.
+// The product request does not carry the shop's look, so the shop is loaded alongside it; if that
+// fails the product still shows, in StoreHatch's own colours.
 function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const { id = "" } = useParams()
     const navigate = useNavigate()
     const location = useLocation()
     const [state, setState] = useState<LoadState>({ kind: "loading" })
     const [attempt, setAttempt] = useState(0)
+    const [shop, setShop] = useState<ShopData | null>(null)
     const listing = state.kind === "ready" ? state.listing : null
     // What the shopper has picked among a product's options. A link to one choice opens the product with it chosen.
     const [pickedOption, setPickedOption] = useState<string | null>(null)
@@ -51,6 +75,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const cartTarget = listing && hasOptions(listing) ? choice : listing
     const cart = useAddToCart(cartTarget, userRole, authStatus === "unauthenticated")
     const pendingResult = usePendingCartAdd(userRole)
+    const cartCount = useCartCount(userRole, `${cart.feedback?.kind}|${pendingResult?.text}`)
     useDocumentTitle(listing ? listing.title : "Product")
 
     useEffect(() => {
@@ -86,6 +111,33 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
         return () => controller.abort()
     }, [id, attempt])
 
+    // The shop around the product: its colour, header, delivery fees and other products.
+    const shopSlug = listing?.sellerSlug ?? null
+    useEffect(() => {
+        if (!shopSlug) {
+            return
+        }
+        const controller = new AbortController()
+
+        apiFetch(`/seller/shop/${encodeURIComponent(shopSlug)}`, { signal: controller.signal })
+            .then((response) => response.ok ? response.json() : null)
+            .then((data: { profile?: ShopProfile, listings?: Listing[] } | null) => {
+                if (!controller.signal.aborted && data?.profile) {
+                    setShop({ slug: shopSlug, profile: data.profile, listings: data.listings ?? [] })
+                }
+            })
+            .catch(() => {
+                // The product still shows, without the shop's look.
+            })
+        return () => controller.abort()
+    }, [shopSlug])
+
+    const shopData = shop && shop.slug === shopSlug ? shop : null
+    const moreFromShop = useMemo(
+        () => shopData ? newestFirst(shopData.listings.filter((other) => other.id !== listing?.id)).slice(0, MORE_COUNT) : [],
+        [shopData, listing?.id]
+    )
+
     // Back goes to where the shopper came from. A product opened straight from a link has nowhere to
     // go back to, so it goes to the home page.
     function goBack() {
@@ -104,7 +156,17 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     )
 
     if (state.kind === "loading") {
-        return <p role="status">Loading the product...</p>
+        return (
+            <div className="shop-home product-home" aria-busy="true">
+                <p role="status" className="visually-hidden">Loading the product...</p>
+                <div className="shop-wrap product-layout">
+                    <div className="skeleton product-loading-photo" />
+                    <div className="product-loading-lines">
+                        <div className="skeleton" /><div className="skeleton" /><div className="skeleton" />
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     if (state.kind === "not-found") {
@@ -140,89 +202,246 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const optionPhoto = selectedOption?.imageUrl ?? null
     const shownPhotos = optionPhoto ? [optionPhoto, ...photos.filter((url) => url !== optionPhoto)] : photos
     const shownPrice = withOptions && selectedOption ? selectedOption.price : product.price
+    const priceText = `${!selectedOption && product.hasPriceRange ? "From " : ""}${formatMinorUnits(toMinorUnits(shownPrice))}`
     const maxQuantity = cartTarget?.stockQuantity ?? 0
+    const profile = shopData?.profile ?? null
+    const shopPath = product.sellerSlug ? `/shop/${encodeURIComponent(product.sellerSlug)}` : null
+    const whatsapp = profile?.branding?.whatsapp ?? null
+    const trust = product.shopTrust
+    const sellerFacts = [
+        trust && (trust.confirmedDeliveries > 0 ? `${trust.confirmedDeliveries.toLocaleString("en-NG")} ${trust.confirmedDeliveries === 1 ? "order" : "orders"} delivered` : "New shop"),
+        trust?.payoutVerified && "Payout verified",
+        profile?.location
+    ].filter(Boolean).join(" · ")
+    const choiceNote = selectedOption ? `${selectedOption.label}${selectedSize ? `, size ${selectedSize.label}` : ""}` : product.title
+    const stockText = needsChoice
+        ? (selectedOption ? "Choose a size to see what is left." : "Choose an option to see what is left.")
+        : stock.label
+    const stockClass = needsChoice || stock.isSoldOut ? "product-stock" : stock.isLow ? "product-stock is-low" : "product-stock is-ok"
+    const buttonLabel = needsChoice
+        ? (selectedOption ? "Choose a size" : "Choose an option")
+        : stock.isSoldOut ? "Sold out" : cart.isAdding ? "Adding..." : "Add to cart"
+
+    // With a choice still to make, the button takes the shopper to the choices instead of doing nothing.
+    function handleAdd() {
+        if (needsChoice) {
+            scrollToSection("product-options")
+            document.querySelector<HTMLButtonElement>("#product-options button:not(:disabled)")?.focus({ preventScroll: true })
+            return
+        }
+        cart.addToCart()
+    }
+
+    // Links to parts of the shop's home page open it there.
+    const toShop: SectionLink = (sectionId) => ({
+        href: `${shopPath}#${sectionId}`,
+        onClick: (event) => {
+            event.preventDefault()
+            navigate(`${shopPath}#${sectionId}`)
+        }
+    })
+    const sections = profile ? shopSections(profile, shopData?.listings.length ?? 0) : []
 
     return (
-        <div>
-            {backButton}
-
-            {pendingResult && (
-                <p role={pendingResult.isError ? "alert" : "status"} className={`alert ${pendingResult.isError ? "alert-error" : "alert-success"}`}>
-                    {pendingResult.text}
-                    {!pendingResult.isError && <>{" "}<Link to="/cart">View cart</Link></>}
-                </p>
+        <div className="shop-home product-home" style={shopColorStyle(profile?.branding?.brandColor)}>
+            {profile && shopPath && (
+                <>
+                    <ShopAnnounce headline={deliveryHeadline(profile)} />
+                    <ShopBar
+                        profile={profile}
+                        sections={sections}
+                        sectionLink={toShop}
+                        homeLink={{ href: shopPath, onClick: (event) => { event.preventDefault(); navigate(shopPath) } }}
+                        onSearch={() => navigate(`${shopPath}#shop-all`)}
+                        userRole={userRole}
+                        cartCount={cartCount}
+                    />
+                </>
             )}
 
-            <article className="card product-detail">
-                <PhotoGallery key={optionLabel ?? "product"} photos={shownPhotos} title={product.title}>
-                    {stock.isSoldOut && <span className="badge badge-amber product-badge">Sold out</span>}
-                </PhotoGallery>
+            <div className="shop-wrap">
+                {pendingResult && (
+                    <p role={pendingResult.isError ? "alert" : "status"} className={`alert ${pendingResult.isError ? "alert-error" : "alert-success"}`}>
+                        {pendingResult.text}
+                        {!pendingResult.isError && <>{" "}<Link to="/cart">View cart</Link></>}
+                    </p>
+                )}
 
-                <div className="product-detail-info">
-                    <h1>{product.title}</h1>
-                    <p className="product-detail-price">
-                        {!selectedOption && product.hasPriceRange ? "From " : ""}{formatMinorUnits(toMinorUnits(shownPrice))}
-                    </p>
-                    <p className="product-detail-tags">
-                        <span className="badge">{product.category}</span>
-                    </p>
-                    {(product.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={product.ratingAverage} count={product.ratingCount} /></p>}
-                    {withOptions && product.options && (
-                        <OptionPicker
-                            options={product.options}
-                            optionLabel={optionLabel}
-                            sizeLabel={sizeLabel}
-                            onOption={(label) => { setPickedOption(label); setPickedSize(null) }}
-                            onSize={(label) => { setPickedOption(optionLabel); setPickedSize(label) }}
-                        />
+                <nav className="product-crumbs" aria-label="You are here">
+                    {shopPath && product.sellerName && (
+                        <>
+                            <Link to={shopPath}>{product.sellerName}</Link>
+                            <ChevronRight aria-hidden="true" size={14} />
+                            <Link to={`${shopPath}#shop-all`}>{product.category}</Link>
+                            <ChevronRight aria-hidden="true" size={14} />
+                        </>
                     )}
-                    <p className={stock.isLow && !needsChoice ? "product-meta product-meta-warning" : "product-meta"}>
-                        {needsChoice ? (selectedOption ? "Choose a size to see what is left." : "Choose an option to see what is left.") : stock.label}
-                    </p>
-                    {product.sellerName && product.sellerSlug && (
-                        <p className="product-meta">
-                            Sold by <Link to={`/shop/${encodeURIComponent(product.sellerSlug)}`}>{product.sellerName}</Link>
-                        </p>
-                    )}
-                    {(product.deliveredCount ?? 0) > 0 && <p className="product-meta">This product was delivered to {product.deliveredCount} {product.deliveredCount === 1 ? "buyer" : "buyers"}.</p>}
-                    {product.shopTrust && <ShopTrustFacts trust={product.shopTrust} compact />}
+                    <span aria-current="page">{product.title}</span>
+                </nav>
 
-                    <h2 className="order-section-title">About this product</h2>
-                    <p className="product-detail-description">{product.description}</p>
+                <article className="product-layout">
+                    <PhotoGallery key={optionLabel ?? "product"} photos={shownPhotos} title={product.title}>
+                        {stock.isSoldOut && !needsChoice && <span className="badge badge-amber product-badge">Sold out</span>}
+                    </PhotoGallery>
 
-                    {showCartControls && (
-                        <div className="product-actions">
-                            {!needsChoice && !stock.isSoldOut && (
-                                <select
-                                    aria-label={`Quantity for ${product.title}`}
-                                    value={cart.quantity}
-                                    onChange={(event) => cart.setQuantity(Number(event.currentTarget.value))}
+                    <div className="product-info">
+                        <div>
+                            <p className="shop-eyebrow">{product.category}</p>
+                            <h1 className="product-title-lg">{product.title}</h1>
+                            <p className="product-facts">
+                                {(product.ratingCount ?? 0) > 0 && (
+                                    <a href="#product-reviews" onClick={(event) => { event.preventDefault(); scrollToSection("product-reviews") }}>
+                                        <StarRating average={product.ratingAverage} count={product.ratingCount} />
+                                    </a>
+                                )}
+                                {(product.deliveredCount ?? 0) > 0 && (
+                                    <span>Delivered to {product.deliveredCount} {product.deliveredCount === 1 ? "buyer" : "buyers"}</span>
+                                )}
+                            </p>
+                        </div>
+
+                        <p className="product-price-lg">{priceText}</p>
+
+                        {withOptions && product.options && (
+                            <div id="product-options">
+                                <OptionPicker
+                                    options={product.options}
+                                    optionLabel={optionLabel}
+                                    sizeLabel={sizeLabel}
+                                    onOption={(label) => { setPickedOption(label); setPickedSize(null) }}
+                                    onSize={(label) => { setPickedOption(optionLabel); setPickedSize(label) }}
+                                />
+                            </div>
+                        )}
+                        <p className={stockClass}>{stockText}</p>
+
+                        {showCartControls && (
+                            <div className="product-buy">
+                                {!needsChoice && !stock.isSoldOut && maxQuantity > 1 && (
+                                    <div className="qty-stepper" role="group" aria-label={`Quantity for ${product.title}`}>
+                                        <button type="button" aria-label="One fewer" disabled={cart.quantity <= 1} onClick={() => cart.setQuantity(cart.quantity - 1)}>−</button>
+                                        <output aria-live="polite">{cart.quantity}</output>
+                                        <button type="button" aria-label="One more" disabled={cart.quantity >= maxQuantity} onClick={() => cart.setQuantity(cart.quantity + 1)}>+</button>
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="shop-btn is-brand product-add"
+                                    onClick={handleAdd}
+                                    disabled={cart.isAdding || (stock.isSoldOut && !needsChoice)}
                                 >
-                                    {Array.from({ length: maxQuantity }, (_, index) => index + 1).map((option) => (
-                                        <option key={option} value={option}>Quantity: {option}</option>
-                                    ))}
-                                </select>
-                            )}
-                            <button
-                                type="button"
-                                className={stock.isSoldOut || needsChoice ? undefined : "btn btn-primary"}
-                                onClick={cart.addToCart}
-                                disabled={cart.isAdding || needsChoice || stock.isSoldOut}
-                            >
-                                {needsChoice ? (selectedOption ? "Choose a size" : "Choose an option") : stock.isSoldOut ? "Sold out" : cart.isAdding ? "Adding..." : "Add to cart"}
-                            </button>
-                            {cart.feedback && (
-                                <p role="status" className={`alert alert-${cart.feedback.kind}`}>
-                                    {cart.feedback.text}
-                                    {cart.feedback.kind === "success" && <>{" "}<Link to="/cart">View cart</Link></>}
+                                    <ShoppingBag aria-hidden="true" size={20} />
+                                    {buttonLabel}
+                                </button>
+                            </div>
+                        )}
+                        {cart.feedback && (
+                            cart.feedback.kind === "success" ? (
+                                <p role="status" className="product-added">
+                                    <span><Check aria-hidden="true" size={18} />Added {cart.quantity} to your cart.</span>
+                                    <Link to="/cart">View cart</Link>
                                 </p>
+                            ) : (
+                                <p role="status" className={`alert alert-${cart.feedback.kind}`}>{cart.feedback.text}</p>
+                            )
+                        )}
+
+                        <div className="product-boxes">
+                            <div className="product-box">
+                                <ShieldCheck aria-hidden="true" size={22} className="is-safe" />
+                                <div>
+                                    <b>Protected purchase</b>
+                                    <p>You pay through StoreHatch. If your order does not arrive or is not what was described, raise a complaint from My orders.</p>
+                                </div>
+                            </div>
+                            {profile && (
+                                <div className="product-box">
+                                    <Truck aria-hidden="true" size={22} />
+                                    <div>
+                                        <b>{deliverySummary(profile)}</b>
+                                        <p>
+                                            You see the exact fee for your state at checkout.{" "}
+                                            <a {...toShop("shop-delivery")}>See all fees</a>
+                                        </p>
+                                    </div>
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
-            </article>
 
-            <ReviewList kind="product" subject={String(product.id)} />
+                        {product.sellerName && shopPath && (
+                            <div className="product-seller">
+                                {profile?.logoUrl
+                                    ? <img className="shop-brand-logo" src={profile.logoUrl} alt="" />
+                                    : <span className="shop-brand-logo is-initial" aria-hidden="true">{product.sellerName.charAt(0).toUpperCase()}</span>}
+                                <div className="product-seller-text">
+                                    <span>Sold by</span>
+                                    <b>{product.sellerName}</b>
+                                    {sellerFacts && <span>{sellerFacts}</span>}
+                                </div>
+                                <div className="product-seller-actions">
+                                    <Link className="shop-btn is-plain is-small" to={shopPath}>Visit shop</Link>
+                                    {whatsapp && (
+                                        <a className="shop-btn is-plain is-small" href={askAboutUrl(whatsapp.url, product.title)} target="_blank" rel="noopener noreferrer">
+                                            <MessageCircle aria-hidden="true" size={16} />
+                                            Ask on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="product-details">
+                            <details open>
+                                <summary>About this product</summary>
+                                <p>{product.description}</p>
+                            </details>
+                            <details>
+                                <summary>Delivery and complaints</summary>
+                                <p>Delivery fees depend on your state and are shown at checkout. Once your order arrives, confirm it in My orders. If something is wrong, raise a complaint there.</p>
+                            </details>
+                        </div>
+                    </div>
+                </article>
+
+                <section id="product-reviews" className="shop-section" aria-labelledby="product-reviews-heading">
+                    <ReviewsPreview kind="product" subject={String(product.id)} heading="Reviews of this product" headingId="product-reviews-heading" />
+                </section>
+
+                {moreFromShop.length > 0 && shopPath && (
+                    <section className="shop-section product-more" aria-labelledby="product-more-heading">
+                        <div className="shop-section-head">
+                            <h2 id="product-more-heading" className="shop-heading">More from {product.sellerName}</h2>
+                            <Link className="shop-see-all" to={shopPath}>Visit the shop<ArrowRight aria-hidden="true" size={18} /></Link>
+                        </div>
+                        <ul className="product-grid">
+                            {moreFromShop.map((other) => (
+                                <li key={other.id} className="shop-product">
+                                    <ListingCard isEditable={false} allowAddToCart listing={other} />
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+            </div>
+
+            {profile && <ShopFooter profile={profile} sections={sections} sectionLink={toShop} userRole={userRole} />}
+
+            {showCartControls && (
+                <div className="product-buybar">
+                    <div>
+                        <span>{choiceNote}</span>
+                        <b>{priceText}</b>
+                    </div>
+                    <button
+                        type="button"
+                        className="shop-btn is-brand"
+                        onClick={handleAdd}
+                        disabled={cart.isAdding || (stock.isSoldOut && !needsChoice)}
+                    >
+                        {buttonLabel}
+                    </button>
+                </div>
+            )}
         </div>
     )
 }
