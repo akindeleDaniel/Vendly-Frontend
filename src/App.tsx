@@ -24,6 +24,7 @@ import AdminUserDetailPage from "./pages/AdminUserDetailPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
 import SellerEarningsPage from "./pages/SellerEarningsPage"
 import SellerReviewsPage from "./pages/SellerReviewsPage"
+import DeliveryFeesPage from "./pages/DeliveryFeesPage"
 import PreOrderListPage from "./pages/PreOrderListPage"
 import PreOrderDetailPage from "./pages/PreOrderDetailPage"
 import AdminReviewsPage from "./pages/AdminReviewsPage"
@@ -228,6 +229,8 @@ function App() {
           <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
           <Route path="/seller/profile/edit" element={<RequireRole role="SELLER" {...guardProps}><EditSellerProfilePage /></RequireRole>} />
+
+          <Route path="/seller/delivery" element={<RequireRole role="SELLER" {...guardProps}><DeliveryFeesPage /></RequireRole>} />
 
           <Route path="/seller/payouts" element={<RequireRole role="SELLER" {...guardProps}><PayoutSettingsPage hasPassword={hasPassword} /></RequireRole>} />
 

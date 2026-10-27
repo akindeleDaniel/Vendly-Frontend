@@ -10,6 +10,7 @@ import { ChevronLeftIcon, MapPinIcon, SearchIcon } from "../components/Icons"
 import { apiFetch } from "../lib/api"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
+import { ALL_STATES } from "../lib/shippingApi"
 import ReviewList from "../components/ReviewList"
 import StarRating from "../components/StarRating"
 
@@ -23,6 +24,8 @@ type ShopProfile = {
     ratingAverage?: number | null
     ratingCount?: number
     foodOrderType?: "NOW" | "PRE_ORDER" | "BOTH"
+    deliversEverywhere?: boolean
+    shippingRates?: Array<{ state: string, cost: string | null }>// cost null: no delivery to that state
 }
 
 type ShopPageProps = {
@@ -182,13 +185,30 @@ function ShopPage ({ userRole }: ShopPageProps) {
                     {(profile.ratingCount ?? 0) > 0 && <p className="shop-delivery"><StarRating average={profile.ratingAverage} count={profile.ratingCount} /></p>}
                     {profile.foodOrderType === "PRE_ORDER" && <p className="shop-delivery">Food is by pre-order only: ask for a ready time at checkout.</p>}
                     {profile.foodOrderType === "BOTH" && <p className="shop-delivery">Takes pre-orders for food as well as orders for now.</p>}
-                    {profile.shippingPolicy && (
+                    {profile.shippingPolicy && (profile.shippingRates ?? []).length === 0 && (
                         <p className="shop-delivery">
                             {profile.shippingPolicy === "FIXED" && profile.shippingCost
                                 ? `Delivery: ${formatNaira(profile.shippingCost)} per order`
                                 : "Free delivery"}
                         </p>
                     )}
+                    {(profile.shippingRates ?? []).length > 0 && (() => {
+                        const served = (profile.shippingRates ?? []).filter((rate) => rate.cost !== null)
+                        const defaultFee = profile.shippingPolicy === "FIXED" && profile.shippingCost ? formatNaira(profile.shippingCost) : "Free"
+                        const fee = (cost: string) => Number(cost) === 0 ? "Free" : formatNaira(cost)
+
+                        return (
+                            <details className="shop-delivery shop-rates">
+                                <summary>
+                                    {profile.deliversEverywhere ? "Delivers to every state" : `Delivers to ${served.length} ${served.length === 1 ? "state" : "states"}`}. See delivery fees
+                                </summary>
+                                <ul>
+                                    {served.map((rate) => <li key={rate.state}><span>{rate.state}</span><span>{fee(rate.cost as string)}</span></li>)}
+                                    {profile.deliversEverywhere && (profile.shippingRates ?? []).length < ALL_STATES.length && <li><span>Other states</span><span>{defaultFee}</span></li>}
+                                </ul>
+                            </details>
+                        )
+                    })()}
                 </div>
             </section>
 

@@ -29,11 +29,15 @@ export type ReviewSeller = {
   subtotal: string
   shipping: string
   total: string
+  // True when this shop's delivery fee depends on the buyer's state and no state was given yet: `shipping`
+  // is then the default (or the cheapest) fee.
+  shippingVaries?: boolean
 }
 
 // Returned by GET /checkout/preview, and inside a CHECKOUT_REVIEW_REQUIRED conflict as `review`.
 export type CheckoutReview = {
   reviewToken: string
+  deliveryState?: string | null // the state the fees were worked out for
   sellers: ReviewSeller[]
   subtotal: string
   shipping: string

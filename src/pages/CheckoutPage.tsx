@@ -5,7 +5,7 @@ import Notice from "../components/Notice"
 import PaymentOptions from "../components/PaymentOptions"
 import PreOrderCheckoutBlock from "../components/PreOrderCheckoutBlock"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
-import type { OrderTooLarge } from "../lib/checkoutApi"
+import type { DeliveryUnavailable, OrderTooLarge } from "../lib/checkoutApi"
 import { ORDER_MAX_VALUE } from "../lib/limits"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
@@ -13,6 +13,10 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
 
 type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "error"
+
+function deliveryUnavailableMessage(outcome: DeliveryUnavailable): string {
+  return `${outcome.sellerName ?? "A shop in your cart"} does not deliver to ${outcome.state ?? "that state"}. Remove its items from your cart, or choose another delivery state.`
+}
 
 // An order from one shop above the order limit: says what the limit is, what this order comes to, and what to do.
 function orderTooLargeMessage(outcome: OrderTooLarge): string {
@@ -102,7 +106,10 @@ function ReviewSummary({ review, onCheckAgain, isRefreshing }: { review: Checkou
           <PreOrderCheckoutBlock group={group} onCheckAgain={onCheckAgain} isRefreshing={isRefreshing} />
           <hr className="summary-divider" />
           <div className="summary-row"><span>Seller subtotal</span><span>{formatNaira(group.subtotal)}</span></div>
-          <div className="summary-row"><span>Shipping</span><span>{formatNaira(group.shipping)}</span></div>
+          <div className="summary-row">
+            <span>{group.shippingVaries && !review.deliveryState ? "Shipping (depends on your state)" : "Shipping"}</span>
+            <span>{group.shippingVaries && !review.deliveryState ? "From " : ""}{formatNaira(group.shipping)}</span>
+          </div>
           <div className="summary-row summary-row-total"><span>Seller total</span><span>{formatNaira(group.total)}</span></div>
         </article>
       ))}
@@ -202,6 +209,7 @@ function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [preOrderProblem, setPreOrderProblem] = useState("")
+  const [stateProblem, setStateProblem] = useState("")// a shop in the cart does not deliver to the chosen state
   const [result, setResult] = useState<CheckoutResult | null>(null)
   const submittingRef = useRef(false)
   const noticeRef = useRef<HTMLDivElement>(null)
@@ -266,6 +274,31 @@ function CheckoutPage() {
     }
   }, [reviewNotice])
 
+  // Delivery fees depend on the buyer's state, so once one is chosen the summary is worked out again for it.
+  useEffect(() => {
+    if (!delivery.state || previewStatus !== "ready") {
+      return
+    }
+
+    const controller = new AbortController()
+    fetchCheckoutPreview(controller.signal, delivery.state).then((outcome) => {
+      if (controller.signal.aborted) {
+        return
+      }
+
+      if (outcome.kind === "ok") {
+        setReview(outcome.review)
+        setStateProblem("")
+      } else if (outcome.kind === "delivery-unavailable") {
+        setStateProblem(deliveryUnavailableMessage(outcome))
+      } else if (outcome.kind === "order-too-large") {
+        setPreviewMessage(orderTooLargeMessage(outcome))
+        setPreviewStatus("too-large")
+      }
+    })
+    return () => controller.abort()
+  }, [delivery.state, previewStatus])
+
   function updateDelivery(next: DeliveryDetails) {
     setDelivery(next)
     setValidationError(null)// the message is about the previous input
@@ -288,7 +321,7 @@ function CheckoutPage() {
   // the one they saw must be confirmed again before anything can be submitted.
   async function refreshPreview(reason: "check-again" | "conflict") {
     setIsRefreshing(true)
-    const outcome = await fetchCheckoutPreview()
+    const outcome = await fetchCheckoutPreview(undefined, delivery.state || undefined)
     setIsRefreshing(false)
 
     switch (outcome.kind) {
@@ -336,7 +369,7 @@ function CheckoutPage() {
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (submittingRef.current || isRefreshing || review === null || reviewNotice !== null || isBlocked || waitingForPreOrder) {
+    if (submittingRef.current || isRefreshing || review === null || reviewNotice !== null || isBlocked || waitingForPreOrder || stateProblem) {
       return
     }
 
@@ -381,6 +414,9 @@ function CheckoutPage() {
           break
         case "order-too-large":
           setIssue({ type: "error", message: orderTooLargeMessage(outcome) })
+          break
+        case "delivery-unavailable":
+          setStateProblem(deliveryUnavailableMessage(outcome))
           break
         case "preorder-problem":
           await refreshPreview("check-again")
@@ -549,6 +585,12 @@ function CheckoutPage() {
             )}
             {issue?.type === "error" && <Notice kind="error">{issue.message}</Notice>}
             {preOrderProblem && <Notice kind="warning">{preOrderProblem}</Notice>}
+            {stateProblem && (
+              <Notice kind="warning">
+                <p>{stateProblem}</p>
+                <Link to="/cart" className="btn">Back to cart</Link>
+              </Notice>
+            )}
             {waitingForPreOrder && (
               <Notice kind="info">A shop in your cart only takes pre-orders. Ask it for a time in the order summary and wait for its approval before you pay.</Notice>
             )}
@@ -558,7 +600,7 @@ function CheckoutPage() {
                 {isRefreshing ? "Checking..." : "Check again"}
               </button>
             ) : (
-              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null || waitingForPreOrder}>
+              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null || waitingForPreOrder || stateProblem !== ""}>
                 {isSubmitting
                   ? "Creating checkout..."
                   : issue?.type === "unconfirmed" ? "Try again with the same details" : "Create checkout"}

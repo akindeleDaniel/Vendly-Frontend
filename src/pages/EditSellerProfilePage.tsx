@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { uploadImage } from "../lib/uploadImage"
 import type { SellerProfile } from "../types/seller"
 import { apiFetch, getErrorMessage } from "../lib/api"
@@ -191,7 +191,8 @@ function EditSellerProfilePage (){
         <div className="form-page-wide">
             <h1>Edit your store</h1>
             <form onSubmit={handleSubmit} className="card form-card">
-                <SellerProfileFields formData={formData} setFormData={setFormData} />
+                <SellerProfileFields formData={formData} setFormData={setFormData} showShipping={false} />
+                <p className="field-help">Delivery fees, and the states you deliver to, are set on the <Link to="/seller/delivery">Delivery</Link> page.</p>
                 {(sellsFood || savedFoodOrderType !== "NOW") && (
                     <>
                         <label>

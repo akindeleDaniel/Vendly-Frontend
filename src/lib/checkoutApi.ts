@@ -14,9 +14,13 @@ const UNEXPECTED_RESPONSE_MESSAGE = "We received an unexpected response from the
 // One shop's order is above the order limit. The amounts are naira strings from the backend, null when missing.
 export type OrderTooLarge = { kind: "order-too-large", sellerName: string | null, orderTotal: string | null, limit: string | null }
 
+// A shop in the cart does not deliver to the chosen state.
+export type DeliveryUnavailable = { kind: "delivery-unavailable", sellerName: string | null, state: string | null }
+
 export type PreviewOutcome =
     | { kind: "ok", review: CheckoutReview }
     | OrderTooLarge
+    | DeliveryUnavailable
     | { kind: "empty-cart" }
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "conflict", message: string }
@@ -30,8 +34,9 @@ export type SubmitOutcome =
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "locked", message: string, checkout: LockedCheckout | null }
     | { kind: "conflict", message: string }
-    | { kind: "preorder-problem", message: string }
-    | OrderTooLarge// a food shop's pre-order is needed, has lapsed, or no longer matches
+    | { kind: "preorder-problem", message: string }// a food shop's pre-order is needed, has lapsed, or no longer matches
+    | OrderTooLarge
+    | DeliveryUnavailable
     | { kind: "empty-cart" }
     | { kind: "invalid-request", message: string }
     | { kind: "unauthorized" }
@@ -151,16 +156,26 @@ function orderTooLargeOf(body: unknown): OrderTooLarge {
 }
 
 const ORDER_TOO_LARGE_CODE = "CHECKOUT_ORDER_TOO_LARGE"
+const DELIVERY_UNAVAILABLE_CODE = "CHECKOUT_DELIVERY_UNAVAILABLE"
+
+function deliveryUnavailableOf(body: unknown): DeliveryUnavailable {
+    return {
+        kind: "delivery-unavailable",
+        sellerName: isRecord(body) && isRecord(body.seller) && typeof body.seller.businessName === "string" ? body.seller.businessName : null,
+        state: isRecord(body) && typeof body.state === "string" ? body.state : null
+    }
+}
 
 function listingIdOf(body: unknown): number | null {
     return isRecord(body) && Number.isInteger(body.listingId) ? body.listingId as number : null
 }
 
-export async function fetchCheckoutPreview(signal?: AbortSignal): Promise<PreviewOutcome> {
+// `state` is the buyer's delivery state, when chosen: each shop's delivery fee is worked out for it.
+export async function fetchCheckoutPreview(signal?: AbortSignal, state?: string): Promise<PreviewOutcome> {
     let response: Response
 
     try {
-        response = await apiFetch("/checkout/preview", {
+        response = await apiFetch(`/checkout/preview${state ? `?${new URLSearchParams({ state })}` : ""}`, {
             credentials: "include",
             signal
         })
@@ -196,6 +211,10 @@ export async function fetchCheckoutPreview(signal?: AbortSignal): Promise<Previe
 
     if (response.status === 409 && codeOf(body) === ORDER_TOO_LARGE_CODE) {
         return orderTooLargeOf(body)
+    }
+
+    if (response.status === 409 && codeOf(body) === DELIVERY_UNAVAILABLE_CODE) {
+        return deliveryUnavailableOf(body)
     }
 
     return { kind: "error", message }
@@ -317,6 +336,10 @@ export async function submitCheckout(delivery: DeliveryDetails, reviewToken: str
 
         if (code === ORDER_TOO_LARGE_CODE) {
             return orderTooLargeOf(body)
+        }
+
+        if (code === DELIVERY_UNAVAILABLE_CODE) {
+            return deliveryUnavailableOf(body)
         }
 
         if (code === "CHECKOUT_PREORDER_REQUIRED" || code === "CHECKOUT_PREORDER_INVALID" || code === "CHECKOUT_PREORDER_NOT_AVAILABLE") {

@@ -656,3 +656,75 @@
   align-items: end;
   gap: var(--space-2);
 }
+
+/* Delivery: where a seller delivers and what each state pays */
+.delivery-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.delivery-form .form-card h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0 var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.same-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.same-price label {
+  flex: 1 1 220px;
+  margin: 0;
+}
+
+.state-prices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+
+.state-price {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.5rem;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* The shop page's list of delivery fees */
+.shop-rates summary {
+  cursor: pointer;
+  min-height: var(--tap-size);
+  display: flex;
+  align-items: center;
+  color: var(--color-forest);
+  font-weight: 600;
+}
+
+.shop-rates ul {
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+  max-width: 360px;
+}
+
+.shop-rates li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border);
+}

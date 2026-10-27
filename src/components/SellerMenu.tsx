@@ -101,6 +101,7 @@ function SellerMenu() {
         ...(counts.takesPreOrders ? [{ to: "/seller/pre-orders", label: "Pre-orders" }] : []),
         { to: "/seller/earnings", label: "Earnings" },
         { to: "/seller/reviews", label: "Reviews" },
+        { to: "/seller/delivery", label: "Delivery" },
         { to: "/seller/payouts", label: "Payouts" },
         { to: "/seller/liabilities", label: "Refunds owed" },
         { to: "/seller/profile/edit", label: "Store details" }

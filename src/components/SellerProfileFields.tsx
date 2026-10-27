@@ -5,10 +5,11 @@ import { SHOP_NAME_MAX_LENGTH } from "../lib/limits"
 type SellerProfileFieldsProps = {
     formData: SellerProfile
     setFormData: (data: SellerProfile) => void
+    showShipping?: boolean // false where delivery is set on its own page
 }
 
 // The state and LGA lists come from the same package the backend uses to validate them.
-function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps) {
+function SellerProfileFields({ formData, setFormData, showShipping = true }: SellerProfileFieldsProps) {
     const stateOptions = states()
     const lgaOptions = formData.state ? lgas(formData.state) ?? [] : []
 
@@ -49,6 +50,7 @@ function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps
                 </select>
             </label>
             </div>
+            {showShipping && (
             <label>
                 Shipping
                 <select name="shippingPolicy"
@@ -62,7 +64,8 @@ function SellerProfileFields({ formData, setFormData }: SellerProfileFieldsProps
                     <option value="FIXED">Fixed shipping cost</option>
                 </select>
             </label>
-            {formData.shippingPolicy === "FIXED" && (
+            )}
+            {showShipping && formData.shippingPolicy === "FIXED" && (
                 <label>
                     Shipping cost
                     <input type="number" min="0" step="0.01" name="shippingCost"
