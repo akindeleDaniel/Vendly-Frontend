@@ -5,6 +5,7 @@ import { apiFetch, getErrorMessage } from "../lib/api"
 import { formatMinorUnits, formatNaira, toMinorUnits } from "../lib/money"
 import { ORDER_MAX_VALUE } from "../lib/limits"
 import Notice from "../components/Notice"
+import ShopAvatar from "../components/ShopAvatar"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { CartItem, CartResponse, CartShop } from "../types/cart"
 
@@ -61,23 +62,6 @@ function groupByShop(items: CartItem[]): ShopGroup[] {
   }
 
   return [...groups.values()]
-}
-
-function ShopAvatar({ shop }: { shop: CartShop | null }) {
-  if (shop?.logoUrl) {
-    return <img className="cart-shop-avatar" src={shop.logoUrl} alt="" />
-  }
-
-  const color = shop?.brandColor
-  return (
-    <span
-      className={`cart-shop-avatar${color?.light ? " is-light" : ""}`}
-      aria-hidden="true"
-      style={color ? { background: color.background, color: color.text } : undefined}
-    >
-      {(shop?.businessName ?? "?").charAt(0).toUpperCase()}
-    </span>
-  )
 }
 
 function CartPage() {
@@ -401,7 +385,7 @@ function CartPage() {
               <section key={group.key} className="cart-shop" aria-labelledby={headingId}>
                 <div className="cart-shop-head">
                   <div className="cart-shop-name">
-                    <ShopAvatar shop={group.shop} />
+                    <ShopAvatar name={group.shop?.businessName} logoUrl={group.shop?.logoUrl} brandColor={group.shop?.brandColor} />
                     <div>
                       <h2 id={headingId}>{group.shop?.businessName ?? "Unknown shop"}</h2>
                       {group.shop?.location && <p>{group.shop.location}</p>}

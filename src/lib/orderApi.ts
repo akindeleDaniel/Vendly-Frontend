@@ -1,5 +1,5 @@
 import { apiFetch, getErrorMessage } from "./api"
-import type { CustomerOrder, CustomerOrderSummary, Fulfilment, OrderPage, SellerOrder, SellerOrderSummary } from "../types/order"
+import type { CustomerOrder, Fulfilment, MyOrderFilter, MyOrderPage, OrderPage, SellerOrder, SellerOrderSummary } from "../types/order"
 
 export type OrderOutcome<T> =
     | { kind: "ok", data: T }
@@ -48,8 +48,9 @@ async function getOrders<T>(path: string, isValid: (body: unknown) => boolean, s
         : { kind: "error", message: "We received an unexpected response from the server. Please try again." }
 }
 
-export function fetchMyOrders(page: number, signal?: AbortSignal) {
-    return getOrders<OrderPage<CustomerOrderSummary>>(`/orders?page=${page}`, isOrderPage, signal)
+export function fetchMyOrders(page: number, status: MyOrderFilter, signal?: AbortSignal) {
+    const query = new URLSearchParams({ page: String(page), ...(status !== "all" ? { status } : {}) })
+    return getOrders<MyOrderPage>(`/orders?${query}`, isOrderPage, signal)
 }
 
 export function fetchMyOrder(id: string, signal?: AbortSignal) {

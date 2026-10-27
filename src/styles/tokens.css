@@ -11,15 +11,20 @@
   --color-forest-tint: #e4efe9;     /* selected rows, quiet highlights */
   --color-amber: #d98b45;           /* badges and accents only. Use charcoal text on it (5.46:1), never amber text */
   --color-amber-text: #9a5214;      /* amber-coloured words. 5.37:1 on cream */
+  --color-amber-tint: #fbefe1;      /* panels asking the user to act, such as confirming a delivery */
+  --color-amber-line: #efd3b2;      /* the edge of those panels */
 
   /* Surfaces and text */
   --color-cream: #f8f5ef;           /* page background */
   --color-surface: #ffffff;         /* cards, inputs, panels */
+  --color-surface-soft: #fbf9f5;    /* a card's header strip */
+  --color-placeholder: #f1ece3;     /* where a photo is missing, small count chips */
   --color-charcoal: #242923;        /* body text and headings. 13.62:1 on cream */
   --color-text-muted: #5b6258;      /* secondary text. 5.79:1 on cream, 6.30:1 on white */
 
   /* Lines */
   --color-border: #e6e0d6;          /* card edges and dividers only (decorative, 1.21:1) */
+  --color-border-muted: #cfc8bb;    /* dashed empty boxes, steps not reached yet (decorative) */
   --color-border-strong: #8a857b;   /* input and button outlines. 3.37:1 on cream */
 
   /* Feedback: always pair with an icon or words, never colour alone */

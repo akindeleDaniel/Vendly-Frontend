@@ -1,21 +1,35 @@
 import { useState } from "react"
-import Notice from "./Notice"
+import { Link } from "react-router-dom"
 import { confirmOrderReceived } from "../lib/orderApi"
 import type { CustomerOrder } from "../types/order"
+
+// How long after the seller reports delivery the order is closed as delivered without an answer
+// (deliveryAutoCloseAfterDays in the backend).
+const AUTO_CLOSE_DAYS = 7
 
 type ConfirmReceiptPromptProps = {
     checkoutId: number
     sellerOrderId: number
+    shopName?: string
+    reportedAt?: string | null// when the seller said it was delivered
+    // Shows "Report a problem", for an order without a complaint.
+    canReport?: boolean
     // Called with the updated order once the buyer's confirmation is saved.
     onConfirmed: (order: CustomerOrder) => void
+}
+
+function formatDay(date: Date): string {
+    return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" })
 }
 
 // Asks the buyer whether one seller's order arrived, after the seller has said it was delivered.
 // The buyer's confirmation is what completes the order. Each seller order has its own prompt, so
 // the orders in a list can be confirmed independently.
-function ConfirmReceiptPrompt({ checkoutId, sellerOrderId, onConfirmed }: ConfirmReceiptPromptProps) {
+function ConfirmReceiptPrompt({ checkoutId, sellerOrderId, shopName, reportedAt, canReport, onConfirmed }: ConfirmReceiptPromptProps) {
     const [isConfirming, setIsConfirming] = useState(false)
     const [error, setError] = useState("")
+    const reported = reportedAt ? new Date(reportedAt) : null
+    const hasDate = reported !== null && !Number.isNaN(reported.getTime())
 
     async function confirm() {
         setIsConfirming(true)
@@ -33,14 +47,24 @@ function ConfirmReceiptPrompt({ checkoutId, sellerOrderId, onConfirmed }: Confir
     }
 
     return (
-        <Notice kind="warning">
-            <p><strong>Your order has been delivered.</strong> The seller says it has arrived. Did you receive it?</p>
-            <p>Only confirm once you have it. Confirming completes the order.</p>
-            {error && <p>{error}</p>}
-            <button type="button" className="btn btn-primary" disabled={isConfirming} onClick={confirm}>
-                {isConfirming ? "Confirming..." : "Yes, I received it"}
-            </button>
-        </Notice>
+        <div className="confirm-receipt">
+            <p className="confirm-receipt-text">
+                <strong>Did you get this order?</strong>
+                <span>
+                    {shopName ?? "The seller"} says it was delivered{hasDate ? ` on ${formatDay(reported)}` : ""}. Only confirm once you have it.
+                    {hasDate && ` If you don't answer, it is marked delivered after ${formatDay(new Date(reported.getTime() + AUTO_CLOSE_DAYS * 86_400_000))}.`}
+                </span>
+            </p>
+            {error && <p className="confirm-receipt-error" role="alert">{error}</p>}
+            <div className="confirm-receipt-actions">
+                <button type="button" className="btn btn-primary" disabled={isConfirming} onClick={confirm}>
+                    {isConfirming ? "Confirming..." : "Yes, I got it"}
+                </button>
+                {canReport && (
+                    <Link to={`/orders/${checkoutId}/seller-orders/${sellerOrderId}/complaint`} className="btn">Report a problem</Link>
+                )}
+            </div>
+        </div>
     )
 }
 

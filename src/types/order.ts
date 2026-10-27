@@ -1,3 +1,4 @@
+import type { BrandColor } from "./branding"
 import type { OrderDisputeLink } from "./dispute"
 import type { BuyerRefund, SellerRefund } from "./refund"
 
@@ -7,6 +8,8 @@ import type { BuyerRefund, SellerRefund } from "./refund"
 export type OrderSeller = {
   businessName: string
   slug: string
+  logoUrl?: string | null // on the shopper's order pages
+  brandColor?: BrandColor // the resolved preset, as in the cart
 } | null
 
 export type OrderPayment = {
@@ -21,6 +24,12 @@ export type OrderItem = {
   unitPrice: string
   quantity: number
   lineTotal: string
+  // On the shopper's order pages: read from the listing as it is now. The title and price above
+  // are as they were at checkout.
+  imageUrl?: string | null // the option's photo, or the product's
+  optionLabel?: string | null
+  sizeLabel?: string | null
+  productTitle?: string | null // the product's name when the item is one of its options
 }
 
 export type DeliveryAddress = {
@@ -137,4 +146,11 @@ export type OrderPage<T> = {
   pageSize: number
   total: number
   orders: T[]
+}
+
+// The tabs on "My orders" (GET /orders?status=). A checkout is in a tab when any of its seller orders is.
+export type MyOrderFilter = "all" | "progress" | "delivered" | "issues"
+
+export type MyOrderPage = OrderPage<CustomerOrderSummary> & {
+  counts?: Record<MyOrderFilter, number>// the number on every tab, whichever one is open
 }

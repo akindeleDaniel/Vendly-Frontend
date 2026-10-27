@@ -81,7 +81,7 @@
   font-size: 0.8125rem;
 }
 
-.cart-shop-avatar {
+.shop-avatar {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -96,7 +96,7 @@
   object-fit: cover;
 }
 
-.cart-shop-avatar.is-light {
+.shop-avatar.is-light {
   box-shadow: inset 0 0 0 1px var(--color-border-strong);
 }
 

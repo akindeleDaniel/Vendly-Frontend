@@ -73,6 +73,8 @@ function OrderDetailPage() {
                         <ConfirmReceiptPrompt
                             checkoutId={order.id}
                             sellerOrderId={sellerOrder.id}
+                            shopName={sellerOrder.seller?.businessName}
+                            reportedAt={sellerOrder.deliveryReportedAt}
                             onConfirmed={(updated) => setOutcome({ kind: "ok", data: updated })}
                         />
                     )}

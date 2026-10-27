@@ -1,36 +1,292 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import BuyerOrderExtras from "../components/BuyerOrderExtras"
-import BackArrow from "../components/BackArrow"
+import type { ReactNode } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { AlertTriangle, CalendarDays, Check, ChevronRight, PackageCheck, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
-import FulfilmentTimeline from "../components/FulfilmentTimeline"
 import Notice from "../components/Notice"
-import OrderItemList from "../components/OrderItemList"
-import { describeOrderStatus, fetchMyOrders, formatDate, formatOrderStatus, formatProvider } from "../lib/orderApi"
+import ShopAvatar from "../components/ShopAvatar"
+import { describeDispute } from "../lib/disputeApi"
+import { formatNaira } from "../lib/money"
+import { fetchAwaitingConfirmationCount, fetchMyOrders, formatOrderStatus, formatProvider } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
-import type { CustomerOrder, CustomerOrderSummary, OrderPage } from "../types/order"
-import { formatNaira } from "../lib/money"
+import type { CustomerOrder, CustomerOrderSummary, MyOrderFilter, MyOrderPage, OrderItem } from "../types/order"
 
-// The shopper's paid orders, newest first.
+type SellerOrder = CustomerOrderSummary["sellerOrders"][number]
+
+const FILTERS: Array<{ value: MyOrderFilter, label: string }> = [
+    { value: "all", label: "All" },
+    { value: "progress", label: "In progress" },
+    { value: "delivered", label: "Delivered" },
+    { value: "issues", label: "Refunds and complaints" }
+]
+
+function readFilter(value: string | null): MyOrderFilter {
+    return FILTERS.find((filter) => filter.value === value)?.value ?? "all"
+}
+
+function readPage(value: string | null): number {
+    const page = Number(value)
+    return Number.isSafeInteger(page) && page >= 1 ? page : 1
+}
+
+// "25 Oct", or "25 Oct 2026" with the year.
+function formatDay(isoTime: string | null | undefined, withYear = false): string {
+    const date = isoTime ? new Date(isoTime) : null
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString("en-NG", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) })
+        : ""
+}
+
+type StatusTone = "attention" | "progress" | "done" | "neutral"
+
+// Where one shop's part of an order stands, in the buyer's words.
+function describeStatus(sellerOrder: SellerOrder): { label: string, tone: StatusTone } {
+    switch (sellerOrder.status) {
+        case "PAID":
+            return { label: "Being prepared", tone: "progress" }
+        case "SHIPPED":
+            return sellerOrder.deliveryReportedAt
+                ? { label: "Confirm delivery", tone: "attention" }
+                : { label: "On the way", tone: "progress" }
+        case "DELIVERED":
+            return { label: "Delivered", tone: "done" }
+        default:
+            return { label: formatOrderStatus(sellerOrder.status), tone: "neutral" }
+    }
+}
+
+type Step = { label: string, detail: string, state: "done" | "waiting" | "next" }
+
+// Paid, shipped, delivered. While the shop says it was delivered and the buyer has not confirmed,
+// the last step waits for the buyer.
+function progressSteps(sellerOrder: SellerOrder, paidAt: string | null): Step[] {
+    const isDelivered = sellerOrder.status === "DELIVERED"
+    const isShipped = isDelivered || sellerOrder.shippedAt !== null
+    const isReported = !isDelivered && sellerOrder.deliveryReportedAt !== null
+
+    return [
+        { label: "Paid", detail: formatDay(paidAt), state: "done" },
+        { label: "Shipped", detail: isShipped ? formatDay(sellerOrder.shippedAt) : "Not yet", state: isShipped ? "done" : "next" },
+        isReported
+            ? { label: "Delivered?", detail: `Shop says ${formatDay(sellerOrder.deliveryReportedAt)}`, state: "waiting" }
+            : {
+                label: "Delivered",
+                detail: isDelivered ? formatDay(sellerOrder.deliveryConfirmedAt ?? sellerOrder.deliveryAutoClosedAt) : "Not yet",
+                state: isDelivered ? "done" : "next"
+            }
+    ]
+}
+
+function ProgressSteps({ steps }: { steps: Step[] }) {
+    const summary = steps.map((step) => `${step.label} ${step.state === "done" ? "done" : step.state === "waiting" ? "waiting for you" : "not yet"}`).join(", ")
+
+    return (
+        <div className="orders-steps" role="img" aria-label={summary}>
+            <div className="orders-steps-track">
+                {steps.map((step, index) => (
+                    <span key={step.label} className="orders-steps-part">
+                        {index > 0 && <span className={`orders-steps-line${step.state !== "next" ? " is-done" : ""}`} />}
+                        <span className={`orders-steps-dot is-${step.state}`}>
+                            {step.state === "done" && <Check size={12} strokeWidth={3.2} aria-hidden="true" />}
+                        </span>
+                    </span>
+                ))}
+            </div>
+            <div className="orders-steps-labels">
+                {steps.map((step) => (
+                    <span key={step.label}><b>{step.label}</b>{step.detail}</span>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function ItemRow({ item }: { item: OrderItem }) {
+    const details = [
+        item.optionLabel,
+        item.sizeLabel,
+        `Qty ${item.quantity}`,
+        item.quantity > 1 ? `${formatNaira(item.unitPrice)} each` : null
+    ].filter(Boolean).join(" · ")
+
+    return (
+        <li className="orders-item">
+            {item.imageUrl
+                ? <img className="orders-item-photo" src={item.imageUrl} alt="" loading="lazy" />
+                : <span className="orders-item-photo" aria-hidden="true"><ShoppingBag size={22} /></span>}
+            <div className="orders-item-text">
+                <span className="orders-item-title">{item.productTitle ?? item.title}</span>
+                <span className="orders-item-details">{details}</span>
+            </div>
+            <span className="orders-item-price">{formatNaira(item.lineTotal)}</span>
+        </li>
+    )
+}
+
+function OrderNote({ icon: Icon, tone, children }: { icon: LucideIcon, tone: "plain" | "warning" | "good", children: ReactNode }) {
+    return (
+        <div className={`orders-note is-${tone}`}>
+            <Icon size={18} aria-hidden="true" />
+            <div className="orders-note-text">{children}</div>
+        </div>
+    )
+}
+
+// A complaint's reason, short enough for one line on the list.
+const SHORT_REASONS: Record<string, string> = {
+    NOT_RECEIVED: "order not received",
+    NOT_AS_DESCRIBED: "item not as described",
+    DAMAGED: "item arrived damaged",
+    WRONG_ITEM: "wrong item sent",
+    OTHER: "a problem with the order",
+    SELLER_REFUND_OFFER: "refund offered by the shop"
+}
+
+type ShopOrderProps = {
+    checkoutId: number
+    paidAt: string | null
+    sellerOrder: SellerOrder
+    onConfirmed: (order: CustomerOrder) => void
+}
+
+// One shop's part of an order: what was bought, where it is, and what the buyer can do next.
+function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderProps) {
+    const shop = sellerOrder.seller
+    const status = describeStatus(sellerOrder)
+    const hasSteps = ["PAID", "SHIPPED", "DELIVERED"].includes(sellerOrder.status)
+    const needsConfirm = sellerOrder.status === "SHIPPED" && sellerOrder.deliveryReportedAt !== null
+    const isDelivered = sellerOrder.status === "DELIVERED"
+    const canReport = sellerOrder.dispute === null && hasSteps
+    const itemCount = sellerOrder.itemCount === 1 ? "1 item" : `${sellerOrder.itemCount} items`
+
+    return (
+        <section className="orders-shop" aria-label={`${shop?.businessName ?? "Shop"}: ${status.label}`}>
+            <div className="orders-shop-head">
+                <ShopAvatar name={shop?.businessName} logoUrl={shop?.logoUrl} brandColor={shop?.brandColor} />
+                <div className="orders-shop-name">
+                    {shop ? <Link to={`/shop/${encodeURIComponent(shop.slug)}`}>{shop.businessName}</Link> : "Shop"}
+                    <span> · {itemCount}</span>
+                </div>
+                <span className={`orders-status is-${status.tone}`}>{status.label}</span>
+            </div>
+
+            <div className={`orders-shop-body${hasSteps ? "" : " is-single"}`}>
+                <ul className="orders-items">
+                    {sellerOrder.items.map((item, index) => <ItemRow key={`${item.listingId}-${index}`} item={item} />)}
+                </ul>
+                {hasSteps && <ProgressSteps steps={progressSteps(sellerOrder, paidAt)} />}
+            </div>
+
+            {needsConfirm && (
+                <ConfirmReceiptPrompt
+                    checkoutId={checkoutId}
+                    sellerOrderId={sellerOrder.id}
+                    shopName={shop?.businessName}
+                    reportedAt={sellerOrder.deliveryReportedAt}
+                    canReport={canReport}
+                    onConfirmed={onConfirmed}
+                />
+            )}
+
+            {sellerOrder.status === "PAID" && sellerOrder.fulfilmentType === "PRE_ORDER" && sellerOrder.readyAt && (
+                <OrderNote icon={CalendarDays} tone="plain">Pre-order: the shop will have it ready on {formatDay(sellerOrder.readyAt)}.</OrderNote>
+            )}
+
+            {sellerOrder.status === "SHIPPED" && !needsConfirm && sellerOrder.shippingNote && (
+                <OrderNote icon={Truck} tone="plain">From the shop: {sellerOrder.shippingNote}</OrderNote>
+            )}
+
+            {sellerOrder.dispute && (
+                <OrderNote icon={AlertTriangle} tone="warning">
+                    <span>Complaint: {SHORT_REASONS[sellerOrder.dispute.reason] ?? SHORT_REASONS.OTHER}. {describeDispute(sellerOrder.dispute, "buyer").label}.</span>
+                    <Link to={`/disputes/${sellerOrder.dispute.id}`}>View complaint</Link>
+                </OrderNote>
+            )}
+
+            {sellerOrder.refunds.map((refund) => (
+                <OrderNote key={refund.reference} icon={RotateCcw} tone={refund.status === "SUCCEEDED" ? "good" : "plain"}>
+                    {refund.status === "SUCCEEDED"
+                        ? `Refund of ${formatNaira(refund.amount)} completed${refund.completedAt ? ` on ${formatDay(refund.completedAt)}` : ""}.`
+                        : refund.status === "PENDING" || refund.status === "PROCESSING"
+                            ? `Refund of ${formatNaira(refund.amount)} on its way${refund.expectedAt ? `, expected by ${formatDay(refund.expectedAt)}` : ""}.`
+                            : `Refund of ${formatNaira(refund.amount)}: StoreHatch is sorting this out and will keep you posted.`}
+                    {refund.note && ` ${refund.note}`}
+                </OrderNote>
+            ))}
+
+            {(isDelivered || (canReport && !needsConfirm)) && (
+                <div className="orders-shop-foot">
+                    {isDelivered && (
+                        <Link to={`/orders/${checkoutId}?review=${sellerOrder.id}`} className="btn">
+                            <Star size={16} aria-hidden="true" />Review your order
+                        </Link>
+                    )}
+                    {isDelivered && (
+                        <span className="orders-muted">
+                            {sellerOrder.deliveryConfirmedAt
+                                ? `You confirmed delivery on ${formatDay(sellerOrder.deliveryConfirmedAt)}.`
+                                : sellerOrder.deliveryAutoClosedAt ? `Marked delivered on ${formatDay(sellerOrder.deliveryAutoClosedAt)}.` : ""}
+                        </span>
+                    )}
+                    {canReport && !needsConfirm && (
+                        <Link to={`/orders/${checkoutId}/seller-orders/${sellerOrder.id}/complaint`} className="orders-report">Report a problem</Link>
+                    )}
+                </div>
+            )}
+        </section>
+    )
+}
+
+// The shopper's paid orders, newest first, with a tab for each kind and one card per checkout.
 function MyOrdersPage() {
     useDocumentTitle("My orders")
-    const [page, setPage] = useState(1)
-    const [outcome, setOutcome] = useState<OrderOutcome<OrderPage<CustomerOrderSummary>> | null>(null)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const filter = readFilter(searchParams.get("status"))
+    const page = readPage(searchParams.get("page"))
+    const [outcome, setOutcome] = useState<OrderOutcome<MyOrderPage> | null>(null)
     const [attempt, setAttempt] = useState(0)
+    const [awaitingCount, setAwaitingCount] = useState<number | null>(null)
+    // The list stays on screen, faded, while the next tab or page loads.
+    const requestKey = `${filter}|${page}|${attempt}`
+    const [loadedKey, setLoadedKey] = useState("")
+    const isLoading = loadedKey !== requestKey
 
     useEffect(() => {
         const controller = new AbortController()
-        fetchMyOrders(page, controller.signal).then((result) => {
+        fetchMyOrders(page, filter, controller.signal).then((result) => {
             if (!controller.signal.aborted) {
                 setOutcome(result)
+                setLoadedKey(`${filter}|${page}|${attempt}`)
             }
         })
         return () => controller.abort()
-    }, [page, attempt])
+    }, [page, filter, attempt])
 
-    // Applies a confirmation to the list: the seller orders in the updated checkout replace their
-    // old versions, and every other order stays as it was.
+    useEffect(() => {
+        const controller = new AbortController()
+        fetchAwaitingConfirmationCount(controller.signal).then((count) => {
+            if (!controller.signal.aborted) {
+                setAwaitingCount(count)
+            }
+        })
+        return () => controller.abort()
+    }, [attempt])
+
+    function showFilter(value: MyOrderFilter, nextPage = 1) {
+        const params = new URLSearchParams()
+        if (value !== "all") {
+            params.set("status", value)
+        }
+        if (nextPage > 1) {
+            params.set("page", String(nextPage))
+        }
+        setSearchParams(params)
+        window.scrollTo({ top: 0, behavior: "instant" })
+    }
+
+    // Shows the confirmation straight away, then reloads quietly so the tabs and counts follow.
     function applyConfirmation(updated: CustomerOrder) {
         setOutcome((current) => current?.kind === "ok"
             ? {
@@ -59,83 +315,140 @@ function MyOrdersPage() {
                 }
             }
             : current)
+        setAwaitingCount((count) => count === null ? null : Math.max(0, count - 1))
     }
 
+    const header = (
+        <div className="orders-head">
+            <div>
+                <h1>My orders</h1>
+                <p>Track what you bought, confirm deliveries and review shops.</p>
+            </div>
+            <div className="orders-quick">
+                <Link to="/disputes"><AlertTriangle size={16} aria-hidden="true" />Complaints</Link>
+                <Link to="/pre-orders"><CalendarDays size={16} aria-hidden="true" />Pre-orders</Link>
+            </div>
+        </div>
+    )
+
     if (outcome === null) {
-        return <p role="status">Loading your orders...</p>
+        return <div className="orders-page" aria-busy="true">{header}<p role="status">Loading your orders...</p></div>
     }
 
     if (outcome.kind !== "ok") {
         return (
-            <div>
-                <BackArrow to="/" label="Back to the home page" />
-                <h1>My orders</h1>
-                {outcome.kind === "error" && (
-                    <Notice kind="error">
-                        <p>{outcome.message}</p>
-                        <button type="button" onClick={() => { setOutcome(null); setAttempt((count) => count + 1) }}>Retry</button>
-                    </Notice>
-                )}
+            <div className="orders-page">
+                {header}
+                <Notice kind="error">
+                    <p>{outcome.kind === "error" ? outcome.message : "We could not load your orders."}</p>
+                    <button type="button" className="btn" onClick={() => setAttempt((count) => count + 1)}>Try again</button>
+                </Notice>
             </div>
         )
     }
 
-    const { orders, total, pageSize } = outcome.data
+    const { orders, total, pageSize, counts } = outcome.data
     const lastPage = Math.max(1, Math.ceil(total / pageSize))
+    const hasNoOrders = (counts ? counts.all === 0 : filter === "all" && total === 0)
+
+    if (hasNoOrders) {
+        return (
+            <div className="orders-page">
+                {header}
+                <section className="orders-empty" aria-labelledby="orders-empty-title">
+                    <span className="orders-empty-icon" aria-hidden="true"><ShoppingBag size={40} strokeWidth={1.8} /></span>
+                    <h2 id="orders-empty-title">No orders yet</h2>
+                    <p>When you buy from a shop on StoreHatch, your orders show up here. You can follow each delivery, confirm it arrived and review the shop.</p>
+                    <div className="orders-empty-actions">
+                        <Link to="/" className="btn btn-primary">Start shopping</Link>
+                    </div>
+                </section>
+            </div>
+        )
+    }
 
     return (
-        <div>
-            <BackArrow to="/" label="Back to the home page" />
-            <h1>My orders</h1>
-            <p className="page-links">
-                <Link to="/disputes">Your complaints</Link>
-            </p>
+        <div className="orders-page" aria-busy={isLoading}>
+            {header}
+
+            {filter === "all" && awaitingCount !== null && awaitingCount > 0 && (
+                <div className="orders-attention" role="status">
+                    <span className="orders-attention-icon" aria-hidden="true"><PackageCheck size={18} /></span>
+                    <p>
+                        <strong>{awaitingCount === 1 ? "1 delivery is waiting for you" : `${awaitingCount} deliveries are waiting for you`}</strong>
+                        <span>{awaitingCount === 1 ? "A shop says your order arrived." : "Shops say your orders arrived."} Let them know you got it.</span>
+                    </p>
+                    <button type="button" className="btn" onClick={() => showFilter("progress")}>Show me</button>
+                </div>
+            )}
+
+            <div className="orders-filters" aria-label="Show orders">
+                {FILTERS.map((option) => (
+                    <button
+                        key={option.value}
+                        type="button"
+                        className={`orders-filter${option.value === filter ? " is-active" : ""}`}
+                        aria-pressed={option.value === filter}
+                        onClick={() => showFilter(option.value)}
+                    >
+                        {option.label}
+                        {counts && <span className="orders-filter-count">{counts[option.value]}</span>}
+                    </button>
+                ))}
+            </div>
+
             {orders.length === 0 ? (
-                <>
-                    <p>You have no paid orders yet.</p>
-                    <Link to="/" className="btn btn-primary">Start shopping</Link>
-                </>
+                <div className="orders-none">
+                    <p>No orders here right now.</p>
+                    <button type="button" className="btn" onClick={() => showFilter("all")}>Show all orders</button>
+                </div>
             ) : (
-                <ul className="order-history">
-                    {orders.map((order) => (
-                        <li key={order.id} className="card summary-card">
-                            <div className="order-header">
-                                <h2><Link to={`/orders/${order.id}`}>Order {order.id}</Link></h2>
-                                <span className="badge">{formatOrderStatus(order.status)}</span>
-                            </div>
-                            <p className="order-line-meta">
-                                {formatDate(order.payment?.paidAt ?? order.createdAt)} · Paid with {formatProvider(order.payment?.provider)}
-                            </p>
-                            {order.sellerOrders.map((sellerOrder) => (
-                                <div key={sellerOrder.id} className="order-seller">
-                                    <div className="order-line">
-                                        <span className="order-line-title">
-                                            {sellerOrder.seller?.businessName ?? "Seller"} · {describeOrderStatus(sellerOrder, "buyer")}
-                                        </span>
-                                        <span className="order-line-amount">{formatNaira(sellerOrder.total)}</span>
+                <ul className={`orders-list${isLoading ? " is-loading" : ""}`}>
+                    {orders.map((order) => {
+                        const paidAt = order.payment?.paidAt ?? order.createdAt
+                        const shopCount = order.sellerOrders.length
+
+                        return (
+                            <li key={order.id} className="orders-card">
+                                <div className="orders-card-head">
+                                    <div>
+                                        <h2>Order #{order.id}</h2>
+                                        <p>Placed {formatDay(order.createdAt, true)} · Paid with {formatProvider(order.payment?.provider)}</p>
                                     </div>
-                                    <FulfilmentTimeline status={sellerOrder.status} paidAt={order.payment?.paidAt ?? null} fulfilment={sellerOrder} viewer="buyer" />
-                                    {sellerOrder.status === "SHIPPED" && sellerOrder.deliveryReportedAt !== null && (
-                                        <ConfirmReceiptPrompt checkoutId={order.id} sellerOrderId={sellerOrder.id} onConfirmed={applyConfirmation} />
-                                    )}
-                                    {sellerOrder.status === "DELIVERED" && (
-                                        <Link to={`/orders/${order.id}?review=${sellerOrder.id}`} className="btn btn-primary">Write a review</Link>
-                                    )}
-                                    <OrderItemList items={sellerOrder.items} />
-                                    <BuyerOrderExtras checkoutId={order.id} sellerOrder={sellerOrder} compact />
+                                    <div className="orders-card-side">
+                                        <p className="orders-card-total">
+                                            {formatNaira(order.total)}
+                                            <span>{shopCount === 1 ? "From 1 shop" : `From ${shopCount} shops`}</span>
+                                        </p>
+                                        <Link to={`/orders/${order.id}`} className="orders-card-link" aria-label={`View order ${order.id}`}>
+                                            View order<ChevronRight size={16} aria-hidden="true" />
+                                        </Link>
+                                    </div>
                                 </div>
-                            ))}
-                            <div className="summary-row summary-row-total"><span>Total</span><span>{formatNaira(order.total)}</span></div>
-                        </li>
-                    ))}
+                                {order.sellerOrders.map((sellerOrder) => (
+                                    <ShopOrder
+                                        key={sellerOrder.id}
+                                        checkoutId={order.id}
+                                        paidAt={paidAt}
+                                        sellerOrder={sellerOrder}
+                                        onConfirmed={(updated) => {
+                                            applyConfirmation(updated)
+                                            setAttempt((count) => count + 1)
+                                        }}
+                                    />
+                                ))}
+                            </li>
+                        )
+                    })}
                 </ul>
             )}
+
             {lastPage > 1 && (
-                <div className="action-row">
-                    <button type="button" onClick={() => { setOutcome(null); setPage(page - 1) }} disabled={page <= 1}>Previous</button>
+                <nav className="orders-pager" aria-label="Pages">
+                    <button type="button" className="btn" disabled={page <= 1} onClick={() => showFilter(filter, page - 1)}>Previous</button>
                     <span>Page {page} of {lastPage}</span>
-                    <button type="button" onClick={() => { setOutcome(null); setPage(page + 1) }} disabled={page >= lastPage}>Next</button>
-                </div>
+                    <button type="button" className="btn" disabled={page >= lastPage} onClick={() => showFilter(filter, page + 1)}>Next</button>
+                </nav>
             )}
         </div>
     )
