@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react"
-import type { ReactNode } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { AlertTriangle, CalendarDays, Check, ChevronRight, PackageCheck, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { AlertTriangle, CalendarDays, ChevronRight, PackageCheck, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react"
+import { OrderItemRow, OrderNote, OrderProgress } from "../components/BuyerOrderParts"
 import ConfirmReceiptPrompt from "../components/ConfirmReceiptPrompt"
 import Notice from "../components/Notice"
 import ShopAvatar from "../components/ShopAvatar"
+import { SHORT_COMPLAINT_REASONS, buyerProgressSteps, describeBuyerStatus, formatOrderDay, hasProgress } from "../lib/buyerOrders"
 import { describeDispute } from "../lib/disputeApi"
 import { formatNaira } from "../lib/money"
-import { fetchAwaitingConfirmationCount, fetchMyOrders, formatOrderStatus, formatProvider } from "../lib/orderApi"
+import { fetchAwaitingConfirmationCount, fetchMyOrders, formatProvider } from "../lib/orderApi"
 import type { OrderOutcome } from "../lib/orderApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
-import type { CustomerOrder, CustomerOrderSummary, MyOrderFilter, MyOrderPage, OrderItem } from "../types/order"
+import type { CustomerOrder, CustomerOrderSummary, MyOrderFilter, MyOrderPage } from "../types/order"
 
 type SellerOrder = CustomerOrderSummary["sellerOrders"][number]
 
@@ -31,119 +31,6 @@ function readPage(value: string | null): number {
     return Number.isSafeInteger(page) && page >= 1 ? page : 1
 }
 
-// "25 Oct", or "25 Oct 2026" with the year.
-function formatDay(isoTime: string | null | undefined, withYear = false): string {
-    const date = isoTime ? new Date(isoTime) : null
-    return date && !Number.isNaN(date.getTime())
-        ? date.toLocaleDateString("en-NG", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) })
-        : ""
-}
-
-type StatusTone = "attention" | "progress" | "done" | "neutral"
-
-// Where one shop's part of an order stands, in the buyer's words.
-function describeStatus(sellerOrder: SellerOrder): { label: string, tone: StatusTone } {
-    switch (sellerOrder.status) {
-        case "PAID":
-            return { label: "Being prepared", tone: "progress" }
-        case "SHIPPED":
-            return sellerOrder.deliveryReportedAt
-                ? { label: "Confirm delivery", tone: "attention" }
-                : { label: "On the way", tone: "progress" }
-        case "DELIVERED":
-            return { label: "Delivered", tone: "done" }
-        default:
-            return { label: formatOrderStatus(sellerOrder.status), tone: "neutral" }
-    }
-}
-
-type Step = { label: string, detail: string, state: "done" | "waiting" | "next" }
-
-// Paid, shipped, delivered. While the shop says it was delivered and the buyer has not confirmed,
-// the last step waits for the buyer.
-function progressSteps(sellerOrder: SellerOrder, paidAt: string | null): Step[] {
-    const isDelivered = sellerOrder.status === "DELIVERED"
-    const isShipped = isDelivered || sellerOrder.shippedAt !== null
-    const isReported = !isDelivered && sellerOrder.deliveryReportedAt !== null
-
-    return [
-        { label: "Paid", detail: formatDay(paidAt), state: "done" },
-        { label: "Shipped", detail: isShipped ? formatDay(sellerOrder.shippedAt) : "Not yet", state: isShipped ? "done" : "next" },
-        isReported
-            ? { label: "Delivered?", detail: `Shop says ${formatDay(sellerOrder.deliveryReportedAt)}`, state: "waiting" }
-            : {
-                label: "Delivered",
-                detail: isDelivered ? formatDay(sellerOrder.deliveryConfirmedAt ?? sellerOrder.deliveryAutoClosedAt) : "Not yet",
-                state: isDelivered ? "done" : "next"
-            }
-    ]
-}
-
-function ProgressSteps({ steps }: { steps: Step[] }) {
-    const summary = steps.map((step) => `${step.label} ${step.state === "done" ? "done" : step.state === "waiting" ? "waiting for you" : "not yet"}`).join(", ")
-
-    return (
-        <div className="orders-steps" role="img" aria-label={summary}>
-            <div className="orders-steps-track">
-                {steps.map((step, index) => (
-                    <span key={step.label} className="orders-steps-part">
-                        {index > 0 && <span className={`orders-steps-line${step.state !== "next" ? " is-done" : ""}`} />}
-                        <span className={`orders-steps-dot is-${step.state}`}>
-                            {step.state === "done" && <Check size={12} strokeWidth={3.2} aria-hidden="true" />}
-                        </span>
-                    </span>
-                ))}
-            </div>
-            <div className="orders-steps-labels">
-                {steps.map((step) => (
-                    <span key={step.label}><b>{step.label}</b>{step.detail}</span>
-                ))}
-            </div>
-        </div>
-    )
-}
-
-function ItemRow({ item }: { item: OrderItem }) {
-    const details = [
-        item.optionLabel,
-        item.sizeLabel,
-        `Qty ${item.quantity}`,
-        item.quantity > 1 ? `${formatNaira(item.unitPrice)} each` : null
-    ].filter(Boolean).join(" · ")
-
-    return (
-        <li className="orders-item">
-            {item.imageUrl
-                ? <img className="orders-item-photo" src={item.imageUrl} alt="" loading="lazy" />
-                : <span className="orders-item-photo" aria-hidden="true"><ShoppingBag size={22} /></span>}
-            <div className="orders-item-text">
-                <span className="orders-item-title">{item.productTitle ?? item.title}</span>
-                <span className="orders-item-details">{details}</span>
-            </div>
-            <span className="orders-item-price">{formatNaira(item.lineTotal)}</span>
-        </li>
-    )
-}
-
-function OrderNote({ icon: Icon, tone, children }: { icon: LucideIcon, tone: "plain" | "warning" | "good", children: ReactNode }) {
-    return (
-        <div className={`orders-note is-${tone}`}>
-            <Icon size={18} aria-hidden="true" />
-            <div className="orders-note-text">{children}</div>
-        </div>
-    )
-}
-
-// A complaint's reason, short enough for one line on the list.
-const SHORT_REASONS: Record<string, string> = {
-    NOT_RECEIVED: "order not received",
-    NOT_AS_DESCRIBED: "item not as described",
-    DAMAGED: "item arrived damaged",
-    WRONG_ITEM: "wrong item sent",
-    OTHER: "a problem with the order",
-    SELLER_REFUND_OFFER: "refund offered by the shop"
-}
-
 type ShopOrderProps = {
     checkoutId: number
     paidAt: string | null
@@ -154,8 +41,8 @@ type ShopOrderProps = {
 // One shop's part of an order: what was bought, where it is, and what the buyer can do next.
 function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderProps) {
     const shop = sellerOrder.seller
-    const status = describeStatus(sellerOrder)
-    const hasSteps = ["PAID", "SHIPPED", "DELIVERED"].includes(sellerOrder.status)
+    const status = describeBuyerStatus(sellerOrder)
+    const hasSteps = hasProgress(sellerOrder)
     const needsConfirm = sellerOrder.status === "SHIPPED" && sellerOrder.deliveryReportedAt !== null
     const isDelivered = sellerOrder.status === "DELIVERED"
     const canReport = sellerOrder.dispute === null && hasSteps
@@ -174,9 +61,9 @@ function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderPr
 
             <div className={`orders-shop-body${hasSteps ? "" : " is-single"}`}>
                 <ul className="orders-items">
-                    {sellerOrder.items.map((item, index) => <ItemRow key={`${item.listingId}-${index}`} item={item} />)}
+                    {sellerOrder.items.map((item, index) => <OrderItemRow key={`${item.listingId}-${index}`} item={item} />)}
                 </ul>
-                {hasSteps && <ProgressSteps steps={progressSteps(sellerOrder, paidAt)} />}
+                {hasSteps && <OrderProgress steps={buyerProgressSteps(sellerOrder, paidAt)} />}
             </div>
 
             {needsConfirm && (
@@ -191,7 +78,7 @@ function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderPr
             )}
 
             {sellerOrder.status === "PAID" && sellerOrder.fulfilmentType === "PRE_ORDER" && sellerOrder.readyAt && (
-                <OrderNote icon={CalendarDays} tone="plain">Pre-order: the shop will have it ready on {formatDay(sellerOrder.readyAt)}.</OrderNote>
+                <OrderNote icon={CalendarDays} tone="plain">Pre-order: the shop will have it ready on {formatOrderDay(sellerOrder.readyAt)}.</OrderNote>
             )}
 
             {sellerOrder.status === "SHIPPED" && !needsConfirm && sellerOrder.shippingNote && (
@@ -200,7 +87,7 @@ function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderPr
 
             {sellerOrder.dispute && (
                 <OrderNote icon={AlertTriangle} tone="warning">
-                    <span>Complaint: {SHORT_REASONS[sellerOrder.dispute.reason] ?? SHORT_REASONS.OTHER}. {describeDispute(sellerOrder.dispute, "buyer").label}.</span>
+                    <span>Complaint: {SHORT_COMPLAINT_REASONS[sellerOrder.dispute.reason] ?? SHORT_COMPLAINT_REASONS.OTHER}. {describeDispute(sellerOrder.dispute, "buyer").label}.</span>
                     <Link to={`/disputes/${sellerOrder.dispute.id}`}>View complaint</Link>
                 </OrderNote>
             )}
@@ -208,9 +95,9 @@ function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderPr
             {sellerOrder.refunds.map((refund) => (
                 <OrderNote key={refund.reference} icon={RotateCcw} tone={refund.status === "SUCCEEDED" ? "good" : "plain"}>
                     {refund.status === "SUCCEEDED"
-                        ? `Refund of ${formatNaira(refund.amount)} completed${refund.completedAt ? ` on ${formatDay(refund.completedAt)}` : ""}.`
+                        ? `Refund of ${formatNaira(refund.amount)} completed${refund.completedAt ? ` on ${formatOrderDay(refund.completedAt)}` : ""}.`
                         : refund.status === "PENDING" || refund.status === "PROCESSING"
-                            ? `Refund of ${formatNaira(refund.amount)} on its way${refund.expectedAt ? `, expected by ${formatDay(refund.expectedAt)}` : ""}.`
+                            ? `Refund of ${formatNaira(refund.amount)} on its way${refund.expectedAt ? `, expected by ${formatOrderDay(refund.expectedAt)}` : ""}.`
                             : `Refund of ${formatNaira(refund.amount)}: StoreHatch is sorting this out and will keep you posted.`}
                     {refund.note && ` ${refund.note}`}
                 </OrderNote>
@@ -226,8 +113,8 @@ function ShopOrder({ checkoutId, paidAt, sellerOrder, onConfirmed }: ShopOrderPr
                     {isDelivered && (
                         <span className="orders-muted">
                             {sellerOrder.deliveryConfirmedAt
-                                ? `You confirmed delivery on ${formatDay(sellerOrder.deliveryConfirmedAt)}.`
-                                : sellerOrder.deliveryAutoClosedAt ? `Marked delivered on ${formatDay(sellerOrder.deliveryAutoClosedAt)}.` : ""}
+                                ? `You confirmed delivery on ${formatOrderDay(sellerOrder.deliveryConfirmedAt)}.`
+                                : sellerOrder.deliveryAutoClosedAt ? `Marked delivered on ${formatOrderDay(sellerOrder.deliveryAutoClosedAt)}.` : ""}
                         </span>
                     )}
                     {canReport && !needsConfirm && (
@@ -413,7 +300,7 @@ function MyOrdersPage() {
                                 <div className="orders-card-head">
                                     <div>
                                         <h2>Order #{order.id}</h2>
-                                        <p>Placed {formatDay(order.createdAt, true)} · Paid with {formatProvider(order.payment?.provider)}</p>
+                                        <p>Placed {formatOrderDay(order.createdAt, { year: true })} · Paid with {formatProvider(order.payment?.provider)}</p>
                                     </div>
                                     <div className="orders-card-side">
                                         <p className="orders-card-total">

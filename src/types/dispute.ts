@@ -89,6 +89,9 @@ export type OrderDisputeLink = {
     status: DisputeStatus
     outcome: DisputeOutcome | null
     reason: DisputeReason
+    requestedAmount?: string
+    responseDueAt?: string// when the seller must reply by, while the complaint is OPEN
+    createdAt?: string
 }
 
 export const DISPUTE_REASON_OPTIONS: Array<{ value: Exclude<DisputeReason, "SELLER_REFUND_OFFER">, label: string }> = [

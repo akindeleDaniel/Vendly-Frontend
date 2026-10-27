@@ -1120,32 +1120,13 @@
   border-top: 1px solid var(--color-border);
 }
 
-.review-item p,
-.review-target p {
+.review-item p {
   margin: var(--space-1) 0;
 }
 
 .review-meta {
   font-size: 0.875rem;
   color: var(--color-text-muted);
-}
-
-.review-panel {
-  display: grid;
-  gap: var(--space-3);
-  margin: var(--space-3) 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-}
-
-.review-target {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.review-target h3 {
-  margin: 0;
-  font-size: 1rem;
 }
 
 /* Choosing a rating */
@@ -1179,18 +1160,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  width: 40px;
   height: 44px;
-  font-size: 1.75rem;
-  line-height: 1;
+  border-radius: var(--radius-sm);
   color: var(--color-border-strong);
-  opacity: 0.5;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.star-input-option label:hover {
+  background: var(--color-cream);
+}
+
+.star-input-option label svg {
+  fill: none;
 }
 
 .star-input-option label.is-filled {
-  color: var(--color-amber);
-  opacity: 1;
+  color: var(--color-amber-text);
+}
+
+.star-input-option label.is-filled svg {
+  fill: var(--color-amber);
 }
 
 .star-input-option input:focus-visible + label {

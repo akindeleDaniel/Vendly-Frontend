@@ -677,3 +677,23 @@
     margin-left: 0;
   }
 }
+
+/* Larger progress on an order's own page */
+.orders-steps.is-large .orders-steps-dot {
+  width: 28px;
+  height: 28px;
+}
+
+.orders-steps.is-large .orders-steps-line {
+  height: 3px;
+}
+
+.orders-steps.is-large .orders-steps-labels {
+  margin-top: 10px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.orders-steps.is-large .orders-steps-labels b {
+  font-size: var(--text-sm);
+}

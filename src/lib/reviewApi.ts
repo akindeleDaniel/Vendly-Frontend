@@ -23,11 +23,12 @@ export function fetchOrderReviews(checkoutId: number, sellerOrderId: number, sig
 
 export type NewReview = { rating: number, comment?: string }
 
-// Saves one new review: of the shop or of one product in the order.
+// Saves new reviews of the shop, of products in the order, or both at once. Nothing is saved unless
+// every part is valid. Leave out products rather than sending an empty list.
 export function createOrderReview(
     checkoutId: number,
     sellerOrderId: number,
-    target: { shop: NewReview } | { products: Array<NewReview & { listingId: number }> }
+    target: { shop?: NewReview, products?: Array<NewReview & { listingId: number }> }
 ): Promise<ApiResult<unknown>> {
     return apiRequest<unknown>(`/orders/${checkoutId}/seller-orders/${sellerOrderId}/reviews`, { method: "POST", body: target })
 }

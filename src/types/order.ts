@@ -10,6 +10,7 @@ export type OrderSeller = {
   slug: string
   logoUrl?: string | null // on the shopper's order pages
   brandColor?: BrandColor // the resolved preset, as in the cart
+  location?: string | null // the shop's area, such as "Surulere, Lagos"
 } | null
 
 export type OrderPayment = {
