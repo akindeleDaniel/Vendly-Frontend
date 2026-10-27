@@ -1,44 +1,164 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Link } from "react-router-dom"
+import { RotateCcw } from "lucide-react"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import { fetchSellerEarnings } from "../lib/adminLookupApi"
 import { formatNaira } from "../lib/money"
-import { formatOrderStatus } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import type { EarningsMonth } from "../types/earnings"
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-// "2026-10" as "October 2026".
-function formatMonth(month: string): string {
+type RangeId = "month" | "three" | "year" | "all" | "custom"
+
+const RANGES: Array<{ id: RangeId, label: string }> = [
+    { id: "month", label: "This month" },
+    { id: "three", label: "Last 3 months" },
+    { id: "year", label: "This year" },
+    { id: "all", label: "All time" },
+    { id: "custom", label: "Pick dates" }
+]
+
+const STATUSES: Array<{ value: string, label: string, tone: string }> = [
+    { value: "PAID", label: "To ship", tone: "is-amber" },
+    { value: "SHIPPED", label: "On the way", tone: "is-green" },
+    { value: "DELIVERED", label: "Delivered", tone: "is-forest" },
+    { value: "REFUNDED", label: "Refunded", tone: "is-grey" }
+]
+
+// "2026-10" as "October 2026", or "Oct" when short.
+function formatMonth(month: string, short = false): string {
     const [year, number] = month.split("-")
     const name = MONTH_NAMES[Number(number) - 1]
-    return name ? `${name} ${year}` : month
+    return name ? (short ? name.slice(0, 3) : `${name} ${year}`) : month
 }
 
-function Figure({ label, value, hint }: { label: string, value: string, hint?: string }) {
+function isoDay(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+// The dates sent to the backend for a preset; "" leaves that end open.
+function presetDates(id: RangeId): { from: string, to: string } {
+    const today = new Date()
+    switch (id) {
+        case "month":
+            return { from: isoDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: "" }
+        case "three":
+            return { from: isoDay(new Date(today.getFullYear(), today.getMonth() - 2, 1)), to: "" }
+        case "year":
+            return { from: isoDay(new Date(today.getFullYear(), 0, 1)), to: "" }
+        default:
+            return { from: "", to: "" }
+    }
+}
+
+function rangeName(id: RangeId, from: string, to: string): string {
+    switch (id) {
+        case "month":
+            return MONTH_NAMES[new Date().getMonth()]
+        case "three":
+            return "the last 3 months"
+        case "year":
+            return String(new Date().getFullYear())
+        case "all":
+            return "all time"
+        default:
+            return `${from || "the start"} to ${to || "today"}`
+    }
+}
+
+// The last twelve months as bars, oldest first, with the months inside the chosen range filled in.
+// Picking a bar shows that month's figures; the table below holds the same numbers for screen readers.
+function MonthChart({ months, from, to }: { months: EarningsMonth[], from: string, to: string }) {
+    const oldestFirst = [...months].reverse()
+    const [picked, setPicked] = useState(oldestFirst.length - 1)
+    const selected = oldestFirst[Math.min(picked, oldestFirst.length - 1)]
+    const highest = Math.max(...oldestFirst.map((month) => Number(month.sales)), 1)
+    const fromMonth = from.slice(0, 7)
+    const toMonth = to.slice(0, 7)
+    const isInRange = (month: string) => (!fromMonth || month >= fromMonth) && (!toMonth || month <= toMonth)
+
     return (
-        <div className="figure">
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-            {hint && <p className="figure-hint">{hint}</p>}
-        </div>
+        <>
+            <div className="earnings-chart" role="group" aria-label="Sales by month">
+                {oldestFirst.map((month, index) => (
+                    <button
+                        key={month.month}
+                        type="button"
+                        className="earnings-bar-button"
+                        aria-pressed={index === picked}
+                        aria-label={`${formatMonth(month.month)}: ${formatNaira(month.sales)} from ${month.orders} ${month.orders === 1 ? "order" : "orders"}`}
+                        onClick={() => setPicked(index)}
+                    >
+                        <span
+                            className={`earnings-bar${isInRange(month.month) ? " is-in-range" : ""}${index === picked ? " is-picked" : ""}`}
+                            style={{ height: `${Math.max(3, Math.round((Number(month.sales) / highest) * 100))}%` }}
+                        />
+                    </button>
+                ))}
+            </div>
+            <div className="earnings-chart-labels" aria-hidden="true">
+                {oldestFirst.map((month) => <span key={month.month}>{formatMonth(month.month, true)}</span>)}
+            </div>
+            {selected && (
+                <p className="earnings-picked" aria-live="polite">
+                    <b>{formatMonth(selected.month)}</b>
+                    <span>{selected.orders === 1 ? "1 order" : `${selected.orders} orders`}</span>
+                    <span>Sales {formatNaira(selected.sales)}</span>
+                    <span>Paid out {formatNaira(selected.paidOutByProvider)}</span>
+                    {Number(selected.refunded) > 0 && <span>Refunded {formatNaira(selected.refunded)}</span>}
+                </p>
+            )}
+            <div className="table-scroll earnings-table">
+                <table className="data-table">
+                    <caption className="visually-hidden">Sales, fees and payouts by month</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            <th scope="col">Orders</th>
+                            <th scope="col">Sales</th>
+                            <th scope="col">Fees</th>
+                            <th scope="col">Paid out</th>
+                            <th scope="col">Refunded</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {months.map((month) => (
+                            <tr key={month.month} className={month.month === selected?.month ? "is-picked" : undefined}>
+                                <th scope="row">{formatMonth(month.month)}</th>
+                                <td>{month.orders}</td>
+                                <td>{formatNaira(month.sales)}</td>
+                                <td>{formatNaira(month.providerFees)}</td>
+                                <td>{formatNaira(month.paidOutByProvider)}</td>
+                                <td>{Number(month.refunded) > 0 ? formatNaira(month.refunded) : "—"}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </>
     )
 }
 
 // The seller's sales record: paid orders, what the payment providers took, and what they paid out,
-// for a date range, with the last twelve months below. It is built from the figures the providers
-// reported for each order, so it is a record of sales and not a bank statement.
+// for a period, with the last twelve months as a chart and a table. It is built from the figures the
+// providers reported for each order, so it is a record of sales and not a bank statement.
 function SellerEarningsPage() {
     useDocumentTitle("Earnings")
+    const fromId = useId()
+    const toId = useId()
+    const [rangeId, setRangeId] = useState<RangeId>("year")
     const [fromInput, setFromInput] = useState("")
     const [toInput, setToInput] = useState("")
-    const [range, setRange] = useState({ from: "", to: "" })
+    const [custom, setCustom] = useState({ from: "", to: "" })
     const [rangeError, setRangeError] = useState("")
+    const range = rangeId === "custom" ? custom : presetDates(rangeId)
     const { state, reload } = useApiResource(`${range.from}|${range.to}`, (signal) => fetchSellerEarnings(range.from, range.to, signal))
+    const name = rangeName(rangeId, range.from, range.to)
 
-    function applyRange(event: React.SubmitEvent<HTMLFormElement>) {
+    function applyCustom(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
 
         if (fromInput && toInput && fromInput > toInput) {
@@ -47,34 +167,37 @@ function SellerEarningsPage() {
         }
 
         setRangeError("")
-        setRange({ from: fromInput, to: toInput })
-    }
-
-    function clearRange() {
-        setFromInput("")
-        setToInput("")
-        setRangeError("")
-        setRange({ from: "", to: "" })
+        setCustom({ from: fromInput, to: toInput })
     }
 
     return (
-        <div>
+        <div className="money-page">
             <BackArrow to="/seller/myListing" label="Back to my store" />
-            <h1>Earnings</h1>
-            <p className="page-intro">
-                A record of your paid orders, from the figures the payment providers reported for each one. It is not a bank statement: the money reaches your bank through the provider on its own schedule.
-            </p>
+            <div className="product-form-title">
+                <h1>Earnings</h1>
+                <p>Your paid orders and what the payment providers took and paid out. It isn't a bank statement: money reaches your bank through Paystack or Flutterwave on their own schedule.</p>
+            </div>
 
-            <form onSubmit={applyRange} className="filter-row earnings-range">
-                <label className="field-inline">
-                    From <input type="date" value={fromInput} max={toInput || undefined} onChange={(event) => setFromInput(event.target.value)} />
-                </label>
-                <label className="field-inline">
-                    To <input type="date" value={toInput} min={fromInput || undefined} onChange={(event) => setToInput(event.target.value)} />
-                </label>
-                <button type="submit">Show</button>
-                {(range.from || range.to) && <button type="button" className="btn-text" onClick={clearRange}>Show everything</button>}
-            </form>
+            <div className="money-chips" role="group" aria-label="Time period">
+                {RANGES.map((option) => (
+                    <button key={option.id} type="button" className={`money-chip${rangeId === option.id ? " is-on" : ""}`} aria-pressed={rangeId === option.id} onClick={() => setRangeId(option.id)}>
+                        {option.label}
+                    </button>
+                ))}
+            </div>
+            {rangeId === "custom" && (
+                <form className="earnings-dates" onSubmit={applyCustom}>
+                    <div className="product-field">
+                        <label htmlFor={fromId}>From</label>
+                        <input id={fromId} className="product-input" type="date" value={fromInput} max={toInput || undefined} onChange={(event) => setFromInput(event.target.value)} />
+                    </div>
+                    <div className="product-field">
+                        <label htmlFor={toId}>To</label>
+                        <input id={toId} className="product-input" type="date" value={toInput} min={fromInput || undefined} onChange={(event) => setToInput(event.target.value)} />
+                    </div>
+                    <button type="submit" className="btn btn-primary">Show</button>
+                </form>
+            )}
             {rangeError && <Notice kind="error">{rangeError}</Notice>}
 
             {state.kind === "loading" && <p role="status">Loading your earnings...</p>}
@@ -89,76 +212,75 @@ function SellerEarningsPage() {
 
                 return (
                     <>
-                        <section aria-labelledby="totals-heading" className="card summary-card">
-                            <h2 id="totals-heading">
-                                {range.from || range.to ? `${range.from || "The start"} to ${range.to || "today"}` : "All paid orders"}
-                            </h2>
-                            {totals.ordersWithoutProviderFigures > 0 && (
-                                <Notice kind="info">
-                                    {totals.ordersWithoutProviderFigures} {totals.ordersWithoutProviderFigures === 1 ? "order has" : "orders have"} no figures from the provider yet, so the fees and payouts below may be incomplete.
-                                </Notice>
-                            )}
-                            <dl className="figures">
-                                <Figure label="Paid orders" value={String(totals.orders)} />
-                                <Figure label="Sales" value={formatNaira(totals.sales)} hint="What buyers paid you for these orders" />
-                                <Figure label="Provider fees" value={formatNaira(totals.providerFees)} hint="Taken by Paystack or Flutterwave" />
-                                <Figure label="Paid out by the providers" value={formatNaira(totals.paidOutByProvider)} hint="Sales minus fees" />
-                                <Figure label="Refunded to buyers" value={formatNaira(totals.refunded)} />
-                                <Figure label="Kept for earlier refunds" value={formatNaira(totals.keptForEarlierRefunds)} hint="Taken from these sales to repay refunds" />
-                            </dl>
-                        </section>
-
-                        {Object.keys(ordersByStatus).length > 0 && (
-                            <section aria-labelledby="status-heading" className="card summary-card">
-                                <h2 id="status-heading">Orders by status</h2>
-                                <ul className="deduction-list">
-                                    {Object.entries(ordersByStatus).map(([status, count]) => (
-                                        <li key={status}><span>{formatOrderStatus(status)}</span><strong>{count}</strong></li>
-                                    ))}
-                                </ul>
-                            </section>
-                        )}
-
-                        {owedToVendly.count > 0 && (
-                            <Notice kind="warning">
-                                <p>You still owe StoreHatch {formatNaira(owedToVendly.amountStillOwed)} for {owedToVendly.count} {owedToVendly.count === 1 ? "refund" : "refunds"}.</p>
-                                <Link to="/seller/liabilities" className="btn">See what you owe</Link>
+                        {totals.ordersWithoutProviderFigures > 0 && (
+                            <Notice kind="info">
+                                {totals.ordersWithoutProviderFigures} {totals.ordersWithoutProviderFigures === 1 ? "order has" : "orders have"} no figures from the provider yet, so the fees and payouts below may be incomplete.
                             </Notice>
                         )}
 
-                        <section aria-labelledby="months-heading" className="card summary-card">
-                            <h2 id="months-heading">The last twelve months</h2>
-                            {months.length === 0 ? (
-                                <p>No paid orders in the last twelve months.</p>
-                            ) : (
-                                <div className="table-scroll">
-                                    <table className="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col">Month</th>
-                                                <th scope="col">Orders</th>
-                                                <th scope="col">Sales</th>
-                                                <th scope="col">Provider fees</th>
-                                                <th scope="col">Paid out</th>
-                                                <th scope="col">Refunded</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {months.map((month) => (
-                                                <tr key={month.month}>
-                                                    <th scope="row">{formatMonth(month.month)}</th>
-                                                    <td>{month.orders}</td>
-                                                    <td>{formatNaira(month.sales)}</td>
-                                                    <td>{formatNaira(month.providerFees)}</td>
-                                                    <td>{formatNaira(month.paidOutByProvider)}</td>
-                                                    <td>{formatNaira(month.refunded)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                        <div className="earnings-hero">
+                            <div className="earnings-hero-main">
+                                <div>
+                                    <small>Paid out by the providers · {name}</small>
+                                    <b>{formatNaira(totals.paidOutByProvider)}</b>
+                                    <p>From {totals.orders === 1 ? "1 paid order" : `${totals.orders} paid orders`}, after payment fees</p>
                                 </div>
-                            )}
-                        </section>
+                                <dl>
+                                    <dt>Sales</dt><dd>{formatNaira(totals.sales)}</dd>
+                                    <dt>Payment fees</dt><dd>−{formatNaira(totals.providerFees)}</dd>
+                                </dl>
+                            </div>
+                            <dl className="earnings-figures">
+                                <div><dt>Sales</dt><dd>{formatNaira(totals.sales)}</dd><span>What buyers paid for these orders</span></div>
+                                <div><dt>Payment fees</dt><dd>{formatNaira(totals.providerFees)}</dd><span>Taken by Paystack or Flutterwave</span></div>
+                                <div><dt>Refunded to buyers</dt><dd>{formatNaira(totals.refunded)}</dd><span>For orders in this period</span></div>
+                                <div><dt>Kept for earlier refunds</dt><dd>{formatNaira(totals.keptForEarlierRefunds)}</dd><span>Taken from these sales to repay refunds</span></div>
+                            </dl>
+                        </div>
+
+                        {owedToVendly.count > 0 && (
+                            <div className="money-owed" role="status">
+                                <span className="money-owed-icon" aria-hidden="true"><RotateCcw size={18} /></span>
+                                <p>
+                                    <b>You still owe {formatNaira(owedToVendly.amountStillOwed)} for {owedToVendly.count === 1 ? "1 refund" : `${owedToVendly.count} refunds`}.</b>
+                                    <span>It comes out of your next sales, never more than half your share of any one order.</span>
+                                </p>
+                                <Link to="/seller/liabilities" className="btn">See refunds owed</Link>
+                            </div>
+                        )}
+
+                        <div className="money-grid">
+                            <section className="money-card" aria-labelledby="months-heading">
+                                <div className="money-card-head">
+                                    <h2 id="months-heading">The last twelve months</h2>
+                                    {months.length > 0 && <span>Pick a month to see its figures</span>}
+                                </div>
+                                {months.length === 0
+                                    ? <p className="product-help">No paid orders in the last twelve months.</p>
+                                    : <MonthChart months={months} from={range.from} to={range.to} />}
+                            </section>
+
+                            <div className="money-side">
+                                <section className="money-card" aria-labelledby="status-heading">
+                                    <h2 id="status-heading" className="money-side-title">Orders in {name}</h2>
+                                    <ul className="earnings-statuses">
+                                        {STATUSES.map((status) => (
+                                            <li key={status.value}>
+                                                <Link to={`/seller/orders?status=${status.value}`}>
+                                                    <span className={`earnings-dot ${status.tone}`} aria-hidden="true" />
+                                                    {status.label}
+                                                    <b>{ordersByStatus[status.value] ?? 0}</b>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+                                <section className="money-card" aria-labelledby="source-heading">
+                                    <h2 id="source-heading" className="money-side-title">Where the numbers come from</h2>
+                                    <p className="product-help">Each paid order shows the fee the provider reported. When a provider hasn't reported yet, the order is counted but its fee and payout are left out, and we say so above.</p>
+                                </section>
+                            </div>
+                        </div>
                     </>
                 )
             })()}

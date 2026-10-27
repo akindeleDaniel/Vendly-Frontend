@@ -1,0 +1,865 @@
+/* The seller's earnings, reviews and refunds owed. They share the page width, a row of filter chips,
+   plain cards and an empty state, and reuse the title and fields of product-form-page.css. */
+
+.money-page {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* A row of chips that scrolls sideways on a phone. The padding keeps the hover lift from being cut off. */
+.money-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin: calc(var(--space-4) - 6px) -6px calc(var(--space-4) - 6px);
+  padding: 6px;
+  scrollbar-width: none;
+}
+
+.money-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-size);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.money-chip.is-on {
+  border-color: var(--color-forest);
+  background: var(--color-forest);
+  color: var(--color-surface);
+}
+
+.money-chip-count {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-placeholder);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.money-chip.is-on .money-chip-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-surface);
+}
+
+.money-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 22px var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.money-card h2 {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: var(--text-lg);
+}
+
+.money-card h2.money-side-title {
+  font-size: var(--text-base);
+}
+
+.money-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.money-card-head span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.money-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.money-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.money-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 28px;
+  border: 1.5px dashed var(--color-border-muted);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.money-empty b {
+  color: var(--color-charcoal);
+  font-size: var(--text-base);
+}
+
+/* What the seller still owes, linking to Refunds owed */
+.money-owed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px var(--space-4) 14px 18px;
+  border: 1px solid var(--color-amber-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-amber-tint);
+}
+
+.money-owed p {
+  flex: 1;
+  min-width: 220px;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.money-owed p span {
+  display: block;
+  color: var(--color-charcoal);
+  font-size: var(--text-sm);
+}
+
+.money-owed-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-amber);
+  color: var(--color-charcoal);
+}
+
+/* Earnings */
+.earnings-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: var(--space-4);
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.earnings-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-top: var(--space-2);
+}
+
+.earnings-hero-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: 18px;
+  background: var(--color-forest);
+  color: var(--color-cream);
+}
+
+.earnings-hero-main small {
+  color: var(--color-forest-tint);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.earnings-hero-main b {
+  display: block;
+  font-size: 2.5rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.earnings-hero-main p {
+  margin: 0;
+  color: var(--color-forest-tint);
+  font-size: var(--text-sm);
+}
+
+.earnings-hero-main dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 14px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: var(--text-sm);
+}
+
+.earnings-hero-main dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.earnings-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.earnings-figures div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-4) 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.earnings-figures dt {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.earnings-figures dd {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.earnings-figures span {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.earnings-chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-2);
+  align-items: end;
+  height: 220px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.earnings-bar-button {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: none;
+  cursor: pointer;
+}
+
+.earnings-bar-button:hover:not(:disabled) {
+  transform: none;
+}
+
+.earnings-bar {
+  display: block;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--tint-sage);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.earnings-bar.is-in-range {
+  background: var(--color-success);
+}
+
+.earnings-bar.is-picked {
+  background: var(--color-forest);
+  box-shadow: 0 0 0 3px var(--color-amber);
+}
+
+.earnings-chart-labels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.earnings-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  font-size: var(--text-sm);
+}
+
+.earnings-table tr.is-picked {
+  background: var(--color-amber-tint);
+}
+
+.earnings-statuses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.earnings-statuses a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-charcoal);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.earnings-statuses a:hover {
+  border-color: var(--color-forest);
+  color: var(--color-charcoal);
+}
+
+.earnings-statuses b {
+  margin-left: auto;
+  font-size: var(--text-base);
+}
+
+.earnings-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.earnings-dot.is-amber { background: var(--color-amber); }
+.earnings-dot.is-green { background: var(--color-success); }
+.earnings-dot.is-forest { background: var(--color-forest); }
+.earnings-dot.is-grey { background: var(--color-border-strong); }
+
+/* Reviews */
+.review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.review-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--color-border-muted);
+}
+
+.review-stars .is-on {
+  color: var(--color-amber);
+}
+
+.review-score {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-score b {
+  font-size: 3rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.review-score > span:last-child {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.review-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-bars li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.review-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-placeholder);
+}
+
+.review-track i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-amber);
+}
+
+.review-list-column {
+  min-width: 0;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.review-card.is-hidden {
+  background: var(--color-surface-soft);
+}
+
+.review-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.review-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+.review-who {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-who span {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.review-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.review-pill {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.review-pill.is-reported {
+  background: var(--color-amber-tint);
+  color: var(--color-amber-text);
+}
+
+.review-pill.is-hidden {
+  background: var(--tint-stone);
+  color: var(--color-charcoal);
+}
+
+.review-pill.is-done {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.review-product {
+  align-self: flex-start;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.review-comment {
+  margin: 0;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.review-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-photos img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.review-report-open {
+  align-self: flex-start;
+  min-height: var(--tap-size);
+  padding: 0;
+}
+
+.review-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.review-report label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.review-report-text {
+  min-height: 90px;
+}
+
+.review-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Refunds owed */
+.owed-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-top: var(--space-5);
+}
+
+.owed-total {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.owed-total small {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.owed-total b {
+  font-size: 2.5rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.owed-total-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.owed-progress {
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-placeholder);
+}
+
+.owed-progress i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-success);
+}
+
+.owed-how {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.owed-how li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.owed-how li > span {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-forest);
+  color: var(--color-surface);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.owed-terms {
+  margin-top: 18px;
+  border-color: var(--color-amber-line);
+}
+
+.owed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.owed-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.owed-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.owed-card-head h2 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.owed-card-head h2 a {
+  color: var(--color-charcoal);
+  text-decoration: none;
+}
+
+.owed-card-head h2 a:hover {
+  text-decoration: underline;
+}
+
+.owed-card-date {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.owed-card-reason {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: var(--text-sm);
+}
+
+.owed-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.owed-numbers div {
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.owed-numbers dt {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.owed-numbers dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.owed-deductions summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-size);
+  color: var(--color-forest);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.owed-deductions ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 0 0 6px;
+  padding: 0 0 0 var(--space-4);
+  border-left: 2px solid var(--color-border);
+  list-style: none;
+}
+
+.owed-deductions li {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.owed-deductions li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: calc(var(--space-4) * -1 - 6px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+@media (min-width: 900px) {
+  .money-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .earnings-hero {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr);
+  }
+
+  .review-layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .review-summary {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .owed-top {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .money-chips {
+    margin-right: calc(var(--gutter) * -1);
+    margin-left: calc(var(--gutter) * -1);
+    padding-right: var(--gutter);
+    padding-left: var(--gutter);
+  }
+
+  .money-card,
+  .owed-card {
+    padding: 18px var(--space-4);
+  }
+
+  .earnings-hero-main b,
+  .owed-total b {
+    font-size: 2.125rem;
+  }
+
+  .earnings-figures dd {
+    font-size: 1.125rem;
+  }
+
+  .earnings-chart {
+    gap: 4px;
+    height: 180px;
+  }
+
+  .earnings-chart-labels {
+    gap: 4px;
+    font-size: 0.625rem;
+  }
+
+  .review-card {
+    padding: var(--space-4);
+  }
+
+  .owed-numbers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owed-card-date {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

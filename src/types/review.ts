@@ -54,6 +54,7 @@ export type SellerReview = {
   createdAt: string
   reported: boolean
   hidden: boolean
+  photoUrls?: string[]
   listing?: { id: number, title: string }
 }
 
@@ -62,6 +63,10 @@ export type SellerReviewPage = {
   pageSize: number
   total: number
   reviews: SellerReview[]
+  // The open tab's visible reviews, as shoppers' rating counts them.
+  summary?: ReviewSummary & { withPhotos: number }
+  // How many reviews each tab lists, hidden and reported ones included.
+  counts?: { shop: number, product: number }
 }
 
 export type AdminReviewStatus = "reported" | "hidden" | "visible" | "all"

@@ -467,12 +467,6 @@
   gap: var(--space-3);
 }
 
-.owed-amount {
-  margin: 0;
-  font-size: var(--text-3xl);
-  font-weight: 800;
-}
-
 .dispute-items {
   margin: 0 0 var(--space-3);
   overflow-wrap: anywhere;
@@ -745,43 +739,6 @@
   padding-left: 0;
 }
 
-/* Seller earnings */
-.earnings-range {
-  align-items: flex-end;
-  margin-bottom: var(--space-3);
-}
-
-.figures {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-  margin: var(--space-3) 0 0;
-}
-
-.figure {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-cream);
-}
-
-.figure dt {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.figure dd {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-2xl);
-  font-weight: 800;
-}
-
-.figure-hint {
-  margin: var(--space-1) 0 0;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
 .table-scroll {
   overflow-x: auto;
 }
@@ -807,18 +764,6 @@
 .data-table thead th {
   color: var(--color-text-muted);
   font-weight: 600;
-}
-
-@media (min-width: 640px) {
-  .figures {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .figures {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 /* Administrator overview */
