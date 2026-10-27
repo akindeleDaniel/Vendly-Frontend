@@ -76,6 +76,11 @@ Vendly uses plain CSS with no styling library. `src/index.css` imports these fil
 | `styles/browse.css` | Search field, category tiles, product cards, shop rows, storefront header. |
 | `styles/cart.css` | Cart and checkout cards, money rows, summary columns. |
 | `styles/forms.css` | Login, registration and seller pages, the account-type cards, the image picker. |
+| `styles/shop.css` | A shop's own home page (its colour, header, banner and footer). |
+| `styles/product.css` | A product's page, inside its shop. |
+| `styles/cart-page.css` | The cart, grouped by shop. |
+| `styles/checkout-page.css` | Checkout's two steps and the payment result. |
+| `styles/browse-page.css` | The home page, a category, new products and search results. |
 
 Rules for new screens:
 
@@ -88,6 +93,22 @@ Rules for new screens:
 - The open dropdown list uses the browser's customizable-select feature where available (Chrome and Edge) and falls back to the browser's own list elsewhere.
 
 Sign-in pages (`/login`, `/register`, `/consumer/register`, `/seller/register`) hide the site header and show a centred logo instead; the list is `AUTH_PATHS` in `Navbar.tsx`.
+
+### Category photos on the home page
+
+The "Shop by category" tiles show five of the 11 photos in `public/images/categories/`, from five different categories, in a new order on every visit (`src/data/categoryPhotos.ts`). They are pictures only, not links. All are from Unsplash, free for commercial use with no credit required (credit is kind but optional); do not resell them as they are.
+
+- `fashion-dress.jpg`: unsplash.com/photos/young-woman-in-a-patterned-dress-smiles-6EvUrguVz7s
+- `fashion-suit.jpg`: unsplash.com/photos/man-wearing-colorful-geometric-patterned-suit-ypNtKLYNXOU
+- `crafts-fabric.jpg`: unsplash.com/photos/assorted-color-textiles-SfPOkp6-2eA
+- `accessories-headwrap.jpg`: unsplash.com/photos/woman-wearing-colorful-wax-print-headwrap-and-top--9b2fdmU4bQ
+- `food-cake.jpg`: unsplash.com/photos/chocolate-cake-with-chocolate-syrup-on-top-QLSh4y2v93c
+- `food-market.jpg`: unsplash.com/photos/a-market-with-a-lot-of-fruits-and-vegetables-xs0gVDr02ag
+- `beauty-serum.jpg`: unsplash.com/photos/amber-glass-bottle-on-wooden-pedestal-Mxy5gokl8mE
+- `phones-phone.jpg`: unsplash.com/photos/a-samsung-smartphone-on-a-table-VD9Hsvg3DVQ
+- `sports-sneakers.jpg`: unsplash.com/photos/a-pair-of-sneakers-hanging-on-a-wall-sSaQ7_pArx8
+- `home-armchair.jpg`: unsplash.com/photos/a-comfortable-armchair-with-blankets-and-pillows-3eFjPyC9qyw
+- `books-stack.jpg`: unsplash.com/photos/a-stack-of-books-sitting-next-to-each-other-b53HdbIUOhM
 
 ## Authentication
 

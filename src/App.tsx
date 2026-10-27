@@ -212,7 +212,7 @@ function App() {
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
       <main id="main" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} />} />
+          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} userRole={userRole} />} />
 
           <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RolePage /></RedirectIfAuthenticated>} />
 
