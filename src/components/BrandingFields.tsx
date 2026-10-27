@@ -3,82 +3,103 @@ import ImagePicker from "./ImagePicker"
 import { ABOUT_MAX_LENGTH, BRAND_COLORS } from "../types/branding"
 import type { BrandingForm } from "../types/branding"
 
-type BrandingFieldsProps = {
+type ShopLookFieldsProps = {
     form: BrandingForm
     setForm: (form: BrandingForm) => void
     bannerUrl: string | null // the saved banner, shown until a new one is chosen
     onBannerFile: (file: File | null) => void
     onRemoveBanner: () => void
     disabled?: boolean
+    pickerKey?: number // change it to clear a banner that was chosen but not saved
 }
 
-// How the shop looks to shoppers: a wide banner, one colour, a short "about" text, social links and an
-// optional WhatsApp button. All optional.
-function BrandingFields({ form, setForm, bannerUrl, onBannerFile, onRemoveBanner, disabled }: BrandingFieldsProps) {
+// How the shop looks to shoppers: a wide banner, one colour and a short "about" text. All optional.
+export function ShopLookFields({ form, setForm, bannerUrl, onBannerFile, onRemoveBanner, disabled, pickerKey }: ShopLookFieldsProps) {
     const colorName = useId()
+    const aboutId = useId()
     const update = (change: Partial<BrandingForm>) => setForm({ ...form, ...change })
 
     return (
-        <fieldset className="branding-fields" disabled={disabled}>
-            <legend>How your shop looks</legend>
-            <p className="field-help">All optional. These show on your shop page.</p>
+        <section className="product-form-card" aria-labelledby={`${aboutId}-heading`}>
+            <h2 id={`${aboutId}-heading`}>How your shop looks</h2>
+            <p className="product-help settings-card-lead">All optional. These show on your shop page. Checkout and payment always use StoreHatch's own colours.</p>
+            <fieldset className="settings-fieldset" disabled={disabled}>
+                <ImagePicker
+                    key={pickerKey}
+                    label="Banner (a wide picture across the top of your shop)"
+                    currentUrl={bannerUrl ?? undefined}
+                    onChange={onBannerFile}
+                    disabled={disabled}
+                    aspect={3}
+                />
+                {bannerUrl && <button type="button" className="btn-text settings-remove" onClick={onRemoveBanner}>Remove the banner</button>}
 
-            <ImagePicker
-                label="Banner (a wide picture across the top of your shop)"
-                currentUrl={bannerUrl ?? undefined}
-                onChange={onBannerFile}
-                disabled={disabled}
-                aspect={3}
-            />
-            {bannerUrl && <button type="button" className="btn-text" onClick={onRemoveBanner}>Remove the banner</button>}
+                <fieldset className="settings-fieldset">
+                    <legend className="settings-legend">Shop colour</legend>
+                    <div className="settings-swatches">
+                        {BRAND_COLORS.map((color) => (
+                            <label key={color.key} className={`settings-swatch${form.brandColor === color.key ? " is-on" : ""}`}>
+                                <input type="radio" name={colorName} value={color.key} checked={form.brandColor === color.key} onChange={() => update({ brandColor: color.key })} />
+                                <span className={`settings-swatch-dot${color.light ? " is-light" : ""}`} style={{ background: color.background }} aria-hidden="true" />
+                                {color.name}
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
 
-            <fieldset className="color-choices">
-                <legend>Shop colour</legend>
-                <div className="color-swatches">
-                    {BRAND_COLORS.map((color) => (
-                        <label key={color.key} className={`color-swatch${form.brandColor === color.key ? " is-selected" : ""}`}>
-                            <input type="radio" name={colorName} value={color.key} checked={form.brandColor === color.key} onChange={() => update({ brandColor: color.key })} />
-                            <span className={`color-dot${color.light ? " is-light" : ""}`} style={{ background: color.background }} aria-hidden="true" />
-                            {color.name}
-                        </label>
-                    ))}
+                <div className="product-field">
+                    <div className="product-field-top">
+                        <label htmlFor={aboutId}>About your shop</label>
+                        <small>{form.about.length} / {ABOUT_MAX_LENGTH}</small>
+                    </div>
+                    <textarea id={aboutId} className="product-input product-textarea" maxLength={ABOUT_MAX_LENGTH} value={form.about} onChange={(event) => update({ about: event.target.value })} />
+                    <p className="product-help">Links aren't allowed here. Add your social pages below.</p>
                 </div>
             </fieldset>
-
-            <label>
-                About your shop
-                <textarea maxLength={ABOUT_MAX_LENGTH} value={form.about} onChange={(event) => update({ about: event.target.value })} />
-            </label>
-            <p className="field-help">Up to {ABOUT_MAX_LENGTH} characters. Links are not allowed here: add your social pages below.</p>
-
-            <div className="form-row">
-                <label>
-                    Instagram username
-                    <input autoComplete="off" placeholder="yourshop" value={form.instagram} onChange={(event) => update({ instagram: event.target.value })} />
-                </label>
-                <label>
-                    TikTok username
-                    <input autoComplete="off" placeholder="yourshop" value={form.tiktok} onChange={(event) => update({ tiktok: event.target.value })} />
-                </label>
-            </div>
-            <div className="form-row">
-                <label>
-                    Facebook page name
-                    <input autoComplete="off" placeholder="yourshop" value={form.facebook} onChange={(event) => update({ facebook: event.target.value })} />
-                </label>
-                <label>
-                    X username
-                    <input autoComplete="off" placeholder="yourshop" value={form.x} onChange={(event) => update({ x: event.target.value })} />
-                </label>
-            </div>
-
-            <label>
-                WhatsApp number for shoppers (optional)
-                <input type="tel" autoComplete="off" placeholder="0801 234 5678" value={form.whatsappNumber} onChange={(event) => update({ whatsappNumber: event.target.value })} />
-            </label>
-            <p className="field-help">Shown as a "Chat on WhatsApp" button on your shop. Leave it empty to hide the button. This is separate from the phone number used for your payouts.</p>
-        </fieldset>
+        </section>
     )
 }
 
-export default BrandingFields
+type ShopLinksFieldsProps = {
+    form: BrandingForm
+    setForm: (form: BrandingForm) => void
+    disabled?: boolean
+}
+
+const SOCIAL_FIELDS: Array<{ key: "instagram" | "tiktok" | "facebook" | "x", label: string }> = [
+    { key: "instagram", label: "Instagram username" },
+    { key: "tiktok", label: "TikTok username" },
+    { key: "facebook", label: "Facebook page name" },
+    { key: "x", label: "X username" }
+]
+
+// The shop's social pages and an optional WhatsApp button. Each shows as a button on the shop.
+export function ShopLinksFields({ form, setForm, disabled }: ShopLinksFieldsProps) {
+    const id = useId()
+    const update = (change: Partial<BrandingForm>) => setForm({ ...form, ...change })
+
+    return (
+        <section className="product-form-card" aria-labelledby={`${id}-heading`}>
+            <h2 id={`${id}-heading`}>Social pages and WhatsApp</h2>
+            <p className="product-help settings-card-lead">Optional. Each one shows as a button on your shop.</p>
+            <fieldset className="settings-fieldset" disabled={disabled}>
+                <div className="product-two">
+                    {SOCIAL_FIELDS.map((field) => (
+                        <div key={field.key} className="product-field">
+                            <label htmlFor={`${id}-${field.key}`}>{field.label}</label>
+                            <div className="product-input product-money">
+                                <span aria-hidden="true">@</span>
+                                <input id={`${id}-${field.key}`} autoComplete="off" placeholder="yourshop" value={form[field.key]} onChange={(event) => update({ [field.key]: event.target.value })} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="product-field settings-narrow">
+                    <label htmlFor={`${id}-whatsapp`}>WhatsApp number for shoppers</label>
+                    <input id={`${id}-whatsapp`} className="product-input" type="tel" autoComplete="off" placeholder="0801 234 5678" value={form.whatsappNumber} onChange={(event) => update({ whatsappNumber: event.target.value })} />
+                </div>
+                <p className="product-help">Shows a "Chat on WhatsApp" button. Leave it empty to hide the button. This isn't the phone number for your payouts.</p>
+            </fieldset>
+        </section>
+    )
+}
