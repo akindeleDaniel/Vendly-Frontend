@@ -109,7 +109,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
     }
 
     // Checkout keeps only the logo and a reassurance, so nothing pulls the shopper away mid-payment.
-    if (pathname === "/checkout") {
+    if (pathname === "/checkout" || pathname === "/checkout/payment-return") {
         return (
             <header className="site-header is-checkout">
                 <Logo />

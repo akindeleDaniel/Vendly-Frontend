@@ -168,6 +168,16 @@ export function describeOrderStatus(order: { status: string } & Pick<Fulfilment,
 }
 
 // A short date and time for the progress steps, such as "19 Oct 2026, 1:53 pm".
+// "3:42 PM", with the day when it is not today: how long checkout holds the items.
+export function formatHeldUntil(isoTime: string): string {
+    const date = new Date(isoTime)
+    if (Number.isNaN(date.getTime())) {
+        return isoTime
+    }
+    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    return date.toDateString() === new Date().toDateString() ? time : `${time} on ${date.toLocaleDateString()}`
+}
+
 export function formatShortDate(isoTime: string): string {
     const date = new Date(isoTime)
     return Number.isNaN(date.getTime())

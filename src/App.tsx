@@ -306,7 +306,7 @@ function App() {
 
           <Route path="/admin/liabilities" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminLiabilitiesPage /></AdminShell></RequireAdmin>} />
 
-          <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage /></RequireRole>} />
+          <Route path="/checkout/payment-return" element={<RequireRole role="CONSUMER" {...guardProps}><PaymentReturnPage userName={userName} /></RequireRole>} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { ArrowLeft, ArrowRight, Check, Clock, ShieldCheck } from "lucide-react"
+import { ArrowLeft, ArrowRight, Clock, ShieldCheck } from "lucide-react"
+import CheckoutSteps from "../components/CheckoutSteps"
+import { formatHeldUntil } from "../lib/orderApi"
 import { Link } from "react-router-dom"
 import DeliveryFields from "../components/DeliveryFields"
 import Notice from "../components/Notice"
@@ -73,16 +75,6 @@ function formatTime(isoTime: string): string {
   return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString()
 }
 
-// "3:42 PM", with the day when it is not today.
-function formatHeldUntil(isoTime: string): string {
-  const date = new Date(isoTime)
-  if (Number.isNaN(date.getTime())) {
-    return isoTime
-  }
-  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-  return date.toDateString() === new Date().toDateString() ? time : `${time} on ${date.toLocaleDateString()}`
-}
-
 function formatStatus(status: string): string {
   if (status === "PENDING") {
     return "Pending"
@@ -91,28 +83,6 @@ function formatStatus(status: string): string {
     return "Pending payment"
   }
   return status
-}
-
-type Step = "delivery" | "pay"
-
-// Where the shopper is in checkout: delivery details, then payment, then the result page.
-function CheckoutSteps({ current }: { current: Step }) {
-  const isPay = current === "pay"
-
-  return (
-    <ol className="checkout-steps" aria-label="Checkout steps">
-      <li className={isPay ? "is-done" : "is-current"} aria-current={isPay ? undefined : "step"}>
-        <span className="checkout-step-dot">{isPay ? <Check aria-hidden="true" size={16} /> : "1"}</span>
-        Delivery{isPay && <span className="visually-hidden"> (done)</span>}
-      </li>
-      <li className="checkout-step-bar" aria-hidden="true" />
-      <li className={isPay ? "is-current" : undefined} aria-current={isPay ? "step" : undefined}>
-        <span className="checkout-step-dot">2</span>Pay
-      </li>
-      <li className="checkout-step-bar" aria-hidden="true" />
-      <li><span className="checkout-step-dot">3</span>Done</li>
-    </ol>
-  )
 }
 
 function feeText(amount: string): string {

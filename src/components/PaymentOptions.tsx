@@ -15,6 +15,7 @@ type PaymentOptionsProps = {
     checkoutId: number
     total?: string // shown on the button ("Pay ₦80,000 with Paystack") when known
     children?: ReactNode // shown above the choices, for example how long the items are held
+    heading?: string
 }
 
 const PROVIDERS: Array<{ id: PaymentProvider, name: string, methods: string }> = [
@@ -26,7 +27,7 @@ const PROVIDERS: Array<{ id: PaymentProvider, name: string, methods: string }> =
 // the payment; the shopper then returns to /checkout/payment-return, which asks the backend for the
 // confirmed result.
 // Asking again is safe: the backend returns the payment already in progress instead of a new one.
-function PaymentOptions({ checkoutId, total, children }: PaymentOptionsProps) {
+function PaymentOptions({ checkoutId, total, children, heading = "How would you like to pay?" }: PaymentOptionsProps) {
     const [provider, setProvider] = useState<PaymentProvider>("PAYSTACK")
     const [isStarting, setIsStarting] = useState(false)
     const [problem, setProblem] = useState<Problem | null>(null)
@@ -63,7 +64,7 @@ function PaymentOptions({ checkoutId, total, children }: PaymentOptionsProps) {
     return (
         <section aria-labelledby="payment-heading" className="checkout-card">
             {children}
-            <h2 id="payment-heading" className="checkout-title">How would you like to pay?</h2>
+            <h2 id="payment-heading" className="checkout-title">{heading}</h2>
 
             {problem?.kind === "sellers-not-ready" && (
                 <Notice kind="error">
