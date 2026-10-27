@@ -12,6 +12,7 @@ import { approvePreOrder, cancelPreOrder, declinePreOrder, getPreOrder } from ".
 import type { PreOrderViewer } from "../lib/preOrderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { ORDER_MAX_VALUE } from "../lib/limits"
 import { PRE_ORDER_NOTE_MAX_LENGTH } from "../types/preOrder"
 import type { PreOrder } from "../types/preOrder"
 
@@ -61,6 +62,14 @@ function SellerAnswerPanel({ preOrder, onUpdated }: AnswerPanelProps) {
                 Approving gives {preOrder.buyerName ?? "the buyer"} up to 24 hours to pay (and no later than an hour before the ready time).
                 You cannot suggest another time: if it does not suit you, decline with a reason and they can ask again.
             </p>
+            <p className="field-help">
+                An order from one shop, pre-orders included, can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included. Do not approve one above that: the buyer will not be able to pay for it.
+            </p>
+            {Number(preOrder.subtotal) > Number(ORDER_MAX_VALUE) && (
+                <Notice kind="warning">
+                    This request is {formatNaira(preOrder.subtotal)} before delivery, which is above {formatNaira(ORDER_MAX_VALUE)}. Decline it and ask the buyer to send a smaller one.
+                </Notice>
+            )}
             <label>
                 Note for the buyer (needed to decline)
                 <textarea maxLength={PRE_ORDER_NOTE_MAX_LENGTH} value={note} disabled={working !== null} onChange={(event) => setNote(event.target.value)} />

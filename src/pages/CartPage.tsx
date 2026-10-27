@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { apiFetch, getErrorMessage } from "../lib/api"
-import { formatMinorUnits, toMinorUnits } from "../lib/money"
+import { formatMinorUnits, formatNaira, toMinorUnits } from "../lib/money"
+import { ORDER_MAX_VALUE } from "../lib/limits"
 import Notice from "../components/Notice"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
@@ -441,6 +442,7 @@ function CartPage() {
               This is an estimate only. Shipping and the final total are not included.
               {hasUnavailableItems && " It also includes items that are not fully available right now."}
             </p>
+            <p className="summary-note">An order from one shop can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included.</p>
             {/* The server decides at checkout whether the items can be bought, so the link is always offered. */}
             <Link to="/checkout" className="btn btn-primary btn-lg btn-block">Proceed to checkout</Link>
           </section>

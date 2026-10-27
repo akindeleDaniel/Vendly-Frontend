@@ -5,12 +5,22 @@ import Notice from "../components/Notice"
 import PaymentOptions from "../components/PaymentOptions"
 import PreOrderCheckoutBlock from "../components/PreOrderCheckoutBlock"
 import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
+import type { OrderTooLarge } from "../lib/checkoutApi"
+import { ORDER_MAX_VALUE } from "../lib/limits"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
 
-type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "error"
+type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "error"
+
+// An order from one shop above the order limit: says what the limit is, what this order comes to, and what to do.
+function orderTooLargeMessage(outcome: OrderTooLarge): string {
+  const limit = formatNaira(outcome.limit ?? ORDER_MAX_VALUE)
+  const shop = outcome.sellerName ?? "one shop"
+  const total = outcome.orderTotal ? ` Your order from ${shop} comes to ${formatNaira(outcome.orderTotal)}.` : ""
+  return `An order from one shop can be up to ${limit}, delivery included.${total} Remove some items, or split it into smaller orders.`
+}
 
 type Issue =
   | { type: "items-unavailable", itemTitle: string | null, message: string }
@@ -220,6 +230,10 @@ function CheckoutPage() {
         case "empty-cart":
           setPreviewStatus("empty")
           break
+        case "order-too-large":
+          setPreviewMessage(orderTooLargeMessage(outcome))
+          setPreviewStatus("too-large")
+          break
         case "items-unavailable":
           setIssue({ type: "items-unavailable", itemTitle: null, message: outcome.message })
           setPreviewStatus("blocked")
@@ -294,6 +308,10 @@ function CheckoutPage() {
       case "empty-cart":
         setPreviewStatus("empty")
         break
+      case "order-too-large":
+        setPreviewMessage(orderTooLargeMessage(outcome))
+        setPreviewStatus("too-large")
+        break
       case "items-unavailable":
         setIssue({
           type: "items-unavailable",
@@ -361,6 +379,9 @@ function CheckoutPage() {
         case "conflict":
           await refreshPreview("conflict")
           break
+        case "order-too-large":
+          setIssue({ type: "error", message: orderTooLargeMessage(outcome) })
+          break
         case "preorder-problem":
           await refreshPreview("check-again")
           setPreOrderProblem(outcome.message)
@@ -407,6 +428,16 @@ function CheckoutPage() {
     )
   }
 
+  if (previewStatus === "too-large") {
+    return (
+      <div>
+        <h1>Checkout</h1>
+        <Notice kind="warning">{previewMessage}</Notice>
+        <Link to="/cart" className="btn">Back to cart</Link>
+      </div>
+    )
+  }
+
   if (previewStatus === "empty") {
     return (
       <div>
@@ -447,6 +478,7 @@ function CheckoutPage() {
       <h1>Checkout</h1>
       <Notice kind="info" role="none">
         Creating a checkout reserves your items for a short time. You will pay with Paystack on the next step.
+        An order from one shop can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included.
       </Notice>
 
       <div className="checkout-layout">

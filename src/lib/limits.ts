@@ -8,6 +8,10 @@ export const SHOP_NAME_MAX_LENGTH = 80
 export const PRICE_MAX = 100_000_000
 export const STOCK_MAX = 1_000_000
 
+// The most one order from one shop can be, delivery included, as a naira amount. It is the backend's
+// MAX_ORDER_VALUE (in its .env), so change both together. Shoppers and sellers are told it plainly.
+export const ORDER_MAX_VALUE = "100000"
+
 type ListingFields = {
     title: string
     description: string

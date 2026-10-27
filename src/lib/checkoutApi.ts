@@ -11,8 +11,12 @@ import type {
 const EMPTY_CART_MESSAGE = "Cart is empty"
 const UNEXPECTED_RESPONSE_MESSAGE = "We received an unexpected response from the server. Please try again."
 
+// One shop's order is above the order limit. The amounts are naira strings from the backend, null when missing.
+export type OrderTooLarge = { kind: "order-too-large", sellerName: string | null, orderTotal: string | null, limit: string | null }
+
 export type PreviewOutcome =
     | { kind: "ok", review: CheckoutReview }
+    | OrderTooLarge
     | { kind: "empty-cart" }
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "conflict", message: string }
@@ -26,7 +30,8 @@ export type SubmitOutcome =
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "locked", message: string, checkout: LockedCheckout | null }
     | { kind: "conflict", message: string }
-    | { kind: "preorder-problem", message: string }// a food shop's pre-order is needed, has lapsed, or no longer matches
+    | { kind: "preorder-problem", message: string }
+    | OrderTooLarge// a food shop's pre-order is needed, has lapsed, or no longer matches
     | { kind: "empty-cart" }
     | { kind: "invalid-request", message: string }
     | { kind: "unauthorized" }
@@ -133,6 +138,20 @@ function codeOf(body: unknown): string | null {
     return isRecord(body) && typeof body.code === "string" ? body.code : null
 }
 
+// The shop, its order total and the limit from an "order too large" answer.
+function orderTooLargeOf(body: unknown): OrderTooLarge {
+    const text = (key: string) => isRecord(body) && typeof body[key] === "string" ? body[key] as string : null
+
+    return {
+        kind: "order-too-large",
+        sellerName: isRecord(body) && isRecord(body.seller) && typeof body.seller.businessName === "string" ? body.seller.businessName : null,
+        orderTotal: text("orderTotal"),
+        limit: text("limit")
+    }
+}
+
+const ORDER_TOO_LARGE_CODE = "CHECKOUT_ORDER_TOO_LARGE"
+
 function listingIdOf(body: unknown): number | null {
     return isRecord(body) && Number.isInteger(body.listingId) ? body.listingId as number : null
 }
@@ -173,6 +192,10 @@ export async function fetchCheckoutPreview(signal?: AbortSignal): Promise<Previe
 
     if (response.status === 409 && codeOf(body) === "CHECKOUT_CONFLICT") {
         return { kind: "conflict", message }
+    }
+
+    if (response.status === 409 && codeOf(body) === ORDER_TOO_LARGE_CODE) {
+        return orderTooLargeOf(body)
     }
 
     return { kind: "error", message }
@@ -290,6 +313,10 @@ export async function submitCheckout(delivery: DeliveryDetails, reviewToken: str
 
         if (code === "CHECKOUT_CONFLICT") {
             return { kind: "conflict", message }
+        }
+
+        if (code === ORDER_TOO_LARGE_CODE) {
+            return orderTooLargeOf(body)
         }
 
         if (code === "CHECKOUT_PREORDER_REQUIRED" || code === "CHECKOUT_PREORDER_INVALID" || code === "CHECKOUT_PREORDER_NOT_AVAILABLE") {

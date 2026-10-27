@@ -3,6 +3,8 @@ import { Link } from "react-router-dom"
 import Notice from "./Notice"
 import { failureMessage } from "../lib/apiRequest"
 import { askForPreOrder } from "../lib/preOrderApi"
+import { formatNaira } from "../lib/money"
+import { ORDER_MAX_VALUE } from "../lib/limits"
 import {
     PRE_ORDER_MAX_DAYS_AHEAD,
     PRE_ORDER_MIN_HOURS_AHEAD,
@@ -87,6 +89,7 @@ function PreOrderRequestForm({ sellerSlug, businessName, optional }: PreOrderReq
                 Choose when you want it ready, at least {PRE_ORDER_MIN_HOURS_AHEAD} hours from now and within {PRE_ORDER_MAX_DAYS_AHEAD} days.
                 The shop can approve or decline. Nothing is charged until you pay after it approves.
             </p>
+            <p className="field-help">An order from one shop, pre-orders included, can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included.</p>
             <label>
                 Ready on
                 <input type="datetime-local" min={earliest} max={latest} value={readyAt} disabled={isSending} onChange={(event) => setReadyAt(event.target.value)} />
