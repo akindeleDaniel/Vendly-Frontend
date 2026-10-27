@@ -416,7 +416,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                         <ul className="product-grid">
                             {moreFromShop.map((other) => (
                                 <li key={other.id} className="shop-product">
-                                    <ListingCard isEditable={false} allowAddToCart listing={other} />
+                                    <ListingCard allowAddToCart listing={other} />
                                 </li>
                             ))}
                         </ul>

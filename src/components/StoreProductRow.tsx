@@ -7,7 +7,6 @@ import type { Listing } from "../types/listing"
 type StoreProductRowProps = {
     listing: Listing
     isArchived: boolean
-    onEdit: () => void
     onDelete: () => void
     onRestore: () => void
 }
@@ -29,7 +28,7 @@ function describeOptions(listing: Listing): string | null {
 
 // One product in My store's list: its photo, name, price, stock and status, with Edit and a menu
 // for the rest (view it in the shop, delete it or, once archived, put it back on sale).
-function StoreProductRow({ listing, isArchived, onEdit, onDelete, onRestore }: StoreProductRowProps) {
+function StoreProductRow({ listing, isArchived, onDelete, onRestore }: StoreProductRowProps) {
     const price = `${listing.hasPriceRange ? "From " : ""}${formatMinorUnits(toMinorUnits(listing.price))}`
     const options = describeOptions(listing)
     const isSoldOut = listing.stockQuantity === 0
@@ -57,9 +56,9 @@ function StoreProductRow({ listing, isArchived, onEdit, onDelete, onRestore }: S
                 {isArchived ? (
                     <button type="button" className="btn" onClick={onRestore}><RotateCcw size={16} aria-hidden="true" />Put back on sale</button>
                 ) : (
-                    <button type="button" className="store-icon-button" onClick={onEdit} aria-label={`Edit ${listing.title}`}>
+                    <Link to={`/seller/products/${listing.id}/edit`} className="store-icon-button" aria-label={`Edit ${listing.title}`}>
                         <Pencil size={18} aria-hidden="true" />
-                    </button>
+                    </Link>
                 )}
                 <details className="store-more">
                     <summary className="store-icon-button" aria-label={`More for ${listing.title}`}>

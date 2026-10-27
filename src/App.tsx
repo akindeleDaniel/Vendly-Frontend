@@ -3,6 +3,7 @@ import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import DiscoveryPage from "./pages/DiscoveryPage"
 import MyListingPage from "./pages/MyListingPage"
+import ProductFormPage from "./pages/ProductFormPage"
 import SellerOnboardingPage from "./pages/SellerOnboardingPage"
 import EditSellerProfilePage from "./pages/EditSellerProfilePage"
 import PayoutSettingsPage from "./pages/PayoutSettingsPage"
@@ -259,6 +260,8 @@ function App() {
           <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
 
           <Route path="/seller/myListing" element={<RequireRole role="SELLER" {...guardProps}><MyListingPage userName={userName} /></RequireRole>} />
+          <Route path="/seller/products/new" element={<RequireRole role="SELLER" {...guardProps}><ProductFormPage /></RequireRole>} />
+          <Route path="/seller/products/:id/edit" element={<RequireRole role="SELLER" {...guardProps}><ProductFormPage /></RequireRole>} />
 
           <Route path="/product/:id" element={<ProductPage userRole={userRole} authStatus={authStatus} />} />
 

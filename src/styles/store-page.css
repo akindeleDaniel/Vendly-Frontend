@@ -131,14 +131,20 @@
   margin-top: 6px;
 }
 
+/* Only the logo reaches up over the banner; the name and buttons stay below it, so they never sit on
+   the photo however long the name is. */
 .store-shop-row {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 18px;
-  margin-top: -40px;
-  padding: 0 var(--space-5) var(--space-5);
+  align-items: flex-start;
+  gap: var(--space-3) 18px;
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.store-shop-logo {
+  flex: none;
+  margin-top: -56px;
 }
 
 .store-shop-logo .shop-avatar {
@@ -152,7 +158,6 @@
 .store-shop-info {
   flex: 1;
   min-width: 220px;
-  padding-bottom: 4px;
 }
 
 .store-shop-info h2 {
@@ -191,8 +196,8 @@
 .store-shop-actions {
   display: flex;
   flex-wrap: wrap;
+  align-self: center;
   gap: var(--space-2);
-  padding-bottom: 4px;
 }
 
 .store-shop-actions .btn {
@@ -468,30 +473,6 @@
   font-size: 0.8125rem;
 }
 
-/* Adding a product: the form opens under the heading */
-.store-add {
-  margin-bottom: var(--space-5);
-  padding: var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  scroll-margin-top: var(--space-5);
-}
-
-.store-add-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-
-.store-add-head h3 {
-  margin: 0;
-  font-size: var(--text-lg);
-}
-
 /* The products */
 .store-products {
   border: 1px solid var(--color-border);
@@ -660,14 +641,6 @@
   color: var(--color-error);
 }
 
-.store-edit {
-  padding: 0 var(--space-5) var(--space-5);
-}
-
-.store-edit .product-card {
-  max-width: 560px;
-}
-
 .store-empty {
   display: flex;
   flex-direction: column;
@@ -771,10 +744,19 @@
     height: 140px;
   }
 
+  /* No room for the label beside the button on a phone. */
+  .store-banner-tag {
+    display: none;
+  }
+
   .store-shop-row {
-    gap: var(--space-3);
-    margin-top: -36px;
-    padding: 0 var(--space-4) var(--space-4);
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4) var(--space-4);
+  }
+
+  .store-shop-logo {
+    margin-top: -46px;
   }
 
   .store-shop-logo .shop-avatar {
@@ -835,7 +817,5 @@
     justify-content: flex-start;
   }
 
-  .store-edit {
-    padding: 0 var(--space-4) var(--space-4);
-  }
+
 }

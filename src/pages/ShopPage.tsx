@@ -277,7 +277,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
                     <ul className="product-grid">
                         {newIn.map((listing) => (
                             <li key={listing.id} className="shop-product">
-                                <ListingCard isEditable={false} allowAddToCart listing={listing} />
+                                <ListingCard allowAddToCart listing={listing} />
                                 {isRecentlyAdded(listing) && <span className="shop-new-badge">New</span>}
                             </li>
                         ))}
@@ -339,7 +339,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
                     <ul className="product-grid">
                         {matching.slice(0, visibleCount).map((listing) => (
                             <li key={listing.id} className="shop-product">
-                                <ListingCard isEditable={false} allowAddToCart listing={listing} />
+                                <ListingCard allowAddToCart listing={listing} />
                             </li>
                         ))}
                     </ul>
