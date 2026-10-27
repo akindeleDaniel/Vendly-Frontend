@@ -1,7 +1,9 @@
-import { useRef, useState } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
+import { Lock } from "lucide-react"
 import Notice from "./Notice"
 import { startPayment } from "../lib/paymentApi"
+import { formatNaira } from "../lib/money"
 import type { PaymentProvider } from "../types/payment"
 
 type Problem =
@@ -9,22 +11,35 @@ type Problem =
     | { kind: "expired" | "already-paid" | "try-again" | "error", message: string }
     | { kind: "unconfirmed" }
 
+type PaymentOptionsProps = {
+    checkoutId: number
+    total?: string // shown on the button ("Pay ₦80,000 with Paystack") when known
+    children?: ReactNode // shown above the choices, for example how long the items are held
+}
+
+const PROVIDERS: Array<{ id: PaymentProvider, name: string, methods: string }> = [
+    { id: "PAYSTACK", name: "Paystack", methods: "Card, bank transfer or USSD" },
+    { id: "FLUTTERWAVE", name: "Flutterwave", methods: "Card, bank transfer or USSD" }
+]
+
 // Lets the shopper pay for a checkout with Paystack or Flutterwave. The provider's own page takes
 // the payment; the shopper then returns to /checkout/payment-return, which asks the backend for the
 // confirmed result.
 // Asking again is safe: the backend returns the payment already in progress instead of a new one.
-function PaymentOptions({ checkoutId }: { checkoutId: number }) {
-    const [startingWith, setStartingWith] = useState<PaymentProvider | null>(null)
+function PaymentOptions({ checkoutId, total, children }: PaymentOptionsProps) {
+    const [provider, setProvider] = useState<PaymentProvider>("PAYSTACK")
+    const [isStarting, setIsStarting] = useState(false)
     const [problem, setProblem] = useState<Problem | null>(null)
     const startingRef = useRef(false)
+    const providerName = PROVIDERS.find((option) => option.id === provider)?.name ?? "the provider"
 
-    async function pay(provider: PaymentProvider) {
+    async function pay() {
         if (startingRef.current) {
             return
         }
 
         startingRef.current = true
-        setStartingWith(provider)
+        setIsStarting(true)
         setProblem(null)
 
         const outcome = await startPayment(checkoutId, provider)
@@ -36,7 +51,7 @@ function PaymentOptions({ checkoutId }: { checkoutId: number }) {
         }
 
         startingRef.current = false
-        setStartingWith(null)
+        setIsStarting(false)
 
         if (outcome.kind !== "redirect" && outcome.kind !== "unauthorized") {
             setProblem(outcome)
@@ -46,9 +61,9 @@ function PaymentOptions({ checkoutId }: { checkoutId: number }) {
     const blocked = problem?.kind === "expired" || problem?.kind === "already-paid"
 
     return (
-        <section aria-labelledby="payment-heading" className="card summary-card">
-            <h2 id="payment-heading">Payment</h2>
-            <p>Choose how to pay. You will pay on the provider's secure page, then come back here to see your confirmed order.</p>
+        <section aria-labelledby="payment-heading" className="checkout-card">
+            {children}
+            <h2 id="payment-heading" className="checkout-title">How would you like to pay?</h2>
 
             {problem?.kind === "sellers-not-ready" && (
                 <Notice kind="error">
@@ -72,14 +87,31 @@ function PaymentOptions({ checkoutId }: { checkoutId: number }) {
             )}
 
             {!blocked && (
-                <div className="action-row">
-                    <button type="button" className="btn btn-primary btn-lg" onClick={() => pay("PAYSTACK")} disabled={startingWith !== null}>
-                        {startingWith === "PAYSTACK" ? "Opening Paystack..." : "Pay with Paystack"}
+                <>
+                    <fieldset className="pay-choices" disabled={isStarting}>
+                        <legend className="visually-hidden">Payment provider</legend>
+                        {PROVIDERS.map((option) => (
+                            <label key={option.id} className={`pay-choice${provider === option.id ? " is-selected" : ""}`}>
+                                <input
+                                    type="radio"
+                                    name={`provider-${checkoutId}`}
+                                    value={option.id}
+                                    checked={provider === option.id}
+                                    onChange={() => setProvider(option.id)}
+                                />
+                                <span>
+                                    <b>{option.name}</b>
+                                    <span>{option.methods}</span>
+                                </span>
+                            </label>
+                        ))}
+                    </fieldset>
+                    <button type="button" className="btn btn-primary btn-lg btn-block checkout-go" onClick={pay} disabled={isStarting}>
+                        <Lock aria-hidden="true" size={18} />
+                        {isStarting ? `Opening ${providerName}...` : `Pay ${total ? `${formatNaira(total)} ` : ""}with ${providerName}`}
                     </button>
-                    <button type="button" className="btn btn-primary btn-lg" onClick={() => pay("FLUTTERWAVE")} disabled={startingWith !== null}>
-                        {startingWith === "FLUTTERWAVE" ? "Opening Flutterwave..." : "Pay with Flutterwave"}
-                    </button>
-                </div>
+                    <p className="checkout-small">You finish paying on {providerName}'s secure page, then come back here to see your order.</p>
+                </>
             )}
         </section>
     )

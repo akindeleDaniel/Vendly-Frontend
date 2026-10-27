@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { ArrowLeft, ArrowRight, Check, Clock, ShieldCheck } from "lucide-react"
 import { Link } from "react-router-dom"
 import DeliveryFields from "../components/DeliveryFields"
 import Notice from "../components/Notice"
@@ -72,6 +73,16 @@ function formatTime(isoTime: string): string {
   return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString()
 }
 
+// "3:42 PM", with the day when it is not today.
+function formatHeldUntil(isoTime: string): string {
+  const date = new Date(isoTime)
+  if (Number.isNaN(date.getTime())) {
+    return isoTime
+  }
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  return date.toDateString() === new Date().toDateString() ? time : `${time} on ${date.toLocaleDateString()}`
+}
+
 function formatStatus(status: string): string {
   if (status === "PENDING") {
     return "Pending"
@@ -82,109 +93,101 @@ function formatStatus(status: string): string {
   return status
 }
 
-// Every amount here is a string calculated by the server and is shown exactly as received.
-function ReviewSummary({ review, onCheckAgain, isRefreshing }: { review: CheckoutReview, onCheckAgain: () => void, isRefreshing: boolean }) {
+type Step = "delivery" | "pay"
+
+// Where the shopper is in checkout: delivery details, then payment, then the result page.
+function CheckoutSteps({ current }: { current: Step }) {
+  const isPay = current === "pay"
+
   return (
-    <section aria-labelledby="order-summary-heading" className="checkout-summary">
-      <h2 id="order-summary-heading">Order summary</h2>
-      {review.sellers.map((group) => (
-        <article key={group.seller.slug} className="card summary-card">
-          <h3>
-            <Link to={`/shop/${encodeURIComponent(group.seller.slug)}`}>{group.seller.businessName}</Link>
-          </h3>
-          <ul className="order-lines">
-            {group.items.map((item) => (
-              <li key={item.listingId} className="order-line">
-                <div>
-                  <p className="order-line-title">{item.title}</p>
-                  <p className="order-line-meta">{formatNaira(item.unitPrice)} × {item.quantity}</p>
-                </div>
-                <span className="order-line-amount">{formatNaira(item.lineSubtotal)}</span>
-              </li>
-            ))}
-          </ul>
-          <PreOrderCheckoutBlock group={group} onCheckAgain={onCheckAgain} isRefreshing={isRefreshing} />
-          <hr className="summary-divider" />
-          <div className="summary-row"><span>Seller subtotal</span><span>{formatNaira(group.subtotal)}</span></div>
-          <div className="summary-row">
-            <span>{group.shippingVaries && !review.deliveryState ? "Shipping (depends on your state)" : "Shipping"}</span>
-            <span>{group.shippingVaries && !review.deliveryState ? "From " : ""}{formatNaira(group.shipping)}</span>
-          </div>
-          <div className="summary-row summary-row-total"><span>Seller total</span><span>{formatNaira(group.total)}</span></div>
-        </article>
-      ))}
-      <div className="card summary-card">
-        <div className="summary-row"><span>Subtotal</span><span>{formatNaira(review.subtotal)}</span></div>
-        <div className="summary-row"><span>Shipping</span><span>{formatNaira(review.shipping)}</span></div>
-        <hr className="summary-divider" />
-        <div className="summary-row summary-row-total">
-          <span>Total</span>
-          <span className="summary-total-amount">{formatNaira(review.total)}</span>
-        </div>
-      </div>
-    </section>
+    <ol className="checkout-steps" aria-label="Checkout steps">
+      <li className={isPay ? "is-done" : "is-current"} aria-current={isPay ? undefined : "step"}>
+        <span className="checkout-step-dot">{isPay ? <Check aria-hidden="true" size={16} /> : "1"}</span>
+        Delivery{isPay && <span className="visually-hidden"> (done)</span>}
+      </li>
+      <li className="checkout-step-bar" aria-hidden="true" />
+      <li className={isPay ? "is-current" : undefined} aria-current={isPay ? "step" : undefined}>
+        <span className="checkout-step-dot">2</span>Pay
+      </li>
+      <li className="checkout-step-bar" aria-hidden="true" />
+      <li><span className="checkout-step-dot">3</span>Done</li>
+    </ol>
   )
 }
 
-function CheckoutSuccess({ result }: { result: CheckoutResult }) {
+function feeText(amount: string): string {
+  return Number(amount) === 0 ? "Free" : formatNaira(amount)
+}
+
+type OrderPanelProps = {
+  review: CheckoutReview
+  totals?: { subtotal: string, shipping: string, total: string }// the created checkout's own totals, once there is one
+  notice?: ReactNode// shown at the top, for example "something changed since you looked"
+  onCheckAgain: () => void
+  isRefreshing: boolean
+  showPreOrders: boolean
+  children?: ReactNode// the button and what stops it, under the totals
+}
+
+// The order beside the form: each shop's items with small photos, its delivery fee, any pre-order
+// step for a food shop, and the totals. Every amount is a string worked out by the server and shown as it is.
+function OrderPanel({ review, totals, notice, onCheckAgain, isRefreshing, showPreOrders, children }: OrderPanelProps) {
+  const shopCount = review.sellers.length
+  const hasState = Boolean(review.deliveryState)
+  const subtotal = totals?.subtotal ?? review.subtotal
+  const shipping = totals?.shipping ?? review.shipping
+  const total = totals?.total ?? review.total
+
   return (
-    <div>
-      <h1>Checkout created</h1>
-      <Notice kind="success">
-        Your checkout has been created and your items are reserved. Nothing has been charged yet: pay below to complete your order.
-      </Notice>
-      {result.code === "CHECKOUT_REUSED" && (
-        <p>You already had an identical checkout, so it has been kept as it was.</p>
-      )}
-      {result.code === "CHECKOUT_REPLACED" && (
-        <p>Your earlier pending checkout was replaced by this one.</p>
-      )}
-      <dl className="card status-list">
-        <div><dt>Checkout reference</dt><dd>{result.checkout.id}</dd></div>
-        <div><dt>Status</dt><dd><span className="badge">{formatStatus(result.checkout.status)}</span></dd></div>
-        <div><dt>Expires</dt><dd>{formatTime(result.checkout.expiresAt)}</dd></div>
-      </dl>
-      <p className="summary-note">
-        Your items are held for you until then. Starting payment extends the hold to 30 minutes. After that, this checkout
-        expires and you would need to create a new one.
+    <aside className="checkout-card checkout-panel" aria-labelledby="order-panel-heading">
+      <h2 id="order-panel-heading" className="checkout-panel-title">Your order</h2>
+      <p className="checkout-lead">
+        {shopCount === 1 ? "1 shop, so 1 order." : `${shopCount} shops, so ${shopCount} orders. You pay once.`}
       </p>
+      {notice}
 
-      <PaymentOptions checkoutId={result.checkout.id} />
+      {review.sellers.map((group) => (
+        <section key={group.seller.slug} className="checkout-shop" aria-label={group.seller.businessName}>
+          <p className="checkout-shop-head">
+            <Link to={`/shop/${encodeURIComponent(group.seller.slug)}`}>{group.seller.businessName}</Link>
+            <Link to="/cart" className="checkout-edit">Edit in cart</Link>
+          </p>
+          <ul className="checkout-lines">
+            {group.items.map((item) => (
+              <li key={item.listingId} className="checkout-line">
+                <span className="checkout-thumb">
+                  {item.imageUrl ? <img src={item.imageUrl} alt="" loading="lazy" /> : null}
+                  <span className="checkout-qty" aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
+                </span>
+                <span className="checkout-line-name">{item.title}</span>
+                <span className="checkout-line-amount">{formatNaira(item.lineSubtotal)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="checkout-row">
+            <span className="is-muted">Delivery</span>
+            <span>{!hasState && group.shippingVaries ? "Choose your state" : feeText(group.shipping)}</span>
+          </p>
+          {showPreOrders && <PreOrderCheckoutBlock group={group} onCheckAgain={onCheckAgain} isRefreshing={isRefreshing} />}
+        </section>
+      ))}
 
-      <section aria-labelledby="orders-heading">
-        <h2 id="orders-heading">Orders</h2>
-        {result.orders.map((order) => (
-          <article key={order.id} className="card summary-card">
-            <div className="order-header">
-              <h3>{order.seller ? order.seller.businessName : "Seller"}</h3>
-              <span className="badge">{formatStatus(order.status)}</span>
-            </div>
-            <p className="order-line-meta">Order reference: {order.id}</p>
-            <ul className="order-lines">
-              {order.items.map((item) => (
-                <li key={item.listingId} className="order-line">
-                  <span>{item.title}: {item.quantity} × {formatNaira(item.unitPrice)}</span>
-                </li>
-              ))}
-            </ul>
-            <hr className="summary-divider" />
-            <div className="summary-row"><span>Subtotal</span><span>{formatNaira(order.subtotal)}</span></div>
-            <div className="summary-row"><span>Shipping</span><span>{formatNaira(order.shipping)}</span></div>
-            <div className="summary-row summary-row-total"><span>Order total</span><span>{formatNaira(order.total)}</span></div>
-          </article>
-        ))}
-        <div className="summary-row summary-row-total">
-          <span>Total</span>
-          <span className="summary-total-amount">{formatNaira(result.total)}</span>
-        </div>
-      </section>
-
-      <p className="summary-note">Your cart stays as it is until your payment is confirmed.</p>
-      <div className="action-row">
-        <Link to="/cart" className="btn">Back to cart</Link>
-        <Link to="/">Keep browsing</Link>
+      <div className="checkout-totals">
+        <p className="checkout-row"><span className="is-muted">Items</span><span>{formatNaira(subtotal)}</span></p>
+        <p className="checkout-row">
+          <span className="is-muted">Delivery</span>
+          <span>{hasState || totals ? feeText(shipping) : "Choose your state"}</span>
+        </p>
+        <p className="checkout-row is-total"><b>Total</b><b>{formatNaira(total)}</b></p>
       </div>
-    </div>
+
+      {children}
+
+      <div className="checkout-safe">
+        <ShieldCheck aria-hidden="true" size={22} />
+        <p><b>Protected purchase.</b> If an order does not arrive or is not as described, raise a complaint from My orders.</p>
+      </div>
+    </aside>
   )
 }
 
@@ -443,64 +446,103 @@ function CheckoutPage() {
     }
   }
 
+  // Step 2: the checkout exists and the items are held; the shopper chooses how to pay.
   if (result) {
-    return <CheckoutSuccess result={result} />
+    const to = result.checkout.delivery
+
+    return (
+      <div className="checkout-page">
+        <div className="checkout-top">
+          <button type="button" className="back-link" onClick={() => setResult(null)}>
+            <ArrowLeft aria-hidden="true" size={18} />
+            Back to delivery details
+          </button>
+          <CheckoutSteps current="pay" />
+        </div>
+
+        <div className="checkout-grid">
+          <div className="checkout-main">
+            <PaymentOptions checkoutId={result.checkout.id} total={result.total}>
+              <p className="checkout-held">
+                <Clock aria-hidden="true" size={20} />
+                <span>
+                  <b>Your items are held for you until {formatHeldUntil(result.checkout.expiresAt)}.</b>{" "}
+                  Starting payment keeps them held for 30 minutes more. Nothing has been charged yet.
+                </span>
+              </p>
+              {result.code === "CHECKOUT_REUSED" && <p className="checkout-held-extra">You already had a checkout with exactly these items, so it was kept.</p>}
+              {result.code === "CHECKOUT_REPLACED" && <p className="checkout-held-extra">This replaces the checkout you started earlier.</p>}
+            </PaymentOptions>
+
+            <section className="checkout-card checkout-to" aria-labelledby="deliver-to-heading">
+              <div>
+                <h2 id="deliver-to-heading">Delivering to</h2>
+                <p>{to.fullName} · {to.phone}</p>
+                <p>{to.address}, {to.lga}, {to.state}</p>
+                {to.instructions && <p className="checkout-small">Note for the rider: {to.instructions}</p>}
+              </div>
+              <button type="button" className="btn btn-sm" onClick={() => setResult(null)}>Change</button>
+            </section>
+          </div>
+
+          {review && (
+            <OrderPanel
+              review={review}
+              totals={result}
+              onCheckAgain={() => refreshPreview("check-again")}
+              isRefreshing={isRefreshing}
+              showPreOrders={false}
+            />
+          )}
+        </div>
+      </div>
+    )
   }
 
   if (previewStatus === "loading") {
-    return <p role="status">Loading checkout...</p>
-  }
-
-  if (previewStatus === "error") {
     return (
-      <div>
-        <h1>Checkout</h1>
-        <Notice kind="error">
-          <p>{previewMessage}</p>
-          <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
-        </Notice>
-        <Link to="/cart">Back to cart</Link>
-      </div>
-    )
-  }
-
-  if (previewStatus === "too-large") {
-    return (
-      <div>
-        <h1>Checkout</h1>
-        <Notice kind="warning">{previewMessage}</Notice>
-        <Link to="/cart" className="btn">Back to cart</Link>
-      </div>
-    )
-  }
-
-  if (previewStatus === "empty") {
-    return (
-      <div>
-        <h1>Checkout</h1>
-        <p>Your cart is empty, so there is nothing to check out.</p>
-        <Link to="/" className="btn btn-primary">Keep browsing</Link>
-      </div>
-    )
-  }
-
-  if (previewStatus === "blocked") {
-    return (
-      <div>
-        <h1>Checkout</h1>
-        <Notice kind="error">
-          <p>
-            One or more items in your cart cannot be checked out right now, for example because there is not enough stock.
-            Please review your cart.
-          </p>
-          {(issue?.type === "items-unavailable" || issue?.type === "error") && <p>{issue.message}</p>}
-        </Notice>
-        <div className="action-row">
-          <Link to="/cart" className="btn">Back to cart</Link>
-          <button type="button" onClick={() => refreshPreview("check-again")} disabled={isRefreshing}>
-            {isRefreshing ? "Checking..." : "Check again"}
-          </button>
+      <div className="checkout-page" aria-busy="true">
+        <p role="status" className="visually-hidden">Loading checkout...</p>
+        <div className="checkout-grid">
+          <div className="skeleton checkout-loading-main" />
+          <div className="skeleton checkout-loading-panel" />
         </div>
+      </div>
+    )
+  }
+
+  if (previewStatus === "error" || previewStatus === "too-large" || previewStatus === "empty" || previewStatus === "blocked") {
+    return (
+      <div className="checkout-page">
+        <section className="checkout-card checkout-message" aria-labelledby="checkout-message-heading">
+          <h1 id="checkout-message-heading" className="checkout-title is-page">
+            {previewStatus === "empty" ? "Your cart is empty" : previewStatus === "too-large" ? "This order is over the limit" : "Checkout cannot start yet"}
+          </h1>
+          {previewStatus === "error" && (
+            <Notice kind="error">
+              <p>{previewMessage}</p>
+              <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+            </Notice>
+          )}
+          {previewStatus === "too-large" && <Notice kind="warning">{previewMessage}</Notice>}
+          {previewStatus === "empty" && <p>There is nothing to check out. Find something you like and add it to your cart.</p>}
+          {previewStatus === "blocked" && (
+            <Notice kind="error">
+              <p>One or more items in your cart cannot be checked out right now, for example because there is not enough stock. Please review your cart.</p>
+              {(issue?.type === "items-unavailable" || issue?.type === "error") && <p>{issue.message}</p>}
+            </Notice>
+          )}
+          <div className="action-row">
+            {previewStatus === "empty"
+              ? <Link to="/" className="btn btn-primary">Browse StoreHatch</Link>
+              : <Link to="/cart" className="btn btn-primary">Back to cart</Link>}
+            {previewStatus === "blocked" && (
+              <button type="button" onClick={() => refreshPreview("check-again")} disabled={isRefreshing}>
+                {isRefreshing ? "Checking..." : "Check again"}
+              </button>
+            )}
+          </div>
+        </section>
       </div>
     )
   }
@@ -509,32 +551,48 @@ function CheckoutPage() {
     return null// not reachable: a ready checkout always has a review
   }
 
-  return (
-    <div>
-      <h1>Checkout</h1>
-      <Notice kind="info" role="none">
-        Creating a checkout reserves your items for a short time. You will pay with Paystack on the next step.
-        An order from one shop can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included.
-      </Notice>
+  // Step 1: delivery details. What still stops the shopper is said next to the button.
+  const blockedReason = !delivery.state
+    ? "Choose your state to see delivery fees."
+    : stateProblem ? "One shop does not deliver to your state."
+    : reviewNotice ? "Check the new total above to continue."
+    : waitingForPreOrder ? "A food shop in your order has to approve a pre-order first."
+    : ""
 
-      <div className="checkout-layout">
-        <ReviewSummary review={review} onCheckAgain={() => refreshPreview("check-again")} isRefreshing={isRefreshing} />
-
-        <div className="checkout-main">
-          {reviewNotice && (
-            <Notice kind="warning" ref={noticeRef} tabIndex={-1}>
-              <p>{reviewNotice.message}</p>
-              {reviewNotice.previousTotal !== null && (
-                <p><strong>Previous total: {formatNaira(reviewNotice.previousTotal)}. New total: {formatNaira(review.total)}.</strong></p>
-              )}
-              <button type="button" className="btn btn-primary" onClick={() => setReviewNotice(null)}>
-                I've reviewed the updated totals
-              </button>
-            </Notice>
+  const panelNotice = (
+    <>
+      {reviewNotice && (
+        <div className="checkout-note is-warning" role="alert" ref={noticeRef} tabIndex={-1}>
+          <p><b>Something changed since you looked.</b> {reviewNotice.message}</p>
+          {reviewNotice.previousTotal !== null && (
+            <p>Your total was {formatNaira(reviewNotice.previousTotal)} and is now {formatNaira(review.total)}.</p>
           )}
+          <button type="button" onClick={() => setReviewNotice(null)}>I have checked the new total</button>
+        </div>
+      )}
+      {stateProblem && (
+        <div className="checkout-note is-error" role="alert">
+          <p>{stateProblem}</p>
+          <Link to="/cart">Edit cart</Link>
+        </div>
+      )}
+    </>
+  )
 
-          <form onSubmit={handleSubmit} className="checkout-form">
-            <h2>Delivery details</h2>
+  return (
+    <div className="checkout-page">
+      <div className="checkout-top">
+        {!isSubmitting
+          ? <Link to="/cart" className="back-link"><ArrowLeft aria-hidden="true" size={18} />Back to cart</Link>
+          : <span />}
+        <CheckoutSteps current="delivery" />
+      </div>
+
+      <div className="checkout-grid">
+        <div className="checkout-main">
+          <form id="delivery-form" onSubmit={handleSubmit} className="checkout-card checkout-delivery" aria-labelledby="delivery-heading">
+            <h1 id="delivery-heading" className="checkout-title is-page">Where should we deliver?</h1>
+            <p className="checkout-lead">Pick your state first: each shop's delivery fee depends on it.</p>
             <DeliveryFields
               formData={delivery}
               setFormData={updateDelivery}
@@ -570,7 +628,6 @@ function CheckoutPage() {
                 <p>You can pay for that checkout below (its items as they were when you created it), or try again after it expires.</p>
               </Notice>
             )}
-            {issue?.type === "locked" && issue.checkout && <PaymentOptions checkoutId={issue.checkout.id} />}
             {issue?.type === "conflict" && <Notice kind="warning">{issue.message}</Notice>}
             {issue?.type === "invalid" && (
               <Notice kind="error">
@@ -585,36 +642,39 @@ function CheckoutPage() {
             )}
             {issue?.type === "error" && <Notice kind="error">{issue.message}</Notice>}
             {preOrderProblem && <Notice kind="warning">{preOrderProblem}</Notice>}
-            {stateProblem && (
-              <Notice kind="warning">
-                <p>{stateProblem}</p>
-                <Link to="/cart" className="btn">Back to cart</Link>
-              </Notice>
-            )}
-            {waitingForPreOrder && (
-              <Notice kind="info">A shop in your cart only takes pre-orders. Ask it for a time in the order summary and wait for its approval before you pay.</Notice>
-            )}
-
-            {isBlocked ? (
-              <button type="button" className="btn-block btn-lg" onClick={() => refreshPreview(issue?.type === "conflict" ? "conflict" : "check-again")} disabled={isRefreshing}>
-                {isRefreshing ? "Checking..." : "Check again"}
-              </button>
-            ) : (
-              <button type="submit" className="btn-block btn-lg" disabled={isSubmitting || isRefreshing || reviewNotice !== null || waitingForPreOrder || stateProblem !== ""}>
-                {isSubmitting
-                  ? "Creating checkout..."
-                  : issue?.type === "unconfirmed" ? "Try again with the same details" : "Create checkout"}
-              </button>
-            )}
-            {reviewNotice !== null && (
-              <p className="form-hint">Confirm the updated totals above to continue.</p>
-            )}
-            <p className="form-hint">Nothing is charged until you pay on the next step.</p>
           </form>
 
-          {/* Not offered while a request is in flight, so the shopper cannot walk away from an unseen outcome. */}
-          {!isSubmitting && <Link to="/cart" className="page-link-center">Back to cart</Link>}
+          {issue?.type === "locked" && issue.checkout && <PaymentOptions checkoutId={issue.checkout.id} />}
         </div>
+
+        <OrderPanel
+          review={review}
+          notice={panelNotice}
+          onCheckAgain={() => refreshPreview("check-again")}
+          isRefreshing={isRefreshing}
+          showPreOrders
+        >
+          {isBlocked ? (
+            <button type="button" className="btn btn-primary btn-lg btn-block checkout-go" onClick={() => refreshPreview(issue?.type === "conflict" ? "conflict" : "check-again")} disabled={isRefreshing}>
+              {isRefreshing ? "Checking..." : "Check again"}
+            </button>
+          ) : (
+            <>
+              {blockedReason && <p role="status" className="checkout-reason">{blockedReason}</p>}
+              <button
+                type="submit"
+                form="delivery-form"
+                className="btn btn-primary btn-lg btn-block checkout-go"
+                disabled={isSubmitting || isRefreshing || blockedReason !== ""}
+              >
+                {isSubmitting
+                  ? "Holding your items..."
+                  : issue?.type === "unconfirmed" ? "Try again with the same details" : <>Continue to payment<ArrowRight aria-hidden="true" size={18} /></>}
+              </button>
+            </>
+          )}
+          <p className="checkout-small">Nothing is charged yet. Your items are held for you for a short time.</p>
+        </OrderPanel>
       </div>
     </div>
   )

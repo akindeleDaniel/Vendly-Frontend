@@ -6,7 +6,7 @@ import LogoutDialog from "./LogoutDialog"
 import SellerMenu from "./SellerMenu"
 import { ChevronLeftIcon, HomeIcon } from "./Icons"
 import { BRAND_WORDMARK } from "../lib/brand"
-import { UserRound } from "lucide-react"
+import { Lock, UserRound } from "lucide-react"
 import { fetchAwaitingConfirmationCount } from "../lib/orderApi"
 import { fetchUnreadComplaintCount } from "../lib/disputeApi"
 import { listPreOrders } from "../lib/preOrderApi"
@@ -106,6 +106,16 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
 
     if (AUTH_PATHS.includes(pathname)) {
         return null
+    }
+
+    // Checkout keeps only the logo and a reassurance, so nothing pulls the shopper away mid-payment.
+    if (pathname === "/checkout") {
+        return (
+            <header className="site-header is-checkout">
+                <Logo />
+                <span className="checkout-secure"><Lock aria-hidden="true" size={18} />Secure checkout</span>
+            </header>
+        )
     }
 
     // A shop page (and a product inside it) is the shop's own site: StoreHatch shrinks to a thin strip
