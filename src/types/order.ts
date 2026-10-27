@@ -5,6 +5,23 @@ import type { BuyerRefund, SellerRefund } from "./refund"
 // Shapes of the order endpoints as implemented by the backend (orderController.ts).
 // Money values are strings with two decimals, calculated by the server.
 
+// The photo and chosen option the backend adds to an order, complaint or pre-order line (itemViews.ts).
+export type ItemPicture = {
+  imageUrl?: string | null
+  optionLabel?: string | null
+  sizeLabel?: string | null
+}
+
+// The shop on complaint and pre-order pages (shopCardView in the backend). The name and slug are
+// null on a complaint when the seller has no shop.
+export type ShopCard = {
+  businessName: string | null
+  slug: string | null
+  logoUrl?: string | null
+  brandColor?: BrandColor | null
+  location?: string | null
+}
+
 export type OrderSeller = {
   businessName: string
   slug: string

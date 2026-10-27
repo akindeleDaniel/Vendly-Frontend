@@ -17,7 +17,29 @@ export function formatOrderDay(isoTime: string | null | undefined, options: { ye
     return options.time ? `${day}, ${date.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}` : day
 }
 
-export type StatusTone = "attention" | "progress" | "done" | "neutral"
+// A pre-order's ready time as a calendar tile shows it ("SAT", "1", "NOV", "2:00 pm"), plus the
+// whole of it in words ("Saturday 1 Nov, 2:00 pm").
+export function readyTimeParts(isoTime: string): { weekday: string, day: string, month: string, time: string, long: string } {
+    const date = new Date(isoTime)
+
+    if (Number.isNaN(date.getTime())) {
+        return { weekday: "", day: "", month: "", time: "", long: isoTime }
+    }
+
+    const time = date.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })
+    const weekday = date.toLocaleDateString("en-NG", { weekday: "long" })
+    const dayMonth = date.toLocaleDateString("en-NG", { day: "numeric", month: "short" })
+
+    return {
+        weekday: weekday.slice(0, 3).toUpperCase(),
+        day: String(date.getDate()),
+        month: date.toLocaleDateString("en-NG", { month: "short" }).toUpperCase(),
+        time,
+        long: `${weekday} ${dayMonth}, ${time}`
+    }
+}
+
+export type StatusTone ="attention" | "progress" | "done" | "neutral" | "bad"
 
 // Where one shop's part of an order stands, in the shopper's words.
 export function describeBuyerStatus(order: ShopOrderState): { label: string, tone: StatusTone } {
@@ -40,7 +62,8 @@ export function hasProgress(order: ShopOrderState): boolean {
     return ["PAID", "SHIPPED", "DELIVERED"].includes(order.status)
 }
 
-export type ProgressStep = { label: string, detail: string, state: "done" | "waiting" | "next" }
+// stopped: the step ended without going ahead (declined, rejected, withdrawn, lapsed).
+export type ProgressStep = { label: string, detail: string, state: "done" | "waiting" | "next" | "stopped" }
 
 // Paid, shipped, delivered. While the shop says it was delivered and the shopper has not confirmed,
 // the last step waits for them. withTime adds the time of day to each date.

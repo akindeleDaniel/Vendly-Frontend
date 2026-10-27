@@ -60,7 +60,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
         }
 
         const controller = new AbortController()
-        listPreOrders("buyer", 1, "", controller.signal).then((result) => {
+        listPreOrders("buyer", 1, "all", controller.signal).then((result) => {
             if (!controller.signal.aborted) {
                 setShowPreOrders(result.kind === "ok" && result.data.total > 0)
             }

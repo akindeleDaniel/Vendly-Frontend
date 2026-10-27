@@ -87,11 +87,13 @@
 }
 
 /* Tabs */
+/* A row that scrolls sideways also clips anything above or below it, so it keeps 6px of room for
+   the tabs' 1px lift on hover and their focus ring; the margins take the room back. */
 .orders-filters {
   display: flex;
   gap: var(--space-2);
-  margin: var(--space-6) 0 var(--space-5);
-  padding-bottom: 2px;
+  margin: calc(var(--space-6) - 6px) -6px calc(var(--space-5) - 6px);
+  padding: 6px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -306,6 +308,11 @@
   color: var(--color-charcoal);
 }
 
+.orders-status.is-bad {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
 .orders-shop-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
@@ -420,6 +427,12 @@
   background: var(--color-surface);
 }
 
+.orders-steps-dot.is-stopped {
+  background: var(--color-text-muted);
+  color: #ffffff;
+}
+
+/* The number of columns is set on the element, one per step. */
 .orders-steps-labels {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -429,11 +442,11 @@
   font-size: 0.75rem;
 }
 
-.orders-steps-labels span:nth-child(2) {
+.orders-steps-labels span:not(:first-child):not(:last-child) {
   text-align: center;
 }
 
-.orders-steps-labels span:nth-child(3) {
+.orders-steps-labels span:last-child {
   text-align: right;
 }
 
@@ -622,6 +635,7 @@
     width: 100%;
   }
 
+  /* Edge to edge on a phone, so the tabs scroll under the screen's edge. */
   .orders-filters {
     margin-right: calc(var(--gutter) * -1);
     margin-left: calc(var(--gutter) * -1);

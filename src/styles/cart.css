@@ -700,49 +700,86 @@
   overflow-wrap: anywhere;
 }
 
-/* A complaint's conversation */
+/* A complaint's conversation: the viewer's own messages on the right, the other side's on the
+   left, StoreHatch's in the middle. */
 .thread {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .thread-message {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 82%;
 }
 
 .thread-message.is-own {
-  border-color: var(--color-forest);
-  background: var(--color-forest-tint);
+  align-self: flex-end;
+  align-items: flex-end;
 }
 
-.thread-message.is-vendly {
-  background: var(--color-cream);
+.thread-message.is-other,
+.thread-message.is-storehatch {
+  align-self: flex-start;
+}
+
+.thread-message.is-system {
+  align-self: center;
+  align-items: center;
+  max-width: 92%;
+  text-align: center;
 }
 
 .thread-meta {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
-  margin-bottom: var(--space-1);
-  font-size: var(--text-sm);
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
-.thread-meta time {
-  color: var(--color-text-muted);
+.thread-meta strong {
+  color: var(--color-charcoal);
 }
 
 .thread-body {
   margin: 0;
+  padding: var(--space-3) 14px;
+  border-radius: 14px;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.thread-message.is-own .thread-body {
+  border-bottom-right-radius: 4px;
+  background: var(--color-forest);
+  color: #ffffff;
+}
+
+.thread-message.is-other .thread-body {
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: 4px;
+  background: var(--color-cream);
+}
+
+.thread-message.is-storehatch .thread-body {
+  border-bottom-left-radius: 4px;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.thread-message.is-system .thread-body {
+  border: 1px dashed var(--color-border-muted);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .thread-evidence,

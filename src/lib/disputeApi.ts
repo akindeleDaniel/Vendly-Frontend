@@ -1,7 +1,7 @@
 import { apiRequest, isRecord } from "./apiRequest"
 import type { ApiResult } from "./apiRequest"
 import type { AdminRefund } from "../types/refund"
-import type { Dispute, DisputePage, DisputeStatus } from "../types/dispute"
+import type { Dispute, DisputeGroup, DisputePage, DisputeStatus } from "../types/dispute"
 
 export type DisputeViewer = "buyer" | "seller" | "admin"
 
@@ -40,8 +40,13 @@ function withOptional(body: Record<string, unknown>, evidenceUrls: string[], amo
     }
 }
 
-export function listDisputes(viewer: DisputeViewer, page: number, status: string, signal?: AbortSignal): Promise<ApiResult<DisputePage>> {
-    const query = new URLSearchParams({ page: String(page), ...(status ? { status } : {}) })
+// The administrator filters by one status; the buyer and seller by a tab (group). Send one or neither.
+export function listDisputes(viewer: DisputeViewer, page: number, filter: { status?: string, group?: DisputeGroup }, signal?: AbortSignal): Promise<ApiResult<DisputePage>> {
+    const query = new URLSearchParams({
+        page: String(page),
+        ...(filter.status ? { status: filter.status } : {}),
+        ...(filter.group && filter.group !== "all" ? { group: filter.group } : {})
+    })
     return apiRequest<DisputePage>(`${BASE_PATHS[viewer]}?${query}`, { signal, isValid: isDisputePage })
 }
 
@@ -179,13 +184,15 @@ export function describeDispute(
         case "OPEN":
             return viewer === "seller"
                 ? { label: "Needs your response", tone: "attention" }
-                : { label: "Waiting for the seller", tone: "neutral" }
+                : viewer === "buyer"
+                    ? { label: "Waiting for the shop", tone: "attention" }
+                    : { label: "Waiting for the seller", tone: "neutral" }
         case "SELLER_AGREED":
             return viewer === "admin"
                 ? { label: "Seller agreed, needs a decision", tone: "attention" }
                 : viewer === "seller"
                     ? { label: "You agreed, waiting for StoreHatch", tone: "neutral" }
-                    : { label: "Seller agreed, waiting for StoreHatch", tone: "neutral" }
+                    : { label: "Shop agreed, waiting for StoreHatch", tone: "neutral" }
         case "UNDER_REVIEW":
             return viewer === "admin"
                 ? { label: "Needs a decision", tone: "attention" }

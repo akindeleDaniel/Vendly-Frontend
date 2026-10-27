@@ -1,3 +1,5 @@
+import type { ItemPicture, ShopCard } from "./order"
+
 // Complaints (disputes) as returned by the backend. A complaint is about one seller's order.
 // Money values are strings with two decimals.
 
@@ -28,8 +30,8 @@ export type DisputeSummary = {
     requestedAmount: string | null
     approvedAmount: string | null
     orderTotal: string
-    items: Array<{ title: string, quantity: number }>
-    seller: { businessName: string } | null
+    items: Array<{ title: string, quantity: number } & ItemPicture>
+    seller: ShopCard | null
     buyerName: string
     responseDueAt: string | null
     createdAt: string
@@ -65,8 +67,8 @@ export type Dispute = DisputeSummary & {
         id: number
         status: string
         total: string
-        seller: { businessName: string } | null
-        items: Array<{ title: string, quantity: number, unitPrice: string, lineTotal: string }>
+        seller: ShopCard | null
+        items: Array<{ title: string, quantity: number, unitPrice: string, lineTotal: string } & ItemPicture>
     }
     messages: DisputeMessage[]
     refunds: DisputeRefund[]
@@ -81,7 +83,11 @@ export type DisputePage = {
     pageSize: number
     total: number
     disputes: DisputeSummary[]
+    counts?: Record<DisputeGroup, number>// buyer and seller lists only: the number on each tab
 }
+
+// The tabs on the buyer's and seller's lists (?group=). "all" sends no group.
+export type DisputeGroup = "all" | "open" | "closed"
 
 // What an order list or detail says about an order's latest complaint.
 export type OrderDisputeLink = {

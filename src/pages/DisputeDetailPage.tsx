@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
+import { AlertTriangle, ArrowLeft, Lock } from "lucide-react"
 import AdminDisputeDecision from "../components/AdminDisputeDecision"
 import DisputeDetailView from "../components/DisputeDetailView"
 import DisputeMessageForm from "../components/DisputeMessageForm"
@@ -9,7 +10,7 @@ import SellerRespondPanel from "../components/SellerRespondPanel"
 import { failureMessage } from "../lib/apiRequest"
 import type { ApiResult } from "../lib/apiRequest"
 import { appealDispute, getDispute, isDisputeClosed, postDisputeMessage, withdrawDispute } from "../lib/disputeApi"
-import { formatShortDate } from "../lib/orderApi"
+import { formatOrderDay } from "../lib/buyerOrders"
 import ReopenDisputePanel from "../components/ReopenDisputePanel"
 import type { DisputeViewer } from "../lib/disputeApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -67,7 +68,7 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
         return failureMessage(result)
     }
 
-    const backLink = <p className="page-back"><Link to={LIST_PATHS[viewer]} className="back-link">Back to complaints</Link></p>
+    const backLink = <Link to={LIST_PATHS[viewer]} className="order-back"><ArrowLeft size={18} aria-hidden="true" />Complaints</Link>
 
     if (state.kind === "loading") {
         return <p role="status">Loading the complaint...</p>
@@ -107,30 +108,68 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
 
     const messageForm = (
         <DisputeMessageForm
-            label="Your message"
+            label="Write a message"
             submitLabel="Send message"
             onSend={(message, urls) => runAction(() => postDisputeMessage(viewer, dispute.id, message, urls))}
         />
     )
 
+    // The message box at the end of the conversation. The seller's response and the administrator's
+    // decision are themselves messages, so no second box is shown beside them; an administrator can
+    // still ask a question without deciding, from the folded section.
+    const composer = isClosed ? (
+        <p className="complaint-closed">
+            <Lock size={18} aria-hidden="true" />
+            {dispute.status === "WITHDRAWN"
+                ? "This was withdrawn, so it is closed."
+                : canAppeal
+                    ? "This complaint is closed. You can still appeal the decision above."
+                    : dispute.appeal?.appealed
+                        ? "This was appealed and decided again. The second decision is final."
+                        : "This has been decided and is closed."}
+        </p>
+    ) : needsSellerResponse ? null : needsDecision ? (
+        <details className="complaint-compose admin-issue">
+            <summary>Message the buyer and seller without deciding</summary>
+            {messageForm}
+        </details>
+    ) : (
+        <div className="complaint-compose">
+            {messageForm}
+            {canWithdraw && (
+                <div className="dispute-withdraw">
+                    <InlineConfirm
+                        buttonLabel={viewer === "buyer" ? "Withdraw my complaint" : "Withdraw my offer"}
+                        prompt={viewer === "buyer"
+                            ? "Withdraw this complaint? It will be closed and you cannot reopen it."
+                            : "Withdraw this refund offer? It will be closed."}
+                        confirmLabel="Yes, withdraw"
+                        danger
+                        onConfirm={() => runAction(() => withdrawDispute(viewer as "buyer" | "seller", dispute.id))}
+                    />
+                </div>
+            )}
+        </div>
+    )
+
     return (
-        <div>
+        <div className="complaints-page is-detail">
             {backLink}
-            <DisputeDetailView dispute={dispute} viewer={viewer}>
+            <DisputeDetailView dispute={dispute} viewer={viewer} composer={composer}>
                 {needsSellerResponse && <SellerRespondPanel dispute={dispute} onUpdated={(updated) => setState({ kind: "ready", dispute: updated })} />}
                 {needsDecision && <AdminDisputeDecision dispute={dispute} onUpdated={(updated) => setState({ kind: "ready", dispute: updated })} />}
 
-                {/* The seller's response and the administrator's decision are themselves messages in the
-                    conversation, so a second message box is not shown beside them. An administrator can
-                    still ask a question without deciding, from the folded section. */}
                 {canAppeal && (
-                    <section aria-labelledby="appeal-heading" className="card summary-card">
-                        <h2 id="appeal-heading">Appeal this decision</h2>
-                        <p>
-                            If you think StoreHatch got this wrong, tell us why and we will look at it again.
-                            {dispute.appeal?.deadline && <> You can appeal until {formatShortDate(dispute.appeal.deadline)}.</>}
+                    <section aria-labelledby="appeal-heading" className="complaint-appeal">
+                        <h2 id="appeal-heading">Think we got this wrong?</h2>
+                        <p>Tell us what we missed, and add photos if you have them. StoreHatch will look at the complaint again.</p>
+                        <p className="complaint-appeal-warning">
+                            <AlertTriangle size={16} aria-hidden="true" />
+                            <span>
+                                You can appeal once{dispute.appeal?.deadline ? `, until ${formatOrderDay(dispute.appeal.deadline, { time: true })}` : ""}.
+                                The second decision is final.
+                            </span>
                         </p>
-                        <Notice kind="warning">You can appeal once, and the second decision is final.</Notice>
                         <DisputeMessageForm
                             label="Why should we look again?"
                             submitLabel="Send appeal"
@@ -140,39 +179,6 @@ function DisputeDetailPage({ viewer }: { viewer: DisputeViewer }) {
                 )}
 
                 {canReopen && <ReopenDisputePanel dispute={dispute} onUpdated={(updated) => setState({ kind: "ready", dispute: updated })} />}
-
-                {isClosed ? (
-                    <Notice kind="info">
-                        {dispute.status === "WITHDRAWN"
-                            ? "This was withdrawn, so it is closed."
-                            : dispute.appeal?.appealed
-                                ? "This was appealed and decided again. The second decision is final."
-                                : "This has been decided and is closed."}
-                    </Notice>
-                ) : needsSellerResponse ? null : needsDecision ? (
-                    <details className="card summary-card admin-issue">
-                        <summary>Message the buyer and seller without deciding</summary>
-                        {messageForm}
-                    </details>
-                ) : (
-                    <section aria-labelledby="reply-heading" className="card summary-card">
-                        <h2 id="reply-heading">Write a message</h2>
-                        {messageForm}
-                        {canWithdraw && (
-                            <div className="dispute-withdraw">
-                                <InlineConfirm
-                                    buttonLabel={viewer === "buyer" ? "Withdraw my complaint" : "Withdraw my offer"}
-                                    prompt={viewer === "buyer"
-                                        ? "Withdraw this complaint? It will be closed and you cannot reopen it."
-                                        : "Withdraw this refund offer? It will be closed."}
-                                    confirmLabel="Yes, withdraw"
-                                    danger
-                                    onConfirm={() => runAction(() => withdrawDispute(viewer as "buyer" | "seller", dispute.id))}
-                                />
-                            </div>
-                        )}
-                    </section>
-                )}
             </DisputeDetailView>
         </div>
     )

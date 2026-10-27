@@ -1,0 +1,661 @@
+/* Complaints and pre-orders: their lists (a card per complaint or request with what happens next)
+   and their own pages (progress, the main card, and a summary beside it). They share the tabs,
+   status pills, progress, item rows and summary boxes of orders-page.css and order-page.css. */
+
+.complaints-page {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.complaints-page.is-detail {
+  max-width: 1120px;
+}
+
+.complaints-head h1 {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-4xl);
+  letter-spacing: -0.025em;
+}
+
+.complaints-head p {
+  max-width: 640px;
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.complaints-page .orders-attention {
+  margin-top: var(--space-5);
+}
+
+/* The lists */
+.complaint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.complaint-row,
+.preorder-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: 18px var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-charcoal);
+  text-decoration: none;
+}
+
+.complaint-row {
+  transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+}
+
+.complaint-row:hover {
+  border-color: var(--color-border-muted);
+  box-shadow: var(--shadow-md);
+  color: var(--color-charcoal);
+}
+
+.complaint-row-photo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  background: var(--color-placeholder);
+  color: var(--color-text-muted);
+  object-fit: cover;
+}
+
+.complaint-row-body,
+.preorder-row-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.complaint-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.complaint-row-top b {
+  font-size: var(--text-base);
+}
+
+.complaint-new {
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-forest);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.complaint-row-meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.complaint-row-meta b {
+  color: var(--color-charcoal);
+}
+
+.complaint-row-chevron {
+  flex: none;
+  align-self: center;
+  color: var(--color-border-strong);
+}
+
+/* What happens next, under a complaint or request and on their own pages */
+.complaint-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) 10px;
+  margin: var(--space-1) 0 0;
+  padding: 10px var(--space-3);
+  border-radius: 10px;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.complaint-next > svg {
+  flex: none;
+}
+
+.complaint-next > span {
+  flex: 1 1 220px;
+}
+
+.complaint-next.is-plain {
+  background: var(--color-cream);
+}
+
+.complaint-next.is-act {
+  background: var(--color-amber-tint);
+  color: var(--color-warning);
+}
+
+.complaint-next.is-act b {
+  color: var(--color-charcoal);
+}
+
+.complaint-next.is-good {
+  background: var(--color-success-bg);
+  color: var(--color-forest);
+}
+
+/* How it works, under the buyer's lists */
+.how-it-works {
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.how-it-works h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-base);
+}
+
+.how-it-works ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: how;
+}
+
+.how-it-works.is-four ol {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.how-it-works li {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  counter-increment: how;
+}
+
+.how-it-works li::before {
+  content: counter(how);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.how-it-works li b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-charcoal);
+}
+
+/* A complaint's own page */
+.complaint-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.complaint-title h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.complaint-title .orders-status {
+  margin-left: 0;
+}
+
+.complaint-sub {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+}
+
+.complaint-progress {
+  margin: var(--space-5) 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.complaint-progress .complaint-next {
+  margin-top: var(--space-4);
+  padding: 14px var(--space-4);
+  font-size: var(--text-base);
+}
+
+.complaint-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .complaint-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .complaint-aside {
+    position: sticky;
+    top: var(--space-5);
+  }
+}
+
+.complaint-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.complaint-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.complaint-card,
+.complaint-decision,
+.complaint-appeal,
+.preorder-action,
+.preorder-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.complaint-card h2,
+.complaint-decision h2,
+.complaint-appeal h2,
+.preorder-action h2,
+.preorder-notes h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.complaint-decision p,
+.complaint-appeal p,
+.preorder-action p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.complaint-decision {
+  border-width: 2px;
+}
+
+.complaint-decision.is-good {
+  border-color: var(--color-success-bg);
+}
+
+.complaint-decision.is-good h2 {
+  color: var(--color-success);
+}
+
+.complaint-decision.is-bad {
+  border-color: var(--color-error-bg);
+}
+
+.complaint-decision.is-bad h2 {
+  color: var(--color-error);
+}
+
+.complaint-appeal {
+  border-color: var(--color-amber-line);
+  background: var(--color-surface-soft);
+}
+
+.complaint-appeal .complaint-appeal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  border-radius: 10px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+}
+
+.complaint-appeal-warning svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.complaint-compose {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.complaint-compose .dispute-withdraw {
+  margin-top: var(--space-3);
+}
+
+.complaint-closed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 14px var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-cream);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.complaint-closed svg {
+  flex: none;
+}
+
+.complaint-shop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.complaint-shop b {
+  display: block;
+}
+
+.complaint-shop div span {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.complaint-aside .orders-item-photo {
+  width: 52px;
+  height: 52px;
+}
+
+/* Pre-orders: the ready time as a small calendar page */
+.ready-tile {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 84px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.ready-tile.is-live {
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.ready-tile.is-pay {
+  background: var(--color-amber-tint);
+  color: var(--color-amber-text);
+}
+
+.ready-tile.is-ended {
+  background: var(--color-placeholder);
+  color: var(--color-text-muted);
+}
+
+.ready-tile-weekday {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ready-tile-day {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ready-tile-month {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.ready-tile-time {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(36, 41, 35, 0.1);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ready-tile.is-large {
+  width: 96px;
+  padding: var(--space-3) 6px;
+}
+
+.ready-tile.is-large .ready-tile-day {
+  font-size: 2.25rem;
+}
+
+.preorder-row-title {
+  color: var(--color-charcoal);
+  font-size: var(--text-base);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.preorder-row-title:hover {
+  color: var(--color-charcoal);
+  text-decoration: underline;
+}
+
+.preorder-row-items {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-sm);
+}
+
+.preorder-row-items img,
+.preorder-row-photo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-placeholder);
+  color: var(--color-text-muted);
+  object-fit: cover;
+}
+
+.preorder-row .complaint-next .btn {
+  min-height: var(--tap-size);
+}
+
+/* A pre-order's own page */
+.preorder-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.preorder-hero-text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.preorder-hero-text h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.preorder-hero-text p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+}
+
+.preorder-hero .orders-status {
+  margin-left: 0;
+}
+
+.preorder-action.is-attention {
+  border-color: var(--color-amber-line);
+}
+
+.preorder-action.is-attention h2,
+.preorder-action.is-good h2 {
+  color: var(--color-success);
+}
+
+.preorder-action.is-attention h2 span,
+.preorder-action.is-good h2 span {
+  color: var(--color-charcoal);
+}
+
+.preorder-deadline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-amber-tint);
+  color: var(--color-warning);
+}
+
+.preorder-deadline svg {
+  flex: none;
+}
+
+.preorder-deadline b {
+  display: block;
+  color: var(--color-charcoal);
+  font-size: var(--text-xl);
+}
+
+.preorder-deadline span {
+  font-size: var(--text-sm);
+}
+
+.preorder-quote {
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-cream);
+  line-height: 1.5;
+}
+
+.preorder-quote.is-shop {
+  background: var(--color-forest-tint);
+}
+
+.preorder-quote small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .complaint-row,
+  .preorder-row {
+    gap: var(--space-3);
+    padding: 14px;
+  }
+
+  .complaint-row-photo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .complaint-row-top .orders-status {
+    margin-left: 0;
+  }
+
+  .complaint-row-chevron {
+    display: none;
+  }
+
+  .ready-tile {
+    width: 64px;
+    padding: var(--space-2) 4px;
+  }
+
+  .ready-tile-day {
+    font-size: var(--text-2xl);
+  }
+
+  .preorder-row .complaint-next .btn {
+    width: 100%;
+  }
+
+  .how-it-works ol,
+  .how-it-works.is-four ol {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .complaint-title h1,
+  .preorder-hero-text h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .complaint-progress,
+  .complaint-card,
+  .complaint-decision,
+  .complaint-appeal,
+  .preorder-action,
+  .preorder-notes,
+  .preorder-hero {
+    padding: var(--space-4);
+  }
+
+  .thread-message {
+    max-width: 92%;
+  }
+
+  .preorder-action .btn-lg {
+    width: 100%;
+  }
+}

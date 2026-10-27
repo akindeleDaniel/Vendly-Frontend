@@ -1,6 +1,6 @@
 import { apiRequest, isRecord } from "./apiRequest"
 import type { ApiResult } from "./apiRequest"
-import type { PreOrder, PreOrderPage, PreOrderStatus } from "../types/preOrder"
+import type { PreOrder, PreOrderGroup, PreOrderPage } from "../types/preOrder"
 
 export type PreOrderViewer = "buyer" | "seller"
 
@@ -27,8 +27,8 @@ export function askForPreOrder(sellerSlug: string, readyAt: string, note: string
     })
 }
 
-export function listPreOrders(viewer: PreOrderViewer, page: number, status: "" | PreOrderStatus, signal?: AbortSignal): Promise<ApiResult<PreOrderPage>> {
-    const query = new URLSearchParams({ page: String(page), ...(status ? { status } : {}) })
+export function listPreOrders(viewer: PreOrderViewer, page: number, group: PreOrderGroup, signal?: AbortSignal): Promise<ApiResult<PreOrderPage>> {
+    const query = new URLSearchParams({ page: String(page), ...(group !== "all" ? { group } : {}) })
     return apiRequest<PreOrderPage>(`${BASE_PATHS[viewer]}?${query}`, { signal, isValid: isPreOrderPage })
 }
 
@@ -62,15 +62,25 @@ export async function fetchPreOrdersAwaitingAnswer(signal?: AbortSignal): Promis
     return result.kind === "ok" ? result.data.count : null
 }
 
-export const PRE_ORDER_FILTERS: Array<{ value: "" | PreOrderStatus, label: string }> = [
-    { value: "", label: "All" },
-    { value: "REQUESTED", label: "Waiting for the shop" },
-    { value: "APPROVED", label: "Approved" },
-    { value: "DECLINED", label: "Declined" },
-    { value: "EXPIRED", label: "Lapsed" },
-    { value: "CANCELLED", label: "Cancelled" },
-    { value: "USED", label: "Paid for" }
+// The tabs on the pre-order lists, with the key of each one's count.
+export const PRE_ORDER_TABS: Array<{ value: PreOrderGroup, label: string, countKey: "all" | "waiting" | "toPay" | "paid" | "ended" }> = [
+    { value: "all", label: "All", countKey: "all" },
+    { value: "waiting", label: "Waiting", countKey: "waiting" },
+    { value: "to-pay", label: "To pay", countKey: "toPay" },
+    { value: "paid", label: "Paid", countKey: "paid" },
+    { value: "ended", label: "Declined or lapsed", countKey: "ended" }
 ]
+
+// Approved and still payable: the buyer can go to checkout and pay for it.
+export function canPayNow(preOrder: Pick<PreOrder, "status" | "payBy">): boolean {
+    return preOrder.status === "APPROVED" && (preOrder.payBy === null || new Date(preOrder.payBy).getTime() > Date.now())
+}
+
+// The ready-time tile's colour: amber while it waits for the buyer's payment, green while the shop
+// is deciding, grey once it has been paid or has ended.
+export function readyTileTone(preOrder: Pick<PreOrder, "status">): "live" | "pay" | "ended" {
+    return preOrder.status === "APPROVED" ? "pay" : preOrder.status === "REQUESTED" ? "live" : "ended"
+}
 
 type Tone = "neutral" | "attention" | "good" | "bad"
 

@@ -1,3 +1,5 @@
+import type { ItemPicture, ShopCard } from "./order"
+
 // Pre-orders for food shops (preOrderController.ts). A buyer asks a shop for a ready time, the shop
 // approves or declines, and an approved request is paid for through the normal checkout.
 
@@ -15,9 +17,9 @@ export type PreOrder = {
   payBy: string | null // once approved, the buyer has until then to pay
   decidedAt: string | null
   createdAt: string
-  items: Array<{ listingId: number, title: string, quantity: number, unitPrice: string }>
+  items: Array<{ listingId: number, title: string, quantity: number, unitPrice: string } & ItemPicture>
   subtotal: string
-  seller: { businessName: string, slug: string }
+  seller: ShopCard
   buyerName?: string // sellers only, first name
 }
 
@@ -26,7 +28,12 @@ export type PreOrderPage = {
   pageSize: number
   total: number
   preOrders: PreOrder[]
+  counts?: { all: number, waiting: number, toPay: number, paid: number, ended: number }
+  awaitingPayment?: number// buyer only: approved requests that can still be paid
 }
+
+// The tabs on the pre-order lists (?group=). "all" sends no group.
+export type PreOrderGroup = "all" | "waiting" | "to-pay" | "paid" | "ended"
 
 // A pre-order approved for the cart's items, as the checkout preview reports it.
 export type ApprovedPreOrder = { id: number, readyAt: string, payBy: string | null }

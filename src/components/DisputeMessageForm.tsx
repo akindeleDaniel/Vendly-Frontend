@@ -58,7 +58,7 @@ function DisputeMessageForm({ label, submitLabel, onSend }: DisputeMessageFormPr
             />
             <EvidenceUploader urls={urls} onChange={setUrls} onUploadingChange={setIsUploading} disabled={isSending} />
             {error && <Notice kind="error">{error}</Notice>}
-            <button type="submit" disabled={isSending || isUploading || message.trim() === ""}>
+            <button type="submit" className="btn btn-primary" disabled={isSending || isUploading || message.trim() === ""}>
                 {isSending ? "Sending..." : submitLabel}
             </button>
         </form>

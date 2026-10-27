@@ -1,17 +1,16 @@
 import type { ReactNode } from "react"
-import { Check, ShoppingBag } from "lucide-react"
+import { Check, ShoppingBag, X } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import { formatNaira } from "../lib/money"
+import { formatMinorUnits, formatNaira, toMinorUnits } from "../lib/money"
 import type { ProgressStep } from "../lib/buyerOrders"
 import type { OrderItem } from "../types/order"
 
-// Pieces shared by the shopper's order pages: My orders and an order's own page.
+// Pieces shared by the shopper's pages: My orders, an order's own page, complaints and pre-orders.
 
 // Paid, Shipped, Delivered as three dots joined by a line, with each step's date below.
 export function OrderProgress({ steps, large = false }: { steps: ProgressStep[], large?: boolean }) {
-    const summary = steps
-        .map((step) => `${step.label} ${step.state === "done" ? "done" : step.state === "waiting" ? "waiting for you" : "not yet"}`)
-        .join(", ")
+    const stateWords = { done: "done", waiting: "in progress", next: "not yet", stopped: "stopped" }
+    const summary = steps.map((step) => `${step.label}: ${step.detail || stateWords[step.state]}`).join(", ")
 
     return (
         <div className={`orders-steps${large ? " is-large" : ""}`} role="img" aria-label={summary}>
@@ -21,11 +20,12 @@ export function OrderProgress({ steps, large = false }: { steps: ProgressStep[],
                         {index > 0 && <span className={`orders-steps-line${step.state !== "next" ? " is-done" : ""}`} />}
                         <span className={`orders-steps-dot is-${step.state}`}>
                             {step.state === "done" && <Check size={large ? 14 : 12} strokeWidth={3.2} aria-hidden="true" />}
+                            {step.state === "stopped" && <X size={large ? 14 : 12} strokeWidth={3.2} aria-hidden="true" />}
                         </span>
                     </span>
                 ))}
             </div>
-            <div className="orders-steps-labels">
+            <div className="orders-steps-labels" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
                 {steps.map((step) => (
                     <span key={step.label}><b>{step.label}</b>{step.detail}</span>
                 ))}
@@ -34,8 +34,12 @@ export function OrderProgress({ steps, large = false }: { steps: ProgressStep[],
     )
 }
 
+// An order, complaint or pre-order line. Pre-order lines have no line total, so it is worked out.
+type ItemLine = Pick<OrderItem, "title" | "quantity" | "unitPrice" | "imageUrl" | "optionLabel" | "sizeLabel" | "productTitle"> & { lineTotal?: string }
+
 // One line of an order: the photo, the product with its options and quantity, and the line total.
-export function OrderItemRow({ item }: { item: OrderItem }) {
+export function OrderItemRow({ item }: { item: ItemLine }) {
+    const lineTotal = item.lineTotal ? formatNaira(item.lineTotal) : formatMinorUnits(toMinorUnits(Number(item.unitPrice)) * item.quantity)
     const details = [
         item.optionLabel,
         item.sizeLabel,
@@ -52,7 +56,7 @@ export function OrderItemRow({ item }: { item: OrderItem }) {
                 <span className="orders-item-title">{item.productTitle ?? item.title}</span>
                 <span className="orders-item-details">{details}</span>
             </div>
-            <span className="orders-item-price">{formatNaira(item.lineTotal)}</span>
+            <span className="orders-item-price">{lineTotal}</span>
         </li>
     )
 }
