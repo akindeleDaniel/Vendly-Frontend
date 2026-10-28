@@ -34,8 +34,8 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
     const [awaitingCount, setAwaitingCount] = useState(0)
     const [unreadComplaints, setUnreadComplaints] = useState(0)
     const [showPreOrders, setShowPreOrders] = useState(false)// a buyer who has asked for a pre-order
-    // Every account can buy, sellers included, so the buyer links show for both.
-    const isConsumer = authStatus === "authenticated" && (userRole === "CONSUMER" || userRole === "SELLER")
+    // Every account can buy, sellers included, so the buyer links show for both. An administrator doesn't shop or sell.
+    const isConsumer = authStatus === "authenticated" && !isAdmin && (userRole === "CONSUMER" || userRole === "SELLER")
 
     // Orders the seller has reported delivered that the shopper has not confirmed yet. Checked when
     // the shopper moves between pages, so the count follows what they confirm.
@@ -155,7 +155,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                                 {isShopPage && firstName && (
                                     <span className="strip-hi"><UserRound aria-hidden="true" size={16} />Hi {firstName}</span>
                                 )}
-                                {userRole === "SELLER" && <SellerStoreLink />}
+                                {userRole === "SELLER" && !isAdmin && <SellerStoreLink />}
                                 {/* On the cart page the cart icon would point to itself, so a Home icon takes its place. */}
                                 {isConsumer && pathname !== "/orders" && (
                                     <Link to="/orders" className="header-link">

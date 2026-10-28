@@ -15,15 +15,16 @@ type GuardProps = {
     children: ReactNode
 }
 
-function homePathForRole(role: UserRole | null): string {
-    return role === "SELLER" ? "/seller/myListing" : "/"
+// An administrator doesn't shop or sell (the backend refuses those routes with 403 ADMIN_ACCOUNT), so their home is the admin area.
+function homePathForRole(role: UserRole | null, isAdmin = false): string {
+    return isAdmin ? "/admin" : role === "SELLER" ? "/seller/myListing" : "/"
 }
 
 function SessionLoading() {
     return <p role="status">Checking your session...</p>
 }
 
-export function RequireRole({ role, authStatus, userRole, onRetry, children }: GuardProps & { role: UserRole }) {
+export function RequireRole({ role, authStatus, userRole, isAdmin, onRetry, children }: GuardProps & { role: UserRole }) {
     if (authStatus === "loading") {
         return <SessionLoading />
     }
@@ -41,16 +42,20 @@ export function RequireRole({ role, authStatus, userRole, onRetry, children }: G
         return <Navigate to="/login" replace />
     }
 
-    if (userRole !== role) {
-        return <Navigate to={homePathForRole(userRole)} replace />
+    if (isAdmin || userRole !== role) {
+        return <Navigate to={homePathForRole(userRole, isAdmin)} replace />
     }
 
     return <>{children}</>
 }
 
 // Buying pages (cart, checkout, orders, complaints, pre-orders): any shopper or seller account, since
-// every account can buy. The backend checks it too, and keeps sellers away from their own shop.
+// every account can buy, but not an administrator. The backend checks it too, and keeps sellers away from their own shop.
 export function RequireBuyer(props: GuardProps & { children: React.ReactNode }) {
+    if (props.authStatus === "authenticated" && props.isAdmin) {
+        return <Navigate to="/admin" replace />
+    }
+
     return <RequireSession {...props} />
 }
 
@@ -97,7 +102,7 @@ export function RequireAdmin({ authStatus, userRole, isAdmin, onRetry, children 
     }
 
     if (!isAdmin) {
-        return <Navigate to={homePathForRole(userRole)} replace />
+        return <Navigate to={homePathForRole(userRole, isAdmin)} replace />
     }
 
     return <>{children}</>
@@ -135,7 +140,7 @@ export function RequireSuperAdmin({ authStatus, userRole, isAdmin, isSuperAdmin,
 }
 
 // For login and registration pages: signed-in users are sent to their home page instead.
-export function RedirectIfAuthenticated({ authStatus, userRole, children }: Omit<GuardProps, "onRetry">) {
+export function RedirectIfAuthenticated({ authStatus, userRole, isAdmin, children }: Omit<GuardProps, "onRetry">) {
     if (authStatus === "loading") {
         return <SessionLoading />
     }
@@ -143,7 +148,7 @@ export function RedirectIfAuthenticated({ authStatus, userRole, children }: Omit
     if (authStatus === "authenticated") {
         // A consumer who was asked to log in from a storefront goes back there; the storefront
         // then adds the product they chose.
-        const pendingCartItem = userRole ? readPendingCartItem() : null
+        const pendingCartItem = userRole && !isAdmin ? readPendingCartItem() : null
         if (pendingCartItem) {
             return <Navigate to={pendingCartItem.returnTo} replace />
         }

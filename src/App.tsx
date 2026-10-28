@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom"
 import RegisterPage from "./pages/RegisterPage"
 import LoginPage from "./pages/LoginPage"
 import DiscoveryPage from "./pages/DiscoveryPage"
@@ -80,6 +80,17 @@ function App() {
     authStatusRef.current = authStatus
   }, [authStatus])
 
+  // Forgets everything about the person who was signed in.
+  function forgetAccount() {
+    clearPendingCartItem()// a remembered add-to-cart must not carry over to whoever logs in next
+    setAuthStatus("unauthenticated")
+    setUserRole(null)
+    setIsAdmin(false)
+    setIsSuperAdmin(false)
+    setHasPassword(true)
+    setUserName("")
+  }
+
   // The login response does not say whether the person is an administrator or has a password, so
   // ask the session check.
   async function refreshAccountFlags() {
@@ -97,14 +108,19 @@ function App() {
     }
   }
 
-  function handleLogin(role: UserRole) {
+  // The session counts as checking until the account flags are back, so an administrator is sent to the admin
+  // area at once instead of first landing on a shopper or seller page.
+  async function handleLogin(role: UserRole) {
     setUserRole(role)
-    setAuthStatus("authenticated")
+    setIsAdmin(false)
+    setIsSuperAdmin(false)
+    setAuthStatus("loading")
     setSessionExpired(false)
     clearPasswordPromptDismissed()
     clearShopSetupPromptDismissed()
     setLoginCount((count) => count + 1)
-    void refreshAccountFlags()
+    await refreshAccountFlags()
+    setAuthStatus("authenticated")
   }
 
   async function handleLogout() {
@@ -117,10 +133,7 @@ function App() {
       throw new Error(await getErrorMessage(response, `Unable to log out (status ${response.status}).`))
     }
 
-    clearPendingCartItem()// a remembered add-to-cart must not carry over to whoever logs in next
-    setAuthStatus("unauthenticated")
-    setUserRole(null)
-    setIsAdmin(false)
+    forgetAccount()
   }
 
   // Ends every login of this account on every device, this one included.
@@ -134,18 +147,12 @@ function App() {
       throw new Error(await getErrorMessage(response, `Unable to log out on all devices (status ${response.status}).`))
     }
 
-    clearPendingCartItem()
-    setAuthStatus("unauthenticated")
-    setUserRole(null)
-    setIsAdmin(false)
+    forgetAccount()
   }
 
   // The account was deleted: the backend has already ended every login, so only the app's memory of it is cleared.
   function handleAccountDeleted() {
-    clearPendingCartItem()
-    setAuthStatus("unauthenticated")
-    setUserRole(null)
-    setIsAdmin(false)
+    forgetAccount()
   }
 
   const retryAuthCheck = useCallback(() => {
@@ -160,9 +167,7 @@ function App() {
         return
       }
       setSessionExpired(true)
-      setAuthStatus("unauthenticated")
-      setUserRole(null)
-      setIsAdmin(false)
+      forgetAccount()
     })
   }, [])
 
@@ -217,6 +222,9 @@ function App() {
   )
 
   const guardProps = { authStatus, userRole, isAdmin, isSuperAdmin, onRetry: retryAuthCheck }
+  // An administrator doesn't shop or sell: on shop and product pages they look without buying, so they get no shopper role.
+  const shopperRole = isAdmin ? null : userRole
+  const isSignedInAdmin = authStatus === "authenticated" && isAdmin
 
   return (
     <BrowserRouter>
@@ -224,10 +232,10 @@ function App() {
       <ScrollToTop />
       <Navbar authStatus={authStatus} userRole={userRole} isAdmin={isAdmin} hasPassword={hasPassword} userName={authStatus === "authenticated" ? userName : ""} onLogout={handleLogout} onLogoutAll={handleLogoutAll} />
       <SetPasswordPrompt key={loginCount} authStatus={authStatus} hasPassword={hasPassword} />
-      <ShopSetupPrompt key={`shop-${loginCount}`} authStatus={authStatus} userRole={userRole} />
+      <ShopSetupPrompt key={`shop-${loginCount}`} authStatus={authStatus} userRole={shopperRole} />
       <main id="main" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} userRole={userRole} onBecameSeller={() => setUserRole("SELLER")} />} />
+          <Route path="/" element={isSignedInAdmin ? <Navigate to="/admin" replace /> : <DiscoveryPage userName={authStatus === "authenticated" ? userName : ""} userRole={userRole} onBecameSeller={() => setUserRole("SELLER")} />} />
 
           <Route path="/register" element={<RedirectIfAuthenticated {...guardProps}><RegisterPage onLogin={handleLogin} role="SELLER"/></RedirectIfAuthenticated>} />
 
@@ -239,7 +247,7 @@ function App() {
 
           <Route path="/forgot-password" element={<RedirectIfAuthenticated {...guardProps}><ForgotPasswordPage /></RedirectIfAuthenticated>} />
 
-          <Route path="/change-password" element={<RequireSession {...guardProps}><PasswordPage hasPassword={hasPassword} backTo={userRole === "SELLER" ? "/seller/myListing" : "/orders"} onPasswordSet={() => void refreshAccountFlags()} /></RequireSession>} />
+          <Route path="/change-password" element={<RequireSession {...guardProps}><PasswordPage hasPassword={hasPassword} backTo={isAdmin ? "/admin" : userRole === "SELLER" ? "/seller/myListing" : "/orders"} onPasswordSet={() => void refreshAccountFlags()} /></RequireSession>} />
 
           <Route path="/seller/onboarding" element={<RequireRole role="SELLER" {...guardProps}><SellerOnboardingPage /></RequireRole>} />
 
@@ -282,9 +290,9 @@ function App() {
           <Route path="/seller/products/quick-edit" element={<RequireRole role="SELLER" {...guardProps}><QuickEditPage /></RequireRole>} />
           <Route path="/seller/products/:id/edit" element={<RequireRole role="SELLER" {...guardProps}><ProductFormPage /></RequireRole>} />
 
-          <Route path="/product/:id" element={<ProductPage userRole={userRole} authStatus={authStatus} />} />
+          <Route path="/product/:id" element={<ProductPage userRole={shopperRole} authStatus={authStatus} isAdmin={isSignedInAdmin} />} />
 
-          <Route path="/shop/:slug" element={<ShopPage userRole={userRole} />} />
+          <Route path="/shop/:slug" element={<ShopPage userRole={shopperRole} />} />
 
           <Route path="/cart" element={<RequireBuyer {...guardProps}><CartPage /></RequireBuyer>} />
 
