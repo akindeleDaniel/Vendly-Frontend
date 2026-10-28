@@ -18,3 +18,5 @@ export const CATEGORIES = [
     "Tools & Hardware",
     "Other"
 ] as const
+// One of the categories above.
+export type Category = (typeof CATEGORIES)[number]

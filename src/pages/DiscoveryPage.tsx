@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ChevronRight, MapPin, MessagesSquare, PackageChe
 import ProductTile from "../components/ProductTile"
 import Pagination from "../components/Pagination"
 import { CATEGORIES } from "../data/categories"
-import { pickCategoryPhotos } from "../data/categoryPhotos"
+import CategoryTiles from "../components/CategoryTiles"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { becomeSeller } from "../lib/accountApi"
 import type { Listing } from "../types/listing"
@@ -46,7 +46,7 @@ function categoryPath(category: string, search?: string): string {
 }
 
 // StoreHatch's home and browsing page. One route ("/") with four views, chosen by the URL:
-//   1. nothing       -> home: search, category photos and list, new products, how buying works
+//   1. nothing       -> home: search, a tile for every category, new products, how buying works
 //   2. ?view=new     -> every product, newest first
 //   3. ?search=...   -> product results across all categories
 //   4. ?category=... -> products in that category (optionally searched) and its shops
@@ -61,7 +61,6 @@ function DiscoveryPage ({ userName = "", userRole = null, onBecameSeller }: Disc
   const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1
   const [searchText, setSearchText] = useState(search)
   const [heroText, setHeroText] = useState("")
-  const [photos] = useState(() => pickCategoryPhotos())// a new set and order on every visit
   useDocumentTitle(selectedCategory ?? (search ? "Search results" : isNewView ? "New on StoreHatch" : null))
   const [products, setProducts] = useState<Listing[]>([])
   const [productTotal, setProductTotal] = useState(0)
@@ -413,17 +412,7 @@ function DiscoveryPage ({ userName = "", userRole = null, onBecameSeller }: Disc
 
         <section className="browse-section" aria-labelledby="categories-heading">
           <h2 id="categories-heading" className="browse-heading">Shop by category</h2>
-          <ul className="category-photos" aria-label="A few of the things you can find">
-            {photos.map((photo, index) => (
-              <li key={photo.src} className={index === 0 ? "is-big" : undefined}>
-                <figure>
-                  <img src={photo.src} alt={photo.alt} style={photo.position ? { objectPosition: photo.position } : undefined} />
-                  <figcaption>{photo.category}</figcaption>
-                </figure>
-              </li>
-            ))}
-          </ul>
-          {allCategories("All categories")}
+          <CategoryTiles onPick={resetSearchAndStatuses} />
         </section>
 
         <section className="browse-section" aria-labelledby="new-heading">

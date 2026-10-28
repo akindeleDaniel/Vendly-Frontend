@@ -112,12 +112,13 @@ function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
     const [isWorking, setIsWorking] = useState(false)
     const [error, setError] = useState("")
     const [openPhoto, setOpenPhoto] = useState<number | null>(null)
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)// asks on the page itself before deleting
     const written = new Date(review.createdAt)
     const changeUntil = Number.isNaN(written.getTime()) ? "" : formatOrderDay(new Date(written.getTime() + CHANGE_DAYS * 86_400_000).toISOString())
     const photoUrls = review.photoUrls ?? []
 
     async function remove() {
-        if (isWorking || !window.confirm(`Delete your review of ${about}?`)) {
+        if (isWorking) {
             return
         }
         setIsWorking(true)
@@ -154,18 +155,28 @@ function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
             />
             {review.hidden && <Notice kind="warning">StoreHatch has hidden this review from the public.</Notice>}
             {error && <Notice kind="error">{error}</Notice>}
-            <div className="review-written-meta">
-                <span>
-                    Written {formatOrderDay(review.createdAt)}
-                    {review.canChange && changeUntil ? ` · You can change it until ${changeUntil}` : ""}
-                </span>
-                {review.canChange && (
-                    <>
-                        <button type="button" className="btn-quiet" onClick={() => setIsEditing(true)} disabled={isWorking}>Edit</button>
-                        <button type="button" className="btn-quiet" onClick={remove} disabled={isWorking}>Delete</button>
-                    </>
-                )}
-            </div>
+            {isConfirmingDelete ? (
+                <div className="review-delete-confirm" role="group" aria-label="Delete your review">
+                    <p><b>Delete your review of {about}?</b> Its stars, words and photos are removed from the shop's page.</p>
+                    <div className="review-actions">
+                        <button type="button" className="btn btn-danger" onClick={remove} disabled={isWorking}>{isWorking ? "Deleting..." : "Delete review"}</button>
+                        <button type="button" className="btn" onClick={() => setIsConfirmingDelete(false)} disabled={isWorking}>Keep it</button>
+                    </div>
+                </div>
+            ) : (
+                <div className="review-written-meta">
+                    <span>
+                        Written {formatOrderDay(review.createdAt)}
+                        {review.canChange && changeUntil ? ` · You can change it until ${changeUntil}` : ""}
+                    </span>
+                    {review.canChange && (
+                        <>
+                            <button type="button" className="btn-quiet" onClick={() => setIsEditing(true)} disabled={isWorking}>Edit</button>
+                            <button type="button" className="btn-quiet" onClick={() => setIsConfirmingDelete(true)} disabled={isWorking}>Delete</button>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

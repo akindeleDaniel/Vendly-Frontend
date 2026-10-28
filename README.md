@@ -94,21 +94,28 @@ Rules for new screens:
 
 Sign-in pages (`/login`, `/register`, `/consumer/register`, `/seller/register`) hide the site header and show a centred logo instead; the list is `AUTH_PATHS` in `Navbar.tsx`.
 
-### Category photos on the home page
+### Category tiles on the home page
 
-The "Shop by category" tiles show five of the 11 photos in `public/images/categories/`, from five different categories, in a new order on every visit (`src/data/categoryPhotos.ts`). They are pictures only, not links. All are from Unsplash, free for commercial use with no credit required (credit is kind but optional); do not resell them as they are.
+"Shop by category" shows a tile for every category, each in one of the shop colours with a photo in a round window, and each a link to that category (`src/data/categoryTiles.ts`, `src/components/CategoryTiles.tsx`). The page-not-found page shows the first four. The photos are in `public/images/categories/`, all from Unsplash, free for commercial use with no credit required (credit is kind but optional); do not resell them as they are.
 
 - `fashion-dress.jpg`: unsplash.com/photos/young-woman-in-a-patterned-dress-smiles-6EvUrguVz7s
-- `fashion-suit.jpg`: unsplash.com/photos/man-wearing-colorful-geometric-patterned-suit-ypNtKLYNXOU
-- `crafts-fabric.jpg`: unsplash.com/photos/assorted-color-textiles-SfPOkp6-2eA
-- `accessories-headwrap.jpg`: unsplash.com/photos/woman-wearing-colorful-wax-print-headwrap-and-top--9b2fdmU4bQ
-- `food-cake.jpg`: unsplash.com/photos/chocolate-cake-with-chocolate-syrup-on-top-QLSh4y2v93c
 - `food-market.jpg`: unsplash.com/photos/a-market-with-a-lot-of-fruits-and-vegetables-xs0gVDr02ag
 - `beauty-serum.jpg`: unsplash.com/photos/amber-glass-bottle-on-wooden-pedestal-Mxy5gokl8mE
 - `phones-phone.jpg`: unsplash.com/photos/a-samsung-smartphone-on-a-table-VD9Hsvg3DVQ
-- `sports-sneakers.jpg`: unsplash.com/photos/a-pair-of-sneakers-hanging-on-a-wall-sSaQ7_pArx8
+- `jewelry-pieces.jpg`: unsplash.com/photos/gold-and-silver-beaded-necklace-uf_IDewI6iQ
 - `home-armchair.jpg`: unsplash.com/photos/a-comfortable-armchair-with-blankets-and-pillows-3eFjPyC9qyw
+- `electronics-headphones.jpg`: unsplash.com/photos/lUMj2Zv5HUE
+- `health-supplements.jpg`: unsplash.com/photos/6IfOjsRKtCg
+- `computers-laptop.jpg`: unsplash.com/photos/RSCirJ70NDM
+- `sports-sneakers.jpg`: unsplash.com/photos/a-pair-of-sneakers-hanging-on-a-wall-sSaQ7_pArx8
+- `baby-clothes.jpg`: unsplash.com/photos/AkPas1rErdE
 - `books-stack.jpg`: unsplash.com/photos/a-stack-of-books-sitting-next-to-each-other-b53HdbIUOhM
+- `toys-collection.jpg`: unsplash.com/photos/gDiRwIYAMA8
+- `crafts-paints.jpg`: unsplash.com/photos/flat-lay-photography-of-assorted-color-painting-tool-lot-lPqICZuSUpw
+- `pets-dog-toy.jpg`: unsplash.com/photos/g2FtlFrc164
+- `automotive-dashboard.jpg`: unsplash.com/photos/SkKTh9ZyTxU
+- `tools-hammer.jpg`: unsplash.com/photos/Z3vFp7szCAY
+- `other-gift.jpg`: unsplash.com/photos/f94JPVrDbnY
 
 The sign-in pages show three other photos, in `public/images/auth/`, beside the forms (`src/components/AuthShell.tsx`). Keep them different from the category photos and the landing page's. Also from Unsplash, on the same terms:
 

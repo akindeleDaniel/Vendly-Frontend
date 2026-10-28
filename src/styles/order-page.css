@@ -673,3 +673,20 @@
     height: 84px;
   }
 }
+
+/* Deleting a review: asked on the page, under the review */
+.review-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px solid var(--color-error-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.review-delete-confirm p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}

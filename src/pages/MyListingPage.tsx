@@ -7,6 +7,8 @@ import { apiFetch } from "../lib/api"
 import { apiRequest, failureMessage } from "../lib/apiRequest"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import AddProductsMenu from "../components/AddProductsMenu"
+import DeleteProductDialog from "../components/DeleteProductDialog"
+import type { DeletePrompt } from "../components/DeleteProductDialog"
 import DraftsPanel from "../components/DraftsPanel"
 import Notice from "../components/Notice"
 import Greeting from "../components/Greeting"
@@ -72,18 +74,30 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const [loadAttempt, setLoadAttempt] = useState(0)
     const [view, setView] = useState<ProductView>(VIEWS.find((value) => value === viewParam) ?? "on-sale")
     const [drafts, setDrafts] = useState<Listing[]>([])
-    const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
-    const [isArchiving, setIsArchiving] = useState(false)
+    const [deletePrompt, setDeletePrompt] = useState<DeletePrompt | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [dialogError, setDialogError] = useState("")
+    const [doneNote, setDoneNote] = useState("")
     const [needsShop, setNeedsShop] = useState(false)// no shop yet: products need one, so setup is offered first
     const [shopAlertNumber, setShopAlertNumber] = useState<number | null>(null)// the shop's low-stock alert number
 
-    async function handleDelete(id: number) {
+    // Opens the delete dialog; nothing is deleted until the seller confirms there.
+    function handleDelete(id: number) {
         const listing = [...listings, ...drafts].find((candidate) => candidate.id === id)
-        if (!window.confirm(`Delete "${listing?.title ?? "this product"}"? This cannot be undone.`)) {
+        setDeleteError("")
+        setDialogError("")
+        setDoneNote("")
+        setDeletePrompt({ id, title: listing?.title ?? "this product", imageUrl: listing?.imageUrl || null, step: "ask" })
+    }
+
+    async function confirmDelete() {
+        if (deletePrompt === null || isDeleting) {
             return
         }
 
-        setDeleteError("")
+        const { id, title } = deletePrompt
+        setIsDeleting(true)
+        setDialogError("")
 
         try {
             const response = await apiFetch(`/listings/${id}`, { method: "DELETE", credentials: "include" })
@@ -94,11 +108,11 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                 // A product that has been ordered, or is in someone's cart, cannot be deleted. It can be taken
                 // off sale instead, which leaves paid orders alone.
                 if (response.status === 409 && typeof body === "object" && body !== null && "code" in body && body.code === "LISTING_HAS_HISTORY") {
-                    setArchivePrompt({ id, title: listing?.title ?? "this product" })
+                    setDeletePrompt({ ...deletePrompt, step: "ordered" })
                     return
                 }
 
-                setDeleteError(
+                setDialogError(
                     typeof body === "object" && body !== null && "message" in body && typeof body.message === "string" && body.message
                         ? body.message
                         : `Unable to delete this product (status ${response.status}).`
@@ -108,28 +122,33 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
 
             setListings((current) => current.filter((candidate) => candidate.id !== id))
             setDrafts((current) => current.filter((candidate) => candidate.id !== id))
+            setDeletePrompt(null)
+            setDoneNote(`“${title}” was deleted.`)
         } catch {
-            setDeleteError("Something went wrong. Please check your connection and try again.")
+            setDialogError("Something went wrong. Please check your connection and try again.")
+        } finally {
+            setIsDeleting(false)
         }
     }
 
     // Takes a product off sale: it is hidden from shoppers and removed from every cart, and paid orders are not touched.
     async function handleArchive() {
-        if (archivePrompt === null || isArchiving) {
+        if (deletePrompt === null || isDeleting) {
             return
         }
 
-        setIsArchiving(true)
-        const result = await apiRequest<{ listing: Listing }>(`/listings/${archivePrompt.id}/archive`, { method: "POST", body: {} })
-        setIsArchiving(false)
+        const { id, title } = deletePrompt
+        setIsDeleting(true)
+        setDialogError("")
+        const result = await apiRequest<{ listing: Listing }>(`/listings/${id}/archive`, { method: "POST", body: {} })
+        setIsDeleting(false)
 
         if (result.kind === "ok") {
-            setListings((current) => current.map((candidate) => candidate.id === archivePrompt.id ? result.data.listing : candidate))
-            setArchivePrompt(null)
-            setDeleteError("")
+            setListings((current) => current.map((candidate) => candidate.id === id ? result.data.listing : candidate))
+            setDeletePrompt(null)
+            setDoneNote(`“${title}” is off sale. Find it in the Archived tab.`)
         } else if (result.kind !== "unauthorized") {
-            setDeleteError(failureMessage(result))
-            setArchivePrompt(null)
+            setDialogError(failureMessage(result))
         }
     }
 
@@ -262,20 +281,15 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                 </div>
 
                 {deleteError && <Notice kind="error">{deleteError}</Notice>}
-                {archivePrompt && (
-                    <Notice kind="warning">
-                        <p>
-                            &ldquo;{archivePrompt.title}&rdquo; cannot be deleted because it has been ordered or is in a cart. You can archive it instead.
-                            It is taken off sale and removed from carts, and orders already paid are not affected. You can restore it later.
-                        </p>
-                        <div className="action-row">
-                            <button type="button" className="btn btn-primary" disabled={isArchiving} onClick={handleArchive}>
-                                {isArchiving ? "Archiving..." : "Archive it"}
-                            </button>
-                            <button type="button" className="btn" disabled={isArchiving} onClick={() => setArchivePrompt(null)}>Cancel</button>
-                        </div>
-                    </Notice>
-                )}
+                {doneNote && <Notice kind="success">{doneNote}</Notice>}
+                <DeleteProductDialog
+                    prompt={deletePrompt}
+                    isWorking={isDeleting}
+                    error={dialogError}
+                    onDelete={confirmDelete}
+                    onArchive={handleArchive}
+                    onClose={() => { if (!isDeleting) setDeletePrompt(null) }}
+                />
 
                 {shownView === "on-sale" && (lowListings.length > 0 || soldOutListings.length > 0) && (
                     <StockAlertBox low={lowListings.length} soldOut={soldOutListings.length} shopAlertNumber={shopAlertNumber} onShow={() => setView(lowListings.length > 0 ? "low" : "sold-out")} />
