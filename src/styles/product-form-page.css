@@ -818,3 +818,13 @@
     display: none;
   }
 }
+
+/* Why options can't change while a product is off sale */
+.product-locked {
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--color-amber-line);
+  border-radius: var(--radius-md);
+  background: var(--color-amber-tint);
+  color: var(--color-charcoal);
+}

@@ -361,6 +361,8 @@ function ProductFormPage() {
             : { done: options.length > 0, label: "Options with stock" }
     ]
     const isArchived = Boolean(listing?.archivedAt)
+    // The backend refuses option changes on a product that is off sale, so they wait until it is back on sale.
+    const optionsLocked = isEdit && isArchived
 
     return (
         <div className="product-form-page">
@@ -407,12 +409,19 @@ function ProductFormPage() {
 
                     <section className="product-form-card" aria-labelledby="stock-heading">
                         <div className="product-form-card-head"><h2 id="stock-heading">Price and stock</h2></div>
+                        {optionsLocked && (
+                            <p className="product-help product-locked">
+                                {options === null
+                                    ? "While it's off sale you can change the price and stock, but not add options. Put it back on sale first."
+                                    : "While it's off sale its options, prices and stock can't be changed. Put it back on sale first."}
+                            </p>
+                        )}
                         <div className="product-sold" role="radiogroup" aria-label="How is it sold?">
-                            <button type="button" role="radio" aria-checked={options === null} className={options === null ? "is-on" : undefined} disabled={isWorking} onClick={() => options !== null && setOptions(null)}>
+                            <button type="button" role="radio" aria-checked={options === null} className={options === null ? "is-on" : undefined} disabled={isWorking || optionsLocked} onClick={() => options !== null && setOptions(null)}>
                                 <span className="product-radio" aria-hidden="true" />
                                 <span><b>One version</b><span>One price, one stock count.</span></span>
                             </button>
-                            <button type="button" role="radio" aria-checked={options !== null} className={options !== null ? "is-on" : undefined} disabled={isWorking} onClick={() => options === null && setOptions(listing?.hasOptions ? draftsFromListing(listing) : [newOptionDraft()])}>
+                            <button type="button" role="radio" aria-checked={options !== null} className={options !== null ? "is-on" : undefined} disabled={isWorking || optionsLocked} onClick={() => options === null && setOptions(listing?.hasOptions ? draftsFromListing(listing) : [newOptionDraft()])}>
                                 <span className="product-radio" aria-hidden="true" />
                                 <span><b>Several options</b><span>Colours, sizes or styles, each with its own stock.</span></span>
                             </button>
@@ -442,7 +451,7 @@ function ProductFormPage() {
                                     drafts={options}
                                     onChange={(drafts) => setOptions(drafts)}
                                     pricePlaceholder={form.price ? Number(form.price).toLocaleString("en-NG") : "Same as the product"}
-                                    disabled={isWorking}
+                                    disabled={isWorking || optionsLocked}
                                 />
                             </>
                         )}

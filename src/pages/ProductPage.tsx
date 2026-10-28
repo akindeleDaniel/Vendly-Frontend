@@ -207,6 +207,8 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const profile = shopData?.profile ?? null
     const shopPath = product.sellerSlug ? `/shop/${encodeURIComponent(product.sellerSlug)}` : null
     const whatsapp = profile?.branding?.whatsapp ?? null
+    // The backend's message names the price and links to the product; the shop's own chat link is the fallback.
+    const enquiryUrl = product.whatsappEnquiry?.url ?? (whatsapp ? askAboutUrl(whatsapp.url, product.title) : null)
     const trust = product.shopTrust
     const sellerFacts = [
         trust && (trust.confirmedDeliveries > 0 ? `${trust.confirmedDeliveries.toLocaleString("en-NG")} ${trust.confirmedDeliveries === 1 ? "order" : "orders"} delivered` : "New shop"),
@@ -380,8 +382,8 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                                 </div>
                                 <div className="product-seller-actions">
                                     <Link className="shop-btn is-plain is-small" to={shopPath}>Visit shop</Link>
-                                    {whatsapp && (
-                                        <a className="shop-btn is-plain is-small" href={askAboutUrl(whatsapp.url, product.title)} target="_blank" rel="noopener noreferrer">
+                                    {enquiryUrl && (
+                                        <a className="shop-btn is-plain is-small" href={enquiryUrl} target="_blank" rel="noopener noreferrer">
                                             <MessageCircle aria-hidden="true" size={16} />
                                             Ask on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
                                         </a>

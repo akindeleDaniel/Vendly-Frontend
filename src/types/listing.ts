@@ -20,6 +20,9 @@ import type { ShopTrust } from "./trust"
 
 export type Listing = {
   id: number
+  // GET /listings/:id only: a WhatsApp link with a message naming the product, its price and a link to it.
+  // Null when the shop has no WhatsApp number.
+  whatsappEnquiry?: { number: string, message: string, url: string } | null
   title: string
   description: string
   price: number

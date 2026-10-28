@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import CartReminderSwitch from "./CartReminderSwitch"
 
 type LogoutDialogProps = {
     isOpen: boolean
@@ -12,8 +13,8 @@ type LogoutDialogProps = {
     onPassword: () => void
 }
 
-// What Logout offers: end the login on this device, or on every device, or go to the password page
-// (set one, or change it). It is a real modal dialog, so the keyboard stays inside it and Escape
+// What Logout offers: end the login on this device, or on every device, go to the password page
+// (set one, or change it), or switch cart reminder emails on or off. It is a real modal dialog, so the keyboard stays inside it and Escape
 // closes it.
 function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout, onLogoutAll, onPassword }: LogoutDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null)
@@ -73,6 +74,8 @@ function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout
                             : "You signed in with Google. Add a password to log in with your email too."}
                     </p>
                 </div>
+
+                {isOpen && <CartReminderSwitch />}
 
                 {error && <p role="alert" className="alert alert-error">{error}</p>}
 

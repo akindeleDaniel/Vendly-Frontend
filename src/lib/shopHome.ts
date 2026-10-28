@@ -18,8 +18,8 @@ export function scrollToSection(id: string, focusId?: string) {
     }
 }
 
-// The shop's colour as CSS variables for its page. A shop that has not picked one gets Forest.
-// Light colours (Cream, Beige) take charcoal for words and outlines, so they still pass contrast.
+// The shop's colour as CSS variables for its page. A shop that has not picked one gets Forest. Every
+// colour offered is dark with white words, so the colour itself is also the accent and the outline.
 export function shopColorStyle(color: BrandColor | undefined): CSSProperties {
     const brand = color ?? BRAND_COLORS[0]
 
@@ -27,9 +27,9 @@ export function shopColorStyle(color: BrandColor | undefined): CSSProperties {
         "--shop-bg": brand.background,
         "--shop-fg": brand.text,
         "--shop-tint": brand.tint,
-        "--shop-accent": brand.light ? "var(--color-charcoal)" : brand.background,
-        "--shop-edge": brand.light ? "var(--color-border-strong)" : brand.background,
-        "--shop-line": brand.light ? "rgba(36, 41, 35, 0.2)" : "rgba(255, 255, 255, 0.25)"
+        "--shop-accent": brand.background,
+        "--shop-edge": brand.background,
+        "--shop-line": "rgba(255, 255, 255, 0.25)"
     } as CSSProperties
 }
 
