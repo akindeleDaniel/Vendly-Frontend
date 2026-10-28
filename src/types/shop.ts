@@ -16,4 +16,6 @@ export type ShopProfile = {
     branding?: ShopBranding
     deliversEverywhere?: boolean
     shippingRates?: Array<{ state: string, cost: string | null }>// cost null: no delivery to that state
+    // The link that shows the shop's picture and name when pasted into WhatsApp, Instagram or Facebook.
+    shareUrl?: string
 }

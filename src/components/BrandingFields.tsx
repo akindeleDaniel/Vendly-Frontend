@@ -1,5 +1,6 @@
-import { useId } from "react"
+import { useId, useRef, useState } from "react"
 import type { ReactNode } from "react"
+import { TriangleAlert } from "lucide-react"
 import ImagePicker from "./ImagePicker"
 import { ABOUT_MAX_LENGTH, BRAND_COLORS } from "../types/branding"
 import type { BrandingForm } from "../types/branding"
@@ -76,15 +77,29 @@ const SOCIAL_FIELDS: Array<{ key: "instagram" | "tiktok" | "facebook" | "x", lab
     { key: "x", label: "X username" }
 ]
 
-// The shop's social pages and an optional WhatsApp button. Each shows as a button on the shop.
+// The shop's social pages and an optional WhatsApp button. Each one filled in shows as an icon on the shop.
+// Turning the WhatsApp button off clears the number, which is what hides the button; the number typed is kept
+// on the page in case it is switched on again before saving.
 export function ShopLinksFields({ form, setForm, disabled }: ShopLinksFieldsProps) {
     const id = useId()
     const update = (change: Partial<BrandingForm>) => setForm({ ...form, ...change })
+    const [showWhatsapp, setShowWhatsapp] = useState(form.whatsappNumber.trim() !== "")
+    const lastNumber = useRef(form.whatsappNumber)
+
+    function switchWhatsapp(on: boolean) {
+        setShowWhatsapp(on)
+        if (on) {
+            update({ whatsappNumber: lastNumber.current })
+        } else {
+            lastNumber.current = form.whatsappNumber
+            update({ whatsappNumber: "" })
+        }
+    }
 
     return (
         <section className="product-form-card" aria-labelledby={`${id}-heading`}>
             <h2 id={`${id}-heading`}>Social pages and WhatsApp</h2>
-            <p className="product-help settings-card-lead">Optional. Each one shows as a button on your shop.</p>
+            <p className="product-help settings-card-lead">Optional. Each one you fill in shows on your shop as a small icon shoppers can tap.</p>
             <fieldset className="settings-fieldset" disabled={disabled}>
                 <div className="product-two">
                     {SOCIAL_FIELDS.map((field) => (
@@ -97,11 +112,27 @@ export function ShopLinksFields({ form, setForm, disabled }: ShopLinksFieldsProp
                         </div>
                     ))}
                 </div>
-                <div className="product-field settings-narrow">
-                    <label htmlFor={`${id}-whatsapp`}>WhatsApp number for shoppers</label>
-                    <input id={`${id}-whatsapp`} className="product-input" type="tel" autoComplete="off" placeholder="0801 234 5678" value={form.whatsappNumber} onChange={(event) => update({ whatsappNumber: event.target.value })} />
-                </div>
-                <p className="product-help">Shows a "Chat on WhatsApp" button. Leave it empty to hide the button. This isn't the phone number for your payouts.</p>
+                <label className="settings-switch">
+                    <input type="checkbox" role="switch" checked={showWhatsapp} onChange={(event) => switchWhatsapp(event.target.checked)} />
+                    <span>
+                        <b>Show a WhatsApp button on your shop</b>
+                        <span>Shoppers can message you before they buy.</span>
+                    </span>
+                </label>
+                {showWhatsapp ? (
+                    <>
+                        <div className="product-field settings-narrow">
+                            <label htmlFor={`${id}-whatsapp`}>WhatsApp number</label>
+                            <input id={`${id}-whatsapp`} className="product-input" type="tel" autoComplete="off" placeholder="0801 234 5678" value={form.whatsappNumber} onChange={(event) => update({ whatsappNumber: event.target.value })} />
+                        </div>
+                        <p className="settings-public-warning" role="note">
+                            <TriangleAlert size={18} aria-hidden="true" />
+                            <span><b>This number will be public.</b> Anyone who visits your shop can see it and message you. Use a number you're happy to share. It isn't the phone number for your payouts.</span>
+                        </p>
+                    </>
+                ) : (
+                    <p className="product-help">No WhatsApp button on your shop. Shoppers can still buy and ask questions through StoreHatch.</p>
+                )}
             </fieldset>
         </section>
     )

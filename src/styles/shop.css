@@ -1214,3 +1214,30 @@ html:has(.shop-home) {
     padding: var(--space-4);
   }
 }
+
+/* The shop's social pages, as round icons (only the ones the seller filled in) */
+.shop-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  border: 1.5px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+}
+
+.shop-social:hover {
+  border-color: var(--shop-bg);
+  color: var(--shop-bg);
+}

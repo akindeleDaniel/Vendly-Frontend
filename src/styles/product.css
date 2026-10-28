@@ -609,3 +609,11 @@
     padding-top: var(--space-6);
   }
 }
+
+/* The product's name with Share beside it */
+.product-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

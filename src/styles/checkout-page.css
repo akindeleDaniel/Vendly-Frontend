@@ -752,3 +752,17 @@
     top: var(--space-5);
   }
 }
+
+/* A delivery fee before the state is chosen: "from ₦1,500", with what it depends on under it */
+.checkout-from {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.checkout-from small {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}

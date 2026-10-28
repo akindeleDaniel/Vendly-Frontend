@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Check, FileSpreadsheet, ShoppingBag } from "lucide-react"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
+import PhotoLinksHelper from "../components/PhotoLinksHelper"
 import { failureMessage } from "../lib/apiRequest"
 import { formatNaira } from "../lib/money"
 import { openDownload } from "../lib/api"
@@ -168,6 +169,7 @@ function ImportProductsPage() {
                                     <code className="is-optional">photo_2 to photo_5</code>
                                 </div>
                             </section>
+                            <PhotoLinksHelper />
                         </div>
                     ) : (
                         <div className="bulk-howto">

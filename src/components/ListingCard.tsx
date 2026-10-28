@@ -47,7 +47,7 @@ function ListingCard({ listing, shopLinkSearch, allowAddToCart }: ListingCardPro
           <p className="product-price">{listing.hasPriceRange ? "From " : ""}{formatMinorUnits(toMinorUnits(listing.price))}</p>
           {listing.hasOptions && <p className="product-meta">Several options</p>}
           {(listing.deliveredCount ?? 0) > 0 && <p className="product-meta">Delivered to {listing.deliveredCount} {listing.deliveredCount === 1 ? "buyer" : "buyers"}</p>}
-          {(listing.ratingCount ?? 0) > 0 && <p className="product-meta"><StarRating average={listing.ratingAverage} count={listing.ratingCount} /></p>}
+          <p className="product-meta"><StarRating average={listing.ratingAverage} count={listing.ratingCount} showEmpty /></p>
           {!allowAddToCart && listing.sellerName && <p className="product-meta">Sold by {listing.sellerName}</p>}
           {allowAddToCart && (
             <p className={stock.isLow ? "product-meta product-meta-warning" : "product-meta"}>{stock.label}</p>

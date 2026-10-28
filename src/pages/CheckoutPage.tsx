@@ -106,6 +106,8 @@ type OrderPanelProps = {
 function OrderPanel({ review, totals, notice, onCheckAgain, isRefreshing, showPreOrders, children }: OrderPanelProps) {
   const shopCount = review.sellers.length
   const hasState = Boolean(review.deliveryState)
+  // Before a state is chosen, a fee that depends on it is shown as "from" the fee the server worked out without one.
+  const anyVaries = !hasState && !totals && review.sellers.some((group) => group.shippingVaries)
   const subtotal = totals?.subtotal ?? review.subtotal
   const shipping = totals?.shipping ?? review.shipping
   const total = totals?.total ?? review.total
@@ -138,7 +140,9 @@ function OrderPanel({ review, totals, notice, onCheckAgain, isRefreshing, showPr
           </ul>
           <p className="checkout-row">
             <span className="is-muted">Delivery</span>
-            <span>{!hasState && group.shippingVaries ? "Choose your state" : feeText(group.shipping)}</span>
+            {!hasState && group.shippingVaries
+              ? <span className="checkout-from"><b>from {feeText(group.shipping)}</b><small>depends on your state</small></span>
+              : <span>{feeText(group.shipping)}</span>}
           </p>
           {showPreOrders && <PreOrderCheckoutBlock group={group} onCheckAgain={onCheckAgain} isRefreshing={isRefreshing} />}
         </section>
@@ -148,9 +152,11 @@ function OrderPanel({ review, totals, notice, onCheckAgain, isRefreshing, showPr
         <p className="checkout-row"><span className="is-muted">Items</span><span>{formatNaira(subtotal)}</span></p>
         <p className="checkout-row">
           <span className="is-muted">Delivery</span>
-          <span>{hasState || totals ? feeText(shipping) : "Choose your state"}</span>
+          {anyVaries
+            ? <span className="checkout-from"><b>from {feeText(shipping)}</b><small>exact fee once you choose your state</small></span>
+            : <span>{feeText(shipping)}</span>}
         </p>
-        <p className="checkout-row is-total"><b>Total</b><b>{formatNaira(total)}</b></p>
+        <p className="checkout-row is-total"><b>Total</b><b>{anyVaries ? `from ${formatNaira(total)}` : formatNaira(total)}</b></p>
       </div>
 
       {children}

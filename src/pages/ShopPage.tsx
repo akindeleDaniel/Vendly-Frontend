@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useParams } from "react-router-dom"
-import { ArrowRight, MapPin, MessageCircle, Search, Star } from "lucide-react"
+import { ArrowRight, MapPin, Search, ShieldCheck, Star } from "lucide-react"
+import { SocialIcon, WhatsAppIcon } from "../components/BrandIcons"
+import ShareButton from "../components/ShareButton"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import type { Listing } from "../types/listing"
 import type { UserRole } from "../types/user"
@@ -177,7 +179,7 @@ function ShopPage ({ userRole }: ShopPageProps) {
 
     const whatsappButton = (className: string) => whatsapp && (
         <a className={className} href={whatsapp.url} target="_blank" rel="noopener noreferrer">
-            <MessageCircle aria-hidden="true" size={18} />
+            <span className="whatsapp-mark"><WhatsAppIcon size={18} /></span>
             Chat on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
         </a>
     )
@@ -187,15 +189,16 @@ function ShopPage ({ userRole }: ShopPageProps) {
             <h1 id="shop-name">{profile.businessName}</h1>
             {intro && <p className="shop-hero-intro">{intro}</p>}
             <p className="shop-hero-facts">
-                {ratingCount > 0 && typeof profile.ratingAverage === "number" && (
-                    <span><Star aria-hidden="true" size={16} className="shop-star" />{profile.ratingAverage.toFixed(1)} from {ratingCount} {ratingCount === 1 ? "review" : "reviews"}</span>
-                )}
+                {ratingCount > 0 && typeof profile.ratingAverage === "number"
+                    ? <span><Star aria-hidden="true" size={16} className="shop-star" />{profile.ratingAverage.toFixed(1)} from {ratingCount} {ratingCount === 1 ? "review" : "reviews"}</span>
+                    : <span>No reviews yet</span>}
                 {profile.location && <span><MapPin aria-hidden="true" size={16} />{profile.location}</span>}
             </p>
             {foodNote && <p className="shop-hero-note">{foodNote}</p>}
             <div className="shop-actions">
                 <a className="shop-btn is-inverse" {...sectionLink("shop-all")}>Shop now</a>
                 {whatsappButton("shop-btn is-inverse-outline")}
+                <ShareButton url={profile.shareUrl ?? window.location.href} title={profile.businessName} label="Share shop" />
             </div>
         </>
     )
@@ -293,12 +296,18 @@ function ShopPage ({ userRole }: ShopPageProps) {
                         {about && <p className="shop-story-text">{about}</p>}
                         <div className="shop-actions">
                             {whatsappButton("shop-btn is-brand")}
-                            {socials.map((social) => (
-                                <a key={social.name} className="shop-btn is-plain" href={social.url} target="_blank" rel="noopener noreferrer">
-                                    {social.name}<span className="visually-hidden"> (@{social.handle}, opens in a new tab)</span>
-                                </a>
-                            ))}
                         </div>
+                        {socials.length > 0 && (
+                            <ul className="shop-socials" aria-label={`${profile.businessName} on social media`}>
+                                {socials.map((social) => (
+                                    <li key={social.name}>
+                                        <a className="shop-social" href={social.url} target="_blank" rel="noopener noreferrer" aria-label={`${social.name}, @${social.handle} (opens in a new tab)`} title={`${social.name}: @${social.handle}`}>
+                                            <SocialIcon name={social.name} size={20} />
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </section>
             )}
@@ -384,7 +393,9 @@ function ShopPage ({ userRole }: ShopPageProps) {
                         ? <p>Ask {profile.businessName} about sizes, colours or delivery times on WhatsApp.</p>
                         : <p>Look through the reviews above, or check the product page for details and stock.</p>}
                     {whatsappButton("shop-btn is-brand")}
-                    <p className="shop-muted shop-safety">Always pay through StoreHatch checkout, never by bank transfer in a chat. That way your order is covered if something goes wrong.</p>
+                    {whatsapp
+                        ? <p className="pay-protected"><ShieldCheck aria-hidden="true" size={15} />Pay through StoreHatch to stay protected.</p>
+                        : <p className="shop-muted shop-safety">Always pay through StoreHatch checkout, never by bank transfer in a chat. That way your order is covered if something goes wrong.</p>}
                 </div>
             </section>
 

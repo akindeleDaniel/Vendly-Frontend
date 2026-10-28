@@ -9,6 +9,7 @@ export type SellerProfile = {
 }
 
 import type { ShopTrust } from "./trust"
+import type { BrandColor } from "./branding"
 
 export type ShopSummary = {
   id: number | string
@@ -19,4 +20,7 @@ export type ShopSummary = {
   logoUrl?: string | null
   slug: string
   trust?: ShopTrust
+  ratingAverage?: number | null // one decimal; null until the first review
+  ratingCount?: number
+  branding?: { bannerUrl: string | null, brandColor: BrandColor | null } // for the strip across the top of the card
 }

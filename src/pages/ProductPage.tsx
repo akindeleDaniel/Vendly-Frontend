@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
-import { ArrowRight, Check, ChevronRight, MessageCircle, ShieldCheck, ShoppingBag, Truck } from "lucide-react"
+import { ArrowRight, Check, ChevronRight, ShieldCheck, ShoppingBag, Truck } from "lucide-react"
+import { WhatsAppIcon } from "../components/BrandIcons"
+import ShareButton from "../components/ShareButton"
 import { ChevronLeftIcon } from "../components/Icons"
 import ListingCard from "../components/ListingCard"
 import Notice from "../components/Notice"
@@ -304,19 +306,22 @@ function ProductPage({ userRole, authStatus, isAdmin = false }: ProductPageProps
                     </PhotoGallery>
 
                     <div className="product-info">
-                        <div>
-                            <p className="shop-eyebrow">{product.category}</p>
-                            <h1 className="product-title-lg">{product.title}</h1>
-                            <p className="product-facts">
-                                {(product.ratingCount ?? 0) > 0 && (
-                                    <a href="#product-reviews" onClick={(event) => { event.preventDefault(); scrollToSection("product-reviews") }}>
-                                        <StarRating average={product.ratingAverage} count={product.ratingCount} />
-                                    </a>
-                                )}
-                                {(product.deliveredCount ?? 0) > 0 && (
-                                    <span>Delivered to {product.deliveredCount} {product.deliveredCount === 1 ? "buyer" : "buyers"}</span>
-                                )}
-                            </p>
+                        <div className="product-head">
+                            <div>
+                                <p className="shop-eyebrow">{product.category}</p>
+                                <h1 className="product-title-lg">{product.title}</h1>
+                                <p className="product-facts">
+                                    {(product.ratingCount ?? 0) > 0 ? (
+                                        <a href="#product-reviews" onClick={(event) => { event.preventDefault(); scrollToSection("product-reviews") }}>
+                                            <StarRating average={product.ratingAverage} count={product.ratingCount} />
+                                        </a>
+                                    ) : <StarRating average={null} count={0} showEmpty />}
+                                    {(product.deliveredCount ?? 0) > 0 && (
+                                        <span>Delivered to {product.deliveredCount} {product.deliveredCount === 1 ? "buyer" : "buyers"}</span>
+                                    )}
+                                </p>
+                            </div>
+                            <ShareButton url={product.shareUrl ?? window.location.href} title={product.title} />
                         </div>
 
                         <p className="product-price-lg">{priceText}</p>
@@ -412,11 +417,14 @@ function ProductPage({ userRole, authStatus, isAdmin = false }: ProductPageProps
                                     <Link className="shop-btn is-plain is-small" to={shopPath}>Visit shop</Link>
                                     {enquiryUrl && !isOwnProduct && (
                                         <a className="shop-btn is-plain is-small" href={enquiryUrl} target="_blank" rel="noopener noreferrer">
-                                            <MessageCircle aria-hidden="true" size={16} />
+                                            <span className="whatsapp-mark"><WhatsAppIcon size={16} /></span>
                                             Ask on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
                                         </a>
                                     )}
                                 </div>
+                                {enquiryUrl && !isOwnProduct && (
+                                    <p className="pay-protected"><ShieldCheck aria-hidden="true" size={15} />Pay through StoreHatch to stay protected.</p>
+                                )}
                             </div>
                         )}
 

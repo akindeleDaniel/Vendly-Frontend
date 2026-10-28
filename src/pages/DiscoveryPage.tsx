@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, ChevronRight, MapPin, MessagesSquare, PackageCheck, Search, ShieldCheck, X } from "lucide-react"
 import ProductTile from "../components/ProductTile"
+import StarRating from "../components/StarRating"
 import Pagination from "../components/Pagination"
 import { CATEGORIES } from "../data/categories"
 import CategoryTiles from "../components/CategoryTiles"
@@ -548,23 +549,31 @@ function DiscoveryPage ({ userName = "", userRole = null, onBecameSeller }: Disc
               {shops.map((shop) => {
                 const place = shop.location || [shop.lga, shop.state].filter(Boolean).join(", ")
                 const delivered = shop.trust?.confirmedDeliveries ?? 0
+                const colour = shop.branding?.brandColor ?? null
+                const banner = shop.branding?.bannerUrl ?? null
                 return (
                   <li key={shop.id}>
                     <Link className="browse-shop" to={`/shop/${encodeURIComponent(shop.slug)}?${searchParams.toString()}`}>
-                      {shop.logoUrl
-                        ? <img className="browse-shop-logo" src={shop.logoUrl} alt="" />
-                        : <span className="browse-shop-logo is-initial" aria-hidden="true">{shop.businessName.charAt(0).toUpperCase()}</span>}
-                      <span className="browse-shop-text">
-                        <b>{shop.businessName}</b>
-                        {place && <span>{place}</span>}
-                        {shop.trust && (
-                          <span className={delivered > 0 ? "is-good" : undefined}>
-                            {delivered > 0 ? `${delivered.toLocaleString("en-NG")} ${delivered === 1 ? "order" : "orders"} delivered` : "New shop"}
-                            {shop.trust.payoutVerified ? " · Payout verified" : ""}
-                          </span>
-                        )}
+                      {/* A strip of the shop's banner across the top, or its colour without one. */}
+                      <span className="browse-shop-strip" style={colour ? { background: colour.background } : undefined} aria-hidden="true">
+                        {banner && <img src={banner} alt="" loading="lazy" />}
                       </span>
-                      <ChevronRight aria-hidden="true" size={20} />
+                      <span className="browse-shop-body">
+                        {shop.logoUrl
+                          ? <img className="browse-shop-logo" src={shop.logoUrl} alt="" />
+                          : <span className="browse-shop-logo is-initial" style={colour ? { background: colour.background, color: colour.text } : undefined} aria-hidden="true">{shop.businessName.charAt(0).toUpperCase()}</span>}
+                        <b className="browse-shop-name">{shop.businessName}</b>
+                        <span className="browse-shop-text">
+                          {place && <span>{place}</span>}
+                          <StarRating average={shop.ratingAverage} count={shop.ratingCount} showEmpty />
+                          {shop.trust && (
+                            <span className={delivered > 0 ? "is-good" : undefined}>
+                              {delivered > 0 ? `${delivered.toLocaleString("en-NG")} ${delivered === 1 ? "order" : "orders"} delivered` : "New shop"}
+                              {shop.trust.payoutVerified ? " · Payout verified" : ""}
+                            </span>
+                          )}
+                        </span>
+                      </span>
                     </Link>
                   </li>
                 )

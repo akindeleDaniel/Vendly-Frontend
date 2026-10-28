@@ -3,6 +3,8 @@ type StarRatingProps = {
     count: number | null | undefined
     // Leave the count out of the words when the page shows it elsewhere.
     showCount?: boolean
+    // Say "No reviews yet" instead of drawing nothing before the first review.
+    showEmpty?: boolean
 }
 
 function describe(average: number, count: number, showCount: boolean): string {
@@ -11,10 +13,11 @@ function describe(average: number, count: number, showCount: boolean): string {
         : `${average} out of 5 stars`
 }
 
-// Five stars, filled to the average, with the number of reviews. Nothing is drawn until the first review.
-function StarRating({ average, count, showCount = true }: StarRatingProps) {
+// Five stars, filled to the average, with the number of reviews. Until the first review, nothing is drawn, or
+// "No reviews yet" with showEmpty.
+function StarRating({ average, count, showCount = true, showEmpty = false }: StarRatingProps) {
     if (average === null || average === undefined || !count) {
-        return null
+        return showEmpty ? <span className="star-rating-none">No reviews yet</span> : null
     }
 
     const filled = Math.round(average)
