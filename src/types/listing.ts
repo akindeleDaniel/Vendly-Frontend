@@ -37,6 +37,8 @@ export type Listing = {
   // GET /listings/:id only: a WhatsApp link with a message naming the product, its price and a link to it.
   // Null when the shop has no WhatsApp number.
   whatsappEnquiry?: { number: string, message: string, url: string } | null
+  // GET /listings/:id only: the link that shows a picture and title when pasted into WhatsApp, Instagram or Facebook.
+  shareUrl?: string
   // GET /listings/:id only: schema.org Product details for Google (price, stock, stars), placed in the page as JSON-LD.
   structuredData?: Record<string, unknown> | null
   title: string

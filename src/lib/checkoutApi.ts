@@ -23,16 +23,21 @@ export type PreviewOutcome =
     | DeliveryUnavailable
     | { kind: "empty-cart" }
     | { kind: "items-unavailable", message: string, listingId: number | null }
+    | OwnListing
     | { kind: "conflict", message: string }
     | { kind: "unauthorized" }
     | { kind: "network-error" }
     | { kind: "error", message: string }
+
+// One of the seller's own products is in their cart: nobody can buy from their own shop. listingId is the item to remove.
+export type OwnListing = { kind: "own-listing", message: string, listingId: number | null }
 
 export type SubmitOutcome =
     | { kind: "success", result: CheckoutResult }
     | { kind: "review-required", message: string, review: CheckoutReview }
     | { kind: "items-unavailable", message: string, listingId: number | null }
     | { kind: "locked", message: string, checkout: LockedCheckout | null }
+    | OwnListing
     | { kind: "conflict", message: string }
     | { kind: "preorder-problem", message: string }// a food shop's pre-order is needed, has lapsed, or no longer matches
     | OrderTooLarge
@@ -157,6 +162,7 @@ function orderTooLargeOf(body: unknown): OrderTooLarge {
 
 const ORDER_TOO_LARGE_CODE = "CHECKOUT_ORDER_TOO_LARGE"
 const DELIVERY_UNAVAILABLE_CODE = "CHECKOUT_DELIVERY_UNAVAILABLE"
+const OWN_LISTING_CODE = "CHECKOUT_OWN_LISTING"
 
 function deliveryUnavailableOf(body: unknown): DeliveryUnavailable {
     return {
@@ -209,6 +215,10 @@ export async function fetchCheckoutPreview(signal?: AbortSignal, state?: string)
         return { kind: "conflict", message }
     }
 
+    if (response.status === 409 && codeOf(body) === OWN_LISTING_CODE) {
+        return { kind: "own-listing", message, listingId: listingIdOf(body) }
+    }
+
     if (response.status === 409 && codeOf(body) === ORDER_TOO_LARGE_CODE) {
         return orderTooLargeOf(body)
     }
@@ -218,6 +228,21 @@ export async function fetchCheckoutPreview(signal?: AbortSignal, state?: string)
     }
 
     return { kind: "error", message }
+}
+
+// Takes one item out of the cart. Returns an error message, or null when it is gone (or already was).
+export async function removeFromCart(listingId: number): Promise<string | null> {
+    try {
+        const response = await apiFetch(`/cart/items/${encodeURIComponent(String(listingId))}`, { method: "DELETE", credentials: "include" })
+
+        if (response.ok || response.status === 404) {
+            return null
+        }
+
+        return messageOf(await readBody(response), `Unable to remove this item (status ${response.status}).`)
+    } catch {
+        return "We could not reach the server. Please check your connection and try again."
+    }
 }
 
 export type DeliveryValidationError = {
@@ -320,6 +345,10 @@ export async function submitCheckout(delivery: DeliveryDetails, reviewToken: str
 
         if (code === "CHECKOUT_ITEMS_UNAVAILABLE") {
             return { kind: "items-unavailable", message, listingId: listingIdOf(body) }
+        }
+
+        if (code === OWN_LISTING_CODE) {
+            return { kind: "own-listing", message, listingId: listingIdOf(body) }
         }
 
         if (code === "CHECKOUT_LOCKED") {

@@ -7,8 +7,8 @@ import DeliveryFields from "../components/DeliveryFields"
 import Notice from "../components/Notice"
 import PaymentOptions from "../components/PaymentOptions"
 import PreOrderCheckoutBlock from "../components/PreOrderCheckoutBlock"
-import { fetchCheckoutPreview, submitCheckout, validateDelivery } from "../lib/checkoutApi"
-import type { DeliveryUnavailable, OrderTooLarge } from "../lib/checkoutApi"
+import { fetchCheckoutPreview, removeFromCart, submitCheckout, validateDelivery } from "../lib/checkoutApi"
+import type { DeliveryUnavailable, OrderTooLarge, OwnListing } from "../lib/checkoutApi"
 import { ORDER_MAX_VALUE } from "../lib/limits"
 import type { DeliveryValidationError } from "../lib/checkoutApi"
 import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } from "../types/checkout"
@@ -16,7 +16,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
 import BackArrow from "../components/BackArrow"
 
-type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "error"
+type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "own" | "error"
 
 function deliveryUnavailableMessage(outcome: DeliveryUnavailable): string {
   return `${outcome.sellerName ?? "A shop in your cart"} does not deliver to ${outcome.state ?? "that state"}. Remove its items from your cart, or choose another delivery state.`
@@ -167,7 +167,9 @@ function CheckoutPage() {
   const [previewStatus, setPreviewStatus] = useState<PreviewStatus>("loading")
   const [previewMessage, setPreviewMessage] = useState("")
   const [loadAttempt, setLoadAttempt] = useState(0)
-  const [review, setReview] = useState<CheckoutReview | null>(null)
+  const [review, setReviewState] = useState<CheckoutReview | null>(null)
+  // The delivery state the review was worked out for ("" for none). Only a review for the chosen state can be submitted.
+  const [reviewForState, setReviewForState] = useState("")
   const [reviewNotice, setReviewNotice] = useState<ReviewNotice | null>(null)
   // The name is left blank: the parcel may be for someone other than the account holder.
   const [delivery, setDelivery] = useState<DeliveryDetails>({
@@ -183,8 +185,15 @@ function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [preOrderProblem, setPreOrderProblem] = useState("")
-  const [stateProblem, setStateProblem] = useState("")// a shop in the cart does not deliver to the chosen state
+  const [stateProblem, setStateProblem] = useState("")// for the chosen state: a shop doesn't deliver there, the order is too large, or the check failed
+  const [stateCanRetry, setStateCanRetry] = useState(false)
+  const [stateAttempt, setStateAttempt] = useState(0)
+  const [isStateLoading, setIsStateLoading] = useState(false)
   const [result, setResult] = useState<CheckoutResult | null>(null)
+  // One of the shopper's own products is in the cart; checkout can't go on until it is removed.
+  const [ownItem, setOwnItem] = useState<{ message: string, listingId: number | null, title: string | null } | null>(null)
+  const [isRemovingOwn, setIsRemovingOwn] = useState(false)
+  const [removeOwnError, setRemoveOwnError] = useState("")
   const submittingRef = useRef(false)
   const noticeRef = useRef<HTMLDivElement>(null)
   // Food shops that take pre-orders: the approved requests this payment uses, and whether a shop that
@@ -192,6 +201,38 @@ function CheckoutPage() {
   const approvedPreOrderIds = (review?.sellers ?? []).flatMap((group) => group.preOrder?.approved ? [group.preOrder.approved.id] : [])
   const waitingForPreOrder = (review?.sellers ?? []).some((group) => group.preOrder?.required === true && !group.preOrder.approved)
   const isBlocked = issue?.type === "items-unavailable" || issue?.type === "locked" || issue?.type === "conflict"
+  const hasReview = review !== null
+
+  function setReview(next: CheckoutReview, forState: string) {
+    setReviewState(next)
+    setReviewForState(forState)
+  }
+
+  function showOwnItem(outcome: OwnListing, from: CheckoutReview | null) {
+    setOwnItem({ message: outcome.message, listingId: outcome.listingId, title: findItemTitle(from, outcome.listingId) })
+    setRemoveOwnError("")
+    setPreviewStatus("own")
+  }
+
+  async function removeOwnItem() {
+    if (!ownItem || ownItem.listingId === null || isRemovingOwn) {
+      return
+    }
+
+    setIsRemovingOwn(true)
+    setRemoveOwnError("")
+    const problem = await removeFromCart(ownItem.listingId)
+
+    if (problem) {
+      setIsRemovingOwn(false)
+      setRemoveOwnError(problem)
+      return
+    }
+
+    setIssue(null)
+    await refreshPreview("check-again")// the rest of the cart, for the chosen state
+    setIsRemovingOwn(false)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -206,7 +247,7 @@ function CheckoutPage() {
 
       switch (outcome.kind) {
         case "ok":
-          setReview(outcome.review)
+          setReview(outcome.review, "")
           setPreviewStatus("ready")
           break
         case "empty-cart":
@@ -216,9 +257,16 @@ function CheckoutPage() {
           setPreviewMessage(orderTooLargeMessage(outcome))
           setPreviewStatus("too-large")
           break
+        case "delivery-unavailable":// not sent without a state; shown as an error just in case
+          setPreviewMessage(deliveryUnavailableMessage(outcome))
+          setPreviewStatus("error")
+          break
         case "items-unavailable":
           setIssue({ type: "items-unavailable", itemTitle: null, message: outcome.message })
           setPreviewStatus("blocked")
+          break
+        case "own-listing":
+          showOwnItem(outcome, null)
           break
         case "conflict":
           setPreviewMessage("Your checkout state changed while it was loading. Please try again.")
@@ -248,30 +296,67 @@ function CheckoutPage() {
     }
   }, [reviewNotice])
 
-  // Delivery fees depend on the buyer's state, so once one is chosen the summary is worked out again for it.
+  // Delivery fees depend on the buyer's state, so whenever it changes the summary is worked out again for it,
+  // whatever the last answer was (too large, no delivery there, an error). Until the answer for the chosen state is
+  // back, the order can't be placed.
   useEffect(() => {
-    if (!delivery.state || previewStatus !== "ready") {
+    if (!delivery.state || !hasReview) {
       return
     }
 
     const controller = new AbortController()
-    fetchCheckoutPreview(controller.signal, delivery.state).then((outcome) => {
+
+    async function loadForState(state: string) {
+      setIsStateLoading(true)
+      setStateProblem("")
+      setStateCanRetry(false)
+      const outcome = await fetchCheckoutPreview(controller.signal, state)
+
       if (controller.signal.aborted) {
         return
       }
 
-      if (outcome.kind === "ok") {
-        setReview(outcome.review)
-        setStateProblem("")
-      } else if (outcome.kind === "delivery-unavailable") {
-        setStateProblem(deliveryUnavailableMessage(outcome))
-      } else if (outcome.kind === "order-too-large") {
-        setPreviewMessage(orderTooLargeMessage(outcome))
-        setPreviewStatus("too-large")
+      setIsStateLoading(false)
+
+      switch (outcome.kind) {
+        case "ok":
+          setReview(outcome.review, state)
+          break
+        case "delivery-unavailable":
+          setStateProblem(deliveryUnavailableMessage(outcome))
+          break
+        case "order-too-large":
+          setStateProblem(orderTooLargeMessage(outcome))
+          break
+        case "own-listing":
+          showOwnItem(outcome, null)
+          break
+        case "items-unavailable":
+          setIssue({ type: "items-unavailable", itemTitle: null, message: outcome.message })
+          break
+        case "empty-cart":
+          setPreviewStatus("empty")
+          break
+        case "conflict":
+          setStateProblem("Your checkout changed while the delivery fee was being worked out.")
+          setStateCanRetry(true)
+          break
+        case "network-error":
+          setStateProblem(NETWORK_ERROR_MESSAGE)
+          setStateCanRetry(true)
+          break
+        case "error":
+          setStateProblem(outcome.message)
+          setStateCanRetry(true)
+          break
+        case "unauthorized":
+          break// the session guard sends the shopper to log in
       }
-    })
+    }
+
+    loadForState(delivery.state)
     return () => controller.abort()
-  }, [delivery.state, previewStatus])
+  }, [delivery.state, stateAttempt, hasReview])
 
   function updateDelivery(next: DeliveryDetails) {
     setDelivery(next)
@@ -294,17 +379,20 @@ function CheckoutPage() {
   // Re-reads the preview on the shopper's request (or after a conflict). A review that differs from
   // the one they saw must be confirmed again before anything can be submitted.
   async function refreshPreview(reason: "check-again" | "conflict") {
+    const state = delivery.state
     setIsRefreshing(true)
-    const outcome = await fetchCheckoutPreview(undefined, delivery.state || undefined)
+    const outcome = await fetchCheckoutPreview(undefined, state || undefined)
     setIsRefreshing(false)
 
     switch (outcome.kind) {
       case "ok": {
-        const changed = review === null || review.reviewToken !== outcome.review.reviewToken
-        setReview(outcome.review)
+        const changed = review !== null && review.reviewToken !== outcome.review.reviewToken
+        setReview(outcome.review, state)
         setPreviewStatus("ready")
         setIssue(null)
-        if (reason === "conflict" || changed) {
+        setStateProblem("")
+        setStateCanRetry(false)
+        if (review !== null && (reason === "conflict" || changed)) {
           setReviewNotice({
             message: reason === "conflict" ? CONFLICT_MESSAGE : REVIEW_CHANGED_MESSAGE,
             previousTotal: review && review.total !== outcome.review.total ? review.total : null
@@ -316,8 +404,18 @@ function CheckoutPage() {
         setPreviewStatus("empty")
         break
       case "order-too-large":
-        setPreviewMessage(orderTooLargeMessage(outcome))
-        setPreviewStatus("too-large")
+        if (state && review !== null) {
+          setStateProblem(orderTooLargeMessage(outcome))// another state may bring it under, so the form stays
+          setPreviewStatus("ready")
+        } else {
+          setPreviewMessage(orderTooLargeMessage(outcome))
+          setPreviewStatus("too-large")
+        }
+        break
+      case "delivery-unavailable":
+        setStateProblem(deliveryUnavailableMessage(outcome))
+        setPreviewStatus(review !== null ? "ready" : "error")
+        setPreviewMessage(deliveryUnavailableMessage(outcome))
         break
       case "items-unavailable":
         setIssue({
@@ -325,6 +423,9 @@ function CheckoutPage() {
           itemTitle: findItemTitle(review, outcome.listingId),
           message: outcome.message
         })
+        break
+      case "own-listing":
+        showOwnItem(outcome, review)
         break
       case "conflict":
         setIssue(refreshFailure(reason, "Your checkout state changed while it was loading."))
@@ -343,7 +444,7 @@ function CheckoutPage() {
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (submittingRef.current || isRefreshing || review === null || reviewNotice !== null || isBlocked || waitingForPreOrder || stateProblem) {
+    if (submittingRef.current || isRefreshing || isStateLoading || review === null || reviewForState !== delivery.state || reviewNotice !== null || isBlocked || waitingForPreOrder || stateProblem) {
       return
     }
 
@@ -367,7 +468,7 @@ function CheckoutPage() {
           setResult(outcome.result)
           break
         case "review-required":
-          setReview(outcome.review)
+          setReview(outcome.review, delivery.state)
           setReviewNotice({
             message: REVIEW_CHANGED_MESSAGE,
             previousTotal: review.total !== outcome.review.total ? review.total : null
@@ -383,11 +484,14 @@ function CheckoutPage() {
         case "locked":
           setIssue({ type: "locked", message: outcome.message, checkout: outcome.checkout })
           break
+        case "own-listing":
+          showOwnItem(outcome, review)
+          break
         case "conflict":
           await refreshPreview("conflict")
           break
         case "order-too-large":
-          setIssue({ type: "error", message: orderTooLargeMessage(outcome) })
+          setStateProblem(orderTooLargeMessage(outcome))
           break
         case "delivery-unavailable":
           setStateProblem(deliveryUnavailableMessage(outcome))
@@ -482,6 +586,29 @@ function CheckoutPage() {
     )
   }
 
+  if (previewStatus === "own" && ownItem) {
+    return (
+      <div className="checkout-page">
+        <section className="checkout-card checkout-message" aria-labelledby="checkout-message-heading">
+          <h1 id="checkout-message-heading" className="checkout-title is-page">Your own product is in your cart</h1>
+          <Notice kind="warning">
+            {ownItem.title && <p><b>{ownItem.title}</b></p>}
+            <p>{ownItem.message}</p>
+          </Notice>
+          {removeOwnError && <Notice kind="error">{removeOwnError}</Notice>}
+          <div className="action-row">
+            {ownItem.listingId !== null && (
+              <button type="button" className="btn btn-primary" onClick={removeOwnItem} disabled={isRemovingOwn}>
+                {isRemovingOwn ? "Removing..." : "Remove it from your cart"}
+              </button>
+            )}
+            <Link to="/cart" className="btn">Back to cart</Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   if (previewStatus === "error" || previewStatus === "too-large" || previewStatus === "empty" || previewStatus === "blocked") {
     return (
       <div className="checkout-page">
@@ -525,7 +652,8 @@ function CheckoutPage() {
   // Step 1: delivery details. What still stops the shopper is said next to the button.
   const blockedReason = !delivery.state
     ? "Choose your state to see delivery fees."
-    : stateProblem ? "One shop does not deliver to your state."
+    : isStateLoading || reviewForState !== delivery.state ? "Working out delivery for your state..."
+    : stateProblem ? "Sort out the problem above, or choose another state."
     : reviewNotice ? "Check the new total above to continue."
     : waitingForPreOrder ? "A food shop in your order has to approve a pre-order first."
     : ""
@@ -544,7 +672,9 @@ function CheckoutPage() {
       {stateProblem && (
         <div className="checkout-note is-error" role="alert">
           <p>{stateProblem}</p>
-          <Link to="/cart">Edit cart</Link>
+          {stateCanRetry
+            ? <button type="button" onClick={() => setStateAttempt((attempt) => attempt + 1)}>Try again</button>
+            : <Link to="/cart">Edit cart</Link>}
         </div>
       )}
     </>

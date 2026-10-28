@@ -19,6 +19,7 @@ import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
 import { useCartCount } from "../lib/useCartCount"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { useOwnShopSlug } from "../lib/useOwnShopSlug"
 import { useStructuredData } from "../lib/useStructuredData"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import type { Listing } from "../types/listing"
@@ -30,6 +31,8 @@ const MORE_COUNT = 4
 type ProductPageProps = {
     userRole: UserRole | null
     authStatus: AuthStatus
+    // An administrator looks at a product (for example one that was reported) but doesn't buy.
+    isAdmin?: boolean
 }
 
 type LoadState =
@@ -40,22 +43,19 @@ type LoadState =
 
 type ShopData = { slug: string, profile: ShopProfile, listings: Listing[] }
 
-// The WhatsApp chat with the product's name and link already typed in.
-function askAboutUrl(chatUrl: string, title: string): string {
-    try {
-        const url = new URL(chatUrl)
-        url.searchParams.set("text", `Hi, I have a question about "${title}": ${window.location.href}`)
-        return url.toString()
-    } catch {
-        return chatUrl
-    }
+// The WhatsApp question about the chosen option or size, written the way the backend writes it for the product:
+// the shop, what was picked, its price and the product's share link.
+function enquiryForChoice(number: string, shop: string, item: string, price: number, shareUrl: string): string {
+    const amount = `₦${price.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`
+    const message = `Hi ${shop}, I'm interested in "${item}" (${amount}) on StoreHatch: ${shareUrl}`
+    return `https://wa.me/${number.replace(/^\+/, "")}?text=${encodeURIComponent(message)}`
 }
 
 // One product on its own page, inside its shop's website: the shop's colour, header and footer around
 // large photos, the options, Add to cart, delivery, the seller, reviews and more from the same shop.
 // The product request does not carry the shop's look, so the shop is loaded alongside it; if that
 // fails the product still shows, in StoreHatch's own colours.
-function ProductPage({ userRole, authStatus }: ProductPageProps) {
+function ProductPage({ userRole, authStatus, isAdmin = false }: ProductPageProps) {
     const { id = "" } = useParams()
     const navigate = useNavigate()
     const location = useLocation()
@@ -77,6 +77,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const cart = useAddToCart(cartTarget, userRole, authStatus === "unauthenticated")
     const pendingResult = usePendingCartAdd(userRole)
     const cartCount = useCartCount(userRole, `${cart.feedback?.kind}|${pendingResult?.text}`)
+    const ownShopSlug = useOwnShopSlug(userRole)
     useDocumentTitle(listing ? listing.title : "Product")
     useStructuredData(listing?.structuredData)
 
@@ -198,7 +199,10 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const product = state.listing
     const withOptions = hasOptions(product)
     const stock = describeStock(withOptions && choice ? choice.stockQuantity : product.stockQuantity)
-    const showCartControls = true// every account can buy; the backend refuses a seller's own products
+    // Every account can buy, but not from its own shop (the backend refuses), so a seller sees their own product
+    // without Add to cart.
+    const isOwnProduct = ownShopSlug !== null && product.sellerSlug === ownShopSlug
+    const showCartControls = !isOwnProduct && !isAdmin
     const needsChoice = withOptions && choice === null
     const photos = photosOf(product)
     const optionPhoto = selectedOption?.imageUrl ?? null
@@ -208,9 +212,20 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const maxQuantity = cartTarget?.stockQuantity ?? 0
     const profile = shopData?.profile ?? null
     const shopPath = product.sellerSlug ? `/shop/${encodeURIComponent(product.sellerSlug)}` : null
-    const whatsapp = profile?.branding?.whatsapp ?? null
-    // The backend's message names the price and links to the product; the shop's own chat link is the fallback.
-    const enquiryUrl = product.whatsappEnquiry?.url ?? (whatsapp ? askAboutUrl(whatsapp.url, product.title) : null)
+    // Shown only when the shop has switched on its WhatsApp number. The backend's message names the product's price;
+    // once an option is picked, the message names that option and its price instead.
+    const enquiry = product.whatsappEnquiry ?? null
+    const enquiryUrl = !enquiry
+        ? null
+        : selectedOption
+            ? enquiryForChoice(
+                enquiry.number,
+                product.sellerName ?? profile?.businessName ?? "there",
+                `${product.title}, ${selectedOption.label}${selectedSize ? ` / ${selectedSize.label}` : ""}`,
+                selectedOption.price,
+                product.shareUrl ?? window.location.href
+            )
+            : enquiry.url
     const trust = product.shopTrust
     const sellerFacts = [
         trust && (trust.confirmedDeliveries > 0 ? `${trust.confirmedDeliveries.toLocaleString("en-NG")} ${trust.confirmedDeliveries === 1 ? "order" : "orders"} delivered` : "New shop"),
@@ -339,6 +354,17 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                                 </button>
                             </div>
                         )}
+                        {isAdmin && (
+                            <Notice kind="info" role="none">
+                                <p>You're signed in as an administrator, so you can look but not buy.</p>
+                            </Notice>
+                        )}
+                        {isOwnProduct && (
+                            <Notice kind="info" role="none">
+                                <p>This is your product, so you can't add it to your cart. Shoppers see Add to cart here.</p>
+                                <Link to={`/seller/products/${product.id}/edit`}>Edit product</Link>
+                            </Notice>
+                        )}
                         {cart.feedback && (
                             cart.feedback.kind === "success" ? (
                                 <p role="status" className="product-added">
@@ -384,7 +410,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
                                 </div>
                                 <div className="product-seller-actions">
                                     <Link className="shop-btn is-plain is-small" to={shopPath}>Visit shop</Link>
-                                    {enquiryUrl && (
+                                    {enquiryUrl && !isOwnProduct && (
                                         <a className="shop-btn is-plain is-small" href={enquiryUrl} target="_blank" rel="noopener noreferrer">
                                             <MessageCircle aria-hidden="true" size={16} />
                                             Ask on WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
