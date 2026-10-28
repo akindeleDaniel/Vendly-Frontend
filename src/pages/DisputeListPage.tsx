@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { AlertTriangle, Check, ChevronRight, Clock, MessageCircle, ShoppingBag } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { AdminAllClear, AdminFilters, AdminListHead } from "../components/AdminList"
 import Notice from "../components/Notice"
 import { failureMessage } from "../lib/apiRequest"
 import { formatOrderDay } from "../lib/buyerOrders"
@@ -29,7 +30,7 @@ const BACK_LINKS: Record<DisputeViewer, { to: string, label: string }> = {
 const INTRO: Record<DisputeViewer, string> = {
     buyer: "Problems you reported with an order, and where each one stands. To report a new one, open the order and choose Report a problem.",
     seller: "Complaints from buyers about your orders, and the refunds you have offered. Answer them quickly: StoreHatch decides complaints that go unanswered.",
-    admin: "Complaints that need a decision are shown first. Choose a status to see the others."
+    admin: "Complaints that need your decision come first. Open one to read both sides and decide."
 }
 
 const GROUPS: Array<{ value: DisputeGroup, label: string }> = [
@@ -60,8 +61,14 @@ function nextStep(dispute: DisputeSummary, viewer: DisputeViewer): { text: strin
                 ? { text: `${shopName} replied.${due ? ` They have until ${due} to agree to a refund.` : ""}`, icon: MessageCircle, tone: "plain" }
                 : { text: due ? `${shopName} has until ${due} to reply.` : `Waiting for ${shopName} to reply.`, icon: Clock, tone: "plain" }
         case "SELLER_AGREED":
+            if (viewer === "admin") {
+                return { text: "The shop agreed to a refund. Approve it to send the money.", icon: AlertTriangle, tone: "act" }
+            }
             return { text: viewer === "seller" ? "You agreed to a refund. StoreHatch is confirming it." : "The shop agreed to a refund. StoreHatch is confirming it.", icon: Clock, tone: "plain" }
         case "UNDER_REVIEW":
+            if (viewer === "admin") {
+                return { text: "Read both sides and decide.", icon: AlertTriangle, tone: "act" }
+            }
             return { text: "StoreHatch is looking at both sides and will reply in the conversation.", icon: Clock, tone: "plain" }
         case "RESOLVED":
             return dispute.outcome === "REFUNDED"
@@ -93,7 +100,7 @@ function DisputeRow({ dispute, viewer }: { dispute: DisputeSummary, viewer: Disp
                         <span className={`orders-status is-${TONE_BY_DISPUTE[status.tone]}`}>{status.label}</span>
                     </div>
                     <p className="complaint-row-meta">
-                        {who} · {isOffer ? "Offer" : "Complaint"} #{dispute.id} · Order #{dispute.orderId} · Opened {formatOrderDay(dispute.createdAt)}
+                        {viewer === "admin" ? <><b>{dispute.buyerName}</b> about <b>{who}</b></> : who} · {isOffer ? "Offer" : "Complaint"} #{dispute.id} · Order #{dispute.orderId} · Opened {formatOrderDay(dispute.createdAt)}
                     </p>
                     <p className="complaint-row-meta">
                         {isOffer ? "Refund offered" : "Refund asked for"}:{" "}
@@ -156,20 +163,32 @@ function DisputeListPage({ viewer }: { viewer: DisputeViewer }) {
     const counts = state.kind === "ready" ? state.data.counts : undefined
 
     return (
-        <div className="complaints-page">
-            {viewer !== "admin" && <BackArrow to={BACK_LINKS[viewer].to} label={BACK_LINKS[viewer].label} />}
-            <div className="complaints-head">
-                <h1>Complaints</h1>
-                <p>{INTRO[viewer]}</p>
-            </div>
+        <div className={isAdmin ? "complaints-page admin-page" : "complaints-page"}>
+            {isAdmin ? (
+                <AdminListHead title="Complaints" intro={INTRO.admin} />
+            ) : (
+                <>
+                    <BackArrow to={BACK_LINKS[viewer].to} label={BACK_LINKS[viewer].label} />
+                    <div className="complaints-head">
+                        <h1>Complaints</h1>
+                        <p>{INTRO[viewer]}</p>
+                    </div>
+                </>
+            )}
 
             {isAdmin ? (
-                <label className="field-inline">
-                    Show{" "}
-                    <select value={adminStatus} onChange={(event) => { setState({ kind: "loading" }); setAdminStatus(event.target.value); setSearchParams({}) }}>
-                        {adminFilters.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
-                    </select>
-                </label>
+                <div className="admin-tools">
+                    <AdminFilters
+                        label="Show"
+                        options={adminFilters.map((filter) => ({
+                            ...filter,
+                            // How many need a decision, while that list is open.
+                            count: filter.value === "" && adminStatus === "" && state.kind === "ready" ? state.data.total : undefined
+                        }))}
+                        value={adminStatus}
+                        onChange={(value) => { setState({ kind: "loading" }); setAdminStatus(value); setSearchParams({}) }}
+                    />
+                </div>
             ) : (
                 <div className="orders-filters" aria-label="Show complaints">
                     {GROUPS.map((option) => (
@@ -196,7 +215,12 @@ function DisputeListPage({ viewer }: { viewer: DisputeViewer }) {
             )}
             {state.kind === "ready" && (
                 <>
-                    {state.data.disputes.length === 0 ? (
+                    {state.data.disputes.length === 0 && isAdmin && adminStatus === "" ? (
+                        <AdminAllClear
+                            title="Nothing needs a decision"
+                            text="Complaints come here when the seller agrees to a refund or doesn't answer in time."
+                        />
+                    ) : state.data.disputes.length === 0 ? (
                         <div className="orders-none">
                             <p>
                                 {isAdmin

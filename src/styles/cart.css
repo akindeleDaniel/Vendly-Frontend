@@ -353,47 +353,6 @@
   }
 }
 
-/* Order history lists (shopper and seller) */
-.order-history {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-
-.order-history h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.field-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-/* A note under a liability */
-.stepper-shipping-note {
-  margin: var(--space-3) 0 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--color-cream);
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
-}
-
-/* The cards on the admin and liability lists */
-.order-card {
-  padding: var(--space-4);
-}
-
-.order-card .order-header {
-  margin-bottom: var(--space-1);
-}
-
 .order-section-title {
   margin: 0 0 var(--space-2);
   font-size: 0.8125rem;
@@ -403,32 +362,7 @@
   color: var(--color-text-muted);
 }
 
-/* Refunds and complaints on orders */
-.order-extras {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.order-extras:empty {
-  display: none;
-}
-
-.order-extras .summary-row,
-.order-extras .refund-list {
-  margin: 0;
-}
-
-.order-extras-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  margin: 0;
-  font-weight: 600;
-}
-
+/* Refunds on an order */
 .refund-list ul {
   display: flex;
   flex-direction: column;
@@ -465,11 +399,6 @@
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-}
-
-.dispute-items {
-  margin: 0 0 var(--space-3);
-  overflow-wrap: anywhere;
 }
 
 /* A complaint's conversation: the viewer's own messages on the right, the other side's on the

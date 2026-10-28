@@ -1,9 +1,9 @@
 import { useId, useState } from "react"
 import { Link } from "react-router-dom"
-import { Star } from "lucide-react"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import Pagination from "../components/Pagination"
+import Stars from "../components/ReviewStars"
 import { failureMessage } from "../lib/apiRequest"
 import { formatOrderDay } from "../lib/buyerOrders"
 import { fetchMyReviews, reportReview } from "../lib/reviewApi"
@@ -18,19 +18,6 @@ const TABS: Array<{ type: SellerReviewType, label: string }> = [
     { type: "shop", label: "Your shop" },
     { type: "product", label: "Your products" }
 ]
-
-// Five stars drawn to a rating, with the rating in words for screen readers.
-function Stars({ rating, size = 16 }: { rating: number, size?: number }) {
-    const filled = Math.round(rating)
-
-    return (
-        <span className="review-stars" role="img" aria-label={`${rating.toFixed(rating % 1 === 0 ? 0 : 1)} out of 5 stars`}>
-            {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} size={size} aria-hidden="true" className={star <= filled ? "is-on" : undefined} fill="currentColor" strokeWidth={0} />
-            ))}
-        </span>
-    )
-}
 
 // The average, the stars and how many reviews gave each number of stars, over the reviews shoppers see.
 function ReviewSummaryCard({ type, summary }: { type: SellerReviewType, summary: NonNullable<SellerReviewPage["summary"]> }) {

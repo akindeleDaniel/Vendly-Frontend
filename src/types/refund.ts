@@ -61,6 +61,7 @@ export type AdminRefund = {
     orderId: number | null// null for a refund of a whole payment
     paymentReference: string
     provider: "PAYSTACK" | "FLUTTERWAVE"
+    providerRefundId?: string | null// the provider's own number for the refund, once it has one
     amount: string
     currency: string
     status: RefundStatus

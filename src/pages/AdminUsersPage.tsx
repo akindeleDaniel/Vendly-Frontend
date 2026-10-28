@@ -1,20 +1,64 @@
 import { useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
+import { Check, ChevronRight, CircleAlert } from "lucide-react"
+import { AdminFilters, AdminListHead, AdminPager, AdminSearch } from "../components/AdminList"
 import Notice from "../components/Notice"
-import Pagination from "../components/Pagination"
+import { avatarTone, initialsOf, pageOf } from "../lib/adminDisplay"
 import { listAdminUsers } from "../lib/adminLookupApi"
 import { formatShortDate } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import type { AdminUserRow } from "../types/admin"
 
-// Finds a person by id, name, email or shop name.
+type RoleFilter = "" | "CONSUMER" | "SELLER"
+
+const ROLE_FILTERS: Array<{ value: RoleFilter, label: string }> = [
+    { value: "", label: "Everyone" },
+    { value: "CONSUMER", label: "Shoppers" },
+    { value: "SELLER", label: "Sellers" }
+]
+
+function PersonRow({ user }: { user: AdminUserRow }) {
+    return (
+        <li>
+            <Link to={`/admin/users/${user.id}`} className="admin-row admin-person-row">
+                <span className={`admin-avatar ${avatarTone(user.id)}`} aria-hidden="true">{initialsOf(user.name)}</span>
+                <span className="admin-cell">
+                    <span className="admin-tags">
+                        <b>{user.name}</b>
+                        <span className={`admin-tag${user.role === "SELLER" ? " is-seller" : ""}`}>{user.role === "SELLER" ? "Seller" : "Shopper"}</span>
+                        {user.isAdmin && <span className="admin-tag is-admin">Administrator</span>}
+                    </span>
+                    <small className="admin-ellipsis">{user.email} · Number {user.id}</small>
+                </span>
+                <span className="admin-cell admin-person-shop">
+                    {user.shop ? (
+                        <>
+                            <span className="admin-ellipsis"><span className="admin-key">Shop </span><b className="admin-shop-name">{user.shop.businessName}</b></span>
+                            <small className="admin-ellipsis">/shop/{user.shop.slug}</small>
+                        </>
+                    ) : <small>No shop</small>}
+                </span>
+                <span className="admin-cell admin-person-account">
+                    <span className={`admin-check${user.emailConfirmed ? "" : " is-no"}`}>
+                        {user.emailConfirmed ? <Check size={14} strokeWidth={2.6} aria-hidden="true" /> : <CircleAlert size={14} aria-hidden="true" />}
+                        {user.emailConfirmed ? "Email confirmed" : "Email not confirmed"}
+                    </span>
+                    <small>Joined {formatShortDate(user.createdAt)}{user.usesGoogle ? " · Signs in with Google" : ""}</small>
+                </span>
+                <ChevronRight className="admin-chevron" size={18} aria-hidden="true" />
+            </Link>
+        </li>
+    )
+}
+
+// Finds a person by number, name, email or shop name.
 function AdminUsersPage() {
-    useDocumentTitle("Find a person")
+    useDocumentTitle("People")
     const [searchParams] = useSearchParams()
     const initialSearch = searchParams.get("search") ?? ""// from the search box on the Overview
-    const [searchInput, setSearchInput] = useState(initialSearch)
     const [search, setSearch] = useState(initialSearch)
-    const [role, setRole] = useState("")
+    const [role, setRole] = useState<RoleFilter>("")
     const [adminsOnly, setAdminsOnly] = useState(false)
     const [page, setPage] = useState(1)
     const { state, reload } = useApiResource(
@@ -22,42 +66,28 @@ function AdminUsersPage() {
         (signal) => listAdminUsers({ search, role, adminsOnly, page }, signal)
     )
 
-    function applySearch(event: React.SubmitEvent<HTMLFormElement>) {
-        event.preventDefault()
-        setSearch(searchInput)
-        setPage(1)
-    }
-
     return (
-        <div>
-            <h1>Find a person</h1>
+        <div className="admin-page">
+            <AdminListHead title="People" intro="Shoppers, sellers and administrators, newest first." />
 
-            <form role="search" onSubmit={applySearch} className="search-form">
-                <label className="visually-hidden" htmlFor="admin-user-search">Search people</label>
-                <input
-                    id="admin-user-search"
-                    type="search"
-                    maxLength={100}
+            <div className="admin-tools">
+                <AdminSearch
+                    label="Search people"
                     placeholder="Number, name, email or shop name"
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
+                    initial={initialSearch}
+                    onSearch={(term) => { setSearch(term); setPage(1) }}
                 />
-                <button type="submit">Search</button>
-            </form>
-
-            <div className="filter-row">
-                <label className="field-inline">
-                    Show{" "}
-                    <select value={role} onChange={(event) => { setRole(event.target.value); setPage(1) }}>
-                        <option value="">Everyone</option>
-                        <option value="CONSUMER">Shoppers</option>
-                        <option value="SELLER">Sellers</option>
-                    </select>
-                </label>
-                <label className="checkbox-label">
-                    <input type="checkbox" checked={adminsOnly} onChange={(event) => { setAdminsOnly(event.target.checked); setPage(1) }} />
-                    Administrators only
-                </label>
+                <div className="admin-filter-line">
+                    <AdminFilters label="Show" options={ROLE_FILTERS} value={role} onChange={(value) => { setRole(value); setPage(1) }} />
+                    <button
+                        type="button"
+                        className={`orders-filter${adminsOnly ? " is-active" : ""}`}
+                        aria-pressed={adminsOnly}
+                        onClick={() => { setAdminsOnly(!adminsOnly); setPage(1) }}
+                    >
+                        Administrators only
+                    </button>
+                </div>
             </div>
 
             {state.kind === "loading" && <p role="status">Searching...</p>}
@@ -69,31 +99,21 @@ function AdminUsersPage() {
             )}
             {state.kind === "ready" && (
                 <>
-                    <p className="field-help">{state.data.total} {state.data.total === 1 ? "person" : "people"} found.</p>
-                    {state.data.users.length === 0 ? <p>Nobody matches.</p> : (
-                        <ul className="order-history">
-                            {state.data.users.map((user) => (
-                                <li key={user.id} className="card order-card">
-                                    <div className="order-header">
-                                        <h2><Link to={`/admin/users/${user.id}`}>{user.name}</Link></h2>
-                                        <span className="badge-group">
-                                            {user.isAdmin && <span className="badge badge-warning">Administrator</span>}
-                                            <span className="badge">{user.role === "SELLER" ? "Seller" : "Shopper"}</span>
-                                        </span>
-                                    </div>
-                                    <p className="order-line-meta">
-                                        {user.email} · Number {user.id} · Joined {formatShortDate(user.createdAt)}
-                                    </p>
-                                    {user.shop && <p>Shop: {user.shop.businessName}</p>}
-                                    <p className="order-line-meta">
-                                        {user.emailConfirmed ? "Email confirmed" : "Email not confirmed"}
-                                        {user.usesGoogle ? " · Uses Google" : ""}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
+                    <p className="admin-count">
+                        <span><b>{state.data.total.toLocaleString("en-NG")}</b> {state.data.total === 1 ? "person" : "people"}</span>
+                        <span>{pageOf(page, state.data.pageSize, state.data.total)}</span>
+                    </p>
+                    {state.data.users.length === 0 ? <div className="orders-none"><p>Nobody matches.</p></div> : (
+                        <div className="admin-panel">
+                            <div className="admin-thead admin-person-row" aria-hidden="true">
+                                <span /><span>Person</span><span className="admin-person-shop">Shop</span><span className="admin-person-account">Account</span><span />
+                            </div>
+                            <ul className="admin-rows">
+                                {state.data.users.map((user) => <PersonRow key={user.id} user={user} />)}
+                            </ul>
+                        </div>
                     )}
-                    <Pagination page={page} pageSize={state.data.pageSize} total={state.data.total} onChange={setPage} />
+                    <AdminPager page={page} pageSize={state.data.pageSize} total={state.data.total} onChange={setPage} />
                 </>
             )}
         </div>

@@ -82,6 +82,7 @@ export type AdminReview = {
   reportReason: string | null
   hiddenAt: string | null
   hiddenReason: string | null
+  photoUrls?: string[] // up to 3, added by the buyer; often none
   orderId: number
   buyer: { id: number, name: string, email: string }
   subject: { id: number, title?: string, businessName?: string, slug?: string }

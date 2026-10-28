@@ -714,3 +714,956 @@ body:has(.admin-shell) #root {
     font-size: 1.875rem;
   }
 }
+
+/* The administrator lists: orders, people, complaints, refunds, reviews, recovery cases, money owed
+   by sellers, the team and the audit log. A white toolbar of search and filter buttons, then either
+   a panel of rows split by lines, or cards for the lists where each item has actions. */
+.admin-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.admin-tools-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-filters,
+.admin-filter-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-filters .orders-filter,
+.admin-filter-line > .orders-filter {
+  min-height: 40px;
+}
+
+.admin-filter-line > .orders-filter {
+  margin-left: var(--space-2);
+}
+
+.admin-filter-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-error);
+  color: var(--color-surface);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-1) var(--space-1) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.admin-count {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.admin-count b {
+  color: var(--color-charcoal);
+}
+
+.admin-page .orders-status {
+  margin-left: 0;
+}
+
+/* A panel of rows */
+.admin-panel {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-rows > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-thead {
+  display: grid;
+  gap: var(--space-4);
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-row {
+  display: grid;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 14px 18px;
+  color: var(--color-charcoal);
+  text-decoration: none;
+}
+
+a.admin-row:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-charcoal);
+}
+
+.admin-order-row {
+  grid-template-columns: 150px minmax(0, 1.4fr) minmax(0, 1.3fr) 130px 190px 18px;
+}
+
+.admin-person-row {
+  grid-template-columns: 44px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) 18px;
+}
+
+.admin-team-row {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: flex-start;
+}
+
+.admin-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.admin-cell b {
+  font-size: 0.9375rem;
+}
+
+.admin-cell small {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.admin-cell-end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.admin-order-status {
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.admin-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The words before a value that only show when a row is stacked on a phone */
+.admin-key {
+  display: none;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.admin-chevron {
+  color: var(--color-border-strong);
+}
+
+.admin-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-error);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.admin-flag.is-closed {
+  color: var(--color-text-muted);
+}
+
+.admin-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--color-charcoal);
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.admin-avatar.is-forest { background: var(--tint-forest); color: var(--color-forest); }
+.admin-avatar.is-amber { background: var(--color-amber-tint); color: var(--color-amber-text); }
+.admin-avatar.is-clay { background: var(--tint-clay); }
+.admin-avatar.is-stone { background: var(--tint-stone); }
+
+.admin-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: 6px;
+  background: var(--color-placeholder);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-tag.is-seller {
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.admin-tag.is-admin {
+  background: var(--color-charcoal);
+  color: var(--color-cream);
+}
+
+.admin-shop-name {
+  font-size: var(--text-sm);
+}
+
+.admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-forest);
+  font-weight: 600;
+}
+
+.admin-check.is-no {
+  color: var(--color-amber-text);
+}
+
+.admin-plain-link {
+  color: var(--color-charcoal);
+  text-decoration: none;
+}
+
+.admin-plain-link:hover {
+  color: var(--color-charcoal);
+  text-decoration: underline;
+}
+
+.admin-muted {
+  color: var(--color-text-muted);
+}
+
+/* Cards */
+.admin-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-card.is-hot {
+  border-color: var(--color-error-bg);
+}
+
+.admin-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.admin-card-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+}
+
+.money-card .admin-card-title h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
+}
+
+.admin-card-title p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.admin-card-text {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.admin-why {
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  color: var(--color-charcoal);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.admin-why b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.8125rem;
+}
+
+.admin-why.is-attention { background: var(--color-amber-tint); }
+.admin-why.is-attention b { color: var(--color-amber-text); }
+.admin-why.is-bad { background: var(--color-error-bg); }
+.admin-why.is-bad b { color: var(--color-error); }
+.admin-why.is-neutral { background: var(--color-placeholder); }
+
+.admin-more summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-size);
+  color: var(--color-forest);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+
+.admin-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-more[open] summary svg {
+  transform: rotate(90deg);
+}
+
+.admin-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 18px;
+  margin: 0;
+}
+
+.admin-facts dt {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.admin-facts dd {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-actions-row.is-split {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-spacer {
+  flex: 1;
+}
+
+.admin-danger-text {
+  color: var(--color-error);
+}
+
+.admin-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 14px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.admin-confirm p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Owed by sellers */
+.admin-figures-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.admin-figures-row div {
+  flex: 1;
+  min-width: 180px;
+  padding: 14px var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.admin-figures-row dt {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.admin-figures-row dd {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.admin-owed-left {
+  text-align: right;
+}
+
+.admin-owed-left small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.admin-owed-left b {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.admin-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-meter-bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-placeholder);
+}
+
+.admin-meter-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-success);
+}
+
+.admin-progress-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.admin-progress-label b {
+  color: var(--color-charcoal);
+}
+
+.admin-recoveries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-recoveries li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
+}
+
+.admin-recoveries li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Reviews */
+.admin-segments {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-placeholder);
+}
+
+.admin-segments button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-segments button.is-on {
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(16, 40, 31, 0.12);
+}
+
+.admin-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-3);
+}
+
+.admin-review-subject {
+  font-weight: 700;
+}
+
+.admin-review-date {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.admin-review-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.admin-photo-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.admin-review-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.admin-review-photo {
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-placeholder);
+  cursor: zoom-in;
+}
+
+.admin-review-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-review-by {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.admin-review-by a {
+  font-weight: 700;
+}
+
+/* Team */
+.admin-team-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--space-1);
+}
+
+.admin-team-confirm {
+  margin-top: 10px;
+}
+
+/* Audit log */
+.admin-day {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-audit-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 18px;
+}
+
+.admin-audit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  color: var(--color-charcoal);
+}
+
+.admin-audit-icon.is-forest { background: var(--tint-forest); color: var(--color-forest); }
+.admin-audit-icon.is-sage { background: var(--tint-sage); color: var(--color-success); }
+.admin-audit-icon.is-amber { background: var(--color-amber-tint); color: var(--color-amber-text); }
+.admin-audit-icon.is-red { background: var(--color-error-bg); color: var(--color-error); }
+.admin-audit-icon.is-stone { background: var(--tint-stone); }
+
+.admin-audit-note {
+  display: block;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+  quotes: none;
+}
+
+.admin-audit-time {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.admin-pager .action-row {
+  justify-content: center;
+  margin: 0;
+}
+
+/* A review's photos, large, in a dialog */
+.photo-viewer {
+  width: min(760px, calc(100% - 16px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--color-charcoal);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-cream);
+}
+
+.photo-viewer::backdrop {
+  background: rgba(20, 24, 21, 0.82);
+}
+
+.photo-viewer-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) 18px;
+}
+
+.photo-viewer-top p {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.photo-viewer-top small {
+  display: block;
+  color: var(--color-border-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.photo-viewer-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.photo-viewer-button:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.photo-viewer-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.photo-viewer-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(520px, 60vh);
+  background: #000000;
+}
+
+.photo-viewer-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.photo-viewer-button.is-previous,
+.photo-viewer-button.is-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.photo-viewer-button.is-previous { left: var(--space-3); }
+.photo-viewer-button.is-next { right: var(--space-3); }
+
+.photo-viewer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: var(--space-3) 18px;
+  font-size: var(--text-sm);
+}
+
+.photo-viewer-foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-size);
+  color: var(--color-cream);
+  font-weight: 700;
+}
+
+.photo-viewer-thumbs {
+  display: flex;
+  gap: 6px;
+}
+
+.photo-viewer-thumb {
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: #000000;
+  cursor: pointer;
+}
+
+.photo-viewer-thumb.is-on {
+  border-color: var(--color-cream);
+}
+
+.photo-viewer-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Narrower screens: the order table drops its items column */
+@media (max-width: 1100px) {
+  .admin-order-row {
+    grid-template-columns: 130px minmax(0, 1fr) 120px 170px 18px;
+  }
+
+  .admin-order-row .admin-order-items {
+    display: none;
+  }
+}
+
+/* A phone: table rows stack and the filter buttons scroll sideways */
+@media (max-width: 760px) {
+  .admin-thead {
+    display: none;
+  }
+
+  .admin-filters,
+  .admin-filter-line {
+    flex-wrap: nowrap;
+    margin: 0 -14px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .admin-filters::-webkit-scrollbar,
+  .admin-filter-line::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-filter-line .admin-filters {
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .admin-filters .orders-filter,
+  .admin-filter-line > .orders-filter {
+    flex: none;
+  }
+
+  .admin-row {
+    gap: 6px var(--space-3);
+    padding: 14px var(--gutter);
+  }
+
+  .admin-row.admin-order-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-order-row .admin-order-items {
+    display: flex;
+  }
+
+  .admin-order-row .admin-order-items,
+  .admin-order-row .admin-order-who,
+  .admin-order-row .admin-order-status {
+    grid-column: 1 / -1;
+  }
+
+  .admin-order-row .admin-order-status {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .admin-row.admin-person-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .admin-person-row .admin-person-shop,
+  .admin-person-row .admin-person-account {
+    grid-column: 2;
+  }
+
+  .admin-order-row .admin-chevron,
+  .admin-person-row .admin-chevron {
+    display: none;
+  }
+
+  .admin-key {
+    display: inline;
+  }
+
+  .admin-row.admin-team-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .admin-team-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .admin-review-side {
+    margin-left: 0;
+  }
+
+  .admin-review-photo {
+    width: 84px;
+    height: 84px;
+  }
+
+  .admin-audit-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+    padding: 14px var(--gutter);
+  }
+
+  .admin-audit-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .admin-audit-time {
+    grid-column: 2;
+  }
+
+  .admin-owed-left {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-search .btn {
+    flex: 1;
+  }
+
+  .money-card .product-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

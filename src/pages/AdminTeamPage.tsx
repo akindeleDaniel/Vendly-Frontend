@@ -1,6 +1,9 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Link } from "react-router-dom"
+import { Plus } from "lucide-react"
+import { AdminListHead } from "../components/AdminList"
 import Notice from "../components/Notice"
+import { avatarTone, initialsOf } from "../lib/adminDisplay"
 import { failureMessage } from "../lib/apiRequest"
 import type { ApiResult } from "../lib/apiRequest"
 import { formatShortDate } from "../lib/orderApi"
@@ -10,10 +13,11 @@ import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { TeamMember } from "../types/platform"
 
 type TeamResult = ApiResult<{ team: TeamMember[] }>
+type Problem = Exclude<TeamResult, { kind: "ok" }>
 
 // Turns a failed result into the words to show. An account with no password (for example one made with
 // Google) cannot confirm a change, so it is sent to set one.
-function ProblemNotice({ result }: { result: Exclude<TeamResult, { kind: "ok" }> }) {
+function ProblemNotice({ result }: { result: Problem }) {
     if (result.kind === "failed" && result.code === "ADMIN_PASSWORD_REQUIRED") {
         return (
             <Notice kind="warning">
@@ -26,18 +30,27 @@ function ProblemNotice({ result }: { result: Exclude<TeamResult, { kind: "ok" }>
     return <Notice kind="error">{failureMessage(result)}</Notice>
 }
 
-type MemberActionsProps = {
+type MemberRowProps = {
     member: TeamMember
     onTeam: (team: TeamMember[]) => void
 }
 
-// Remove a person, or give or take away the super level. Each one asks for your own password.
-function MemberActions({ member, onTeam }: MemberActionsProps) {
+// One administrator, with removing them or giving or taking away the super level. Each change asks
+// for your own password, on the row itself.
+function MemberRow({ member, onTeam }: MemberRowProps) {
+    const passwordId = useId()
     const [action, setAction] = useState<"revoke" | "super" | null>(null)
     const [password, setPassword] = useState("")
     const [isWorking, setIsWorking] = useState(false)
-    const [problem, setProblem] = useState<Exclude<TeamResult, { kind: "ok" }> | null>(null)
+    const [problem, setProblem] = useState<Problem | null>(null)
     const [localError, setLocalError] = useState("")
+
+    function cancel() {
+        setAction(null)
+        setPassword("")
+        setProblem(null)
+        setLocalError("")
+    }
 
     async function confirm(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -60,62 +73,66 @@ function MemberActions({ member, onTeam }: MemberActionsProps) {
         setIsWorking(false)
 
         if (result.kind === "ok") {
-            setAction(null)
-            setPassword("")
+            cancel()
             onTeam(result.data.team)
         } else if (result.kind !== "unauthorized") {
             setProblem(result)
         }
     }
 
-    if (action === null) {
-        return (
-            <div className="action-row">
-                <button type="button" onClick={() => setAction("super")}>{member.isSuperAdmin ? "Remove super level" : "Make super administrator"}</button>
-                <button type="button" onClick={() => setAction("revoke")}>Remove administrator</button>
-            </div>
-        )
-    }
-
     const sentence = action === "revoke"
-        ? `Remove ${member.name} as an administrator? They lose all administrator access straight away and are emailed.`
+        ? `${member.name} loses the admin area straight away and is emailed.`
         : member.isSuperAdmin
-            ? `Take away ${member.name}'s super level? They stay an administrator and are emailed.`
-            : `Make ${member.name} a super administrator? They will see the platform figures, the team and the audit log, and can change the team.`
+            ? `${member.name} keeps the admin area but loses the platform figures, the team and the audit log. They are emailed.`
+            : `${member.name} will see the platform figures, the team and the audit log, and can change the team. They are emailed.`
 
     return (
-        <form onSubmit={confirm} className="stack-form">
-            <Notice kind="warning">{sentence}</Notice>
-            <label>
-                Your password, to confirm it is you
-                <input type="password" autoComplete="current-password" value={password} disabled={isWorking} onChange={(event) => setPassword(event.target.value)} />
-            </label>
-            {localError && <Notice kind="error">{localError}</Notice>}
-            {problem && <ProblemNotice result={problem} />}
-            <div className="action-row">
-                <button type="submit" className={action === "revoke" ? "btn btn-danger" : "btn btn-primary"} disabled={isWorking}>{isWorking ? "Working..." : "Confirm"}</button>
-                <button type="button" onClick={() => { setAction(null); setPassword(""); setProblem(null); setLocalError("") }} disabled={isWorking}>Cancel</button>
+        <li className="admin-row admin-team-row">
+            <span className={`admin-avatar ${avatarTone(member.id)}`} aria-hidden="true">{initialsOf(member.name)}</span>
+            <div className="admin-cell">
+                <span className="admin-tags">
+                    <Link to={`/admin/users/${member.id}`} className="admin-plain-link"><b>{member.name}</b></Link>
+                    <span className={`admin-tag${member.isSuperAdmin ? " is-admin" : " is-seller"}`}>{member.isSuperAdmin ? "Super administrator" : "Administrator"}</span>
+                </span>
+                <small>{member.email} · Joined {formatShortDate(member.createdAt)}</small>
+
+                {action !== null && (
+                    <form onSubmit={confirm} className="admin-confirm admin-team-confirm">
+                        <p>{sentence}</p>
+                        <div className="product-field">
+                            <label htmlFor={passwordId}>Your password, to confirm it's you</label>
+                            <input id={passwordId} className="product-input" type="password" autoComplete="current-password" value={password} disabled={isWorking} onChange={(event) => setPassword(event.target.value)} />
+                        </div>
+                        {localError && <Notice kind="error">{localError}</Notice>}
+                        {problem && <ProblemNotice result={problem} />}
+                        <div className="admin-actions-row">
+                            <button type="submit" className={action === "revoke" ? "btn btn-danger" : "btn btn-primary"} disabled={isWorking}>
+                                {isWorking ? "Working..." : action === "revoke" ? "Remove administrator" : "Confirm"}
+                            </button>
+                            <button type="button" className="btn" onClick={cancel} disabled={isWorking}>Cancel</button>
+                        </div>
+                    </form>
+                )}
             </div>
-        </form>
+            {action === null && (
+                <div className="admin-team-actions">
+                    <button type="button" className="btn-text" onClick={() => setAction("super")}>{member.isSuperAdmin ? "Remove super level" : "Make super administrator"}</button>
+                    <button type="button" className="btn-text admin-danger-text" onClick={() => setAction("revoke")}>Remove</button>
+                </div>
+            )}
+        </li>
     )
 }
 
-// The administrators, for super administrators: who they are, adding someone, and removing or promoting
-// them. Every change asks for your own password and emails the person it affects.
-function AdminTeamPage() {
-    useDocumentTitle("Team")
-    const { state, setData, reload } = useApiResource("team", (signal) => fetchTeam(signal))
+function AddAdminForm({ onTeam, onClose }: { onTeam: (team: TeamMember[]) => void, onClose: () => void }) {
+    const id = useId()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [superAdmin, setSuper] = useState(false)
     const [isAdding, setIsAdding] = useState(false)
-    const [problem, setProblem] = useState<Exclude<TeamResult, { kind: "ok" }> | null>(null)
+    const [problem, setProblem] = useState<Problem | null>(null)
     const [localError, setLocalError] = useState("")
     const [added, setAdded] = useState("")
-
-    function showTeam(team: TeamMember[]) {
-        setData(() => ({ team }))
-    }
 
     async function handleAdd(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -137,7 +154,7 @@ function AdminTeamPage() {
         setIsAdding(false)
 
         if (result.kind === "ok") {
-            showTeam(result.data.team)
+            onTeam(result.data.team)
             setAdded(`${email.trim()} is now ${superAdmin ? "a super administrator" : "an administrator"}. They have been emailed, and need an emailed code each time they log in.`)
             setEmail("")
             setPassword("")
@@ -148,8 +165,65 @@ function AdminTeamPage() {
     }
 
     return (
-        <div>
-            <h1>Team</h1>
+        <section className="money-card" aria-labelledby={`${id}-title`}>
+            <div className="admin-card-top">
+                <div className="admin-card-title">
+                    <h2 id={`${id}-title`}>Add an administrator</h2>
+                    <p>They need an account already, with a confirmed email. Like every administrator, they enter an emailed code each time they log in.</p>
+                </div>
+                <button type="button" className="btn-text" onClick={onClose}>Close</button>
+            </div>
+            {added && <Notice kind="success">{added}</Notice>}
+            <form onSubmit={handleAdd} className="admin-form">
+                <div className="product-two">
+                    <div className="product-field">
+                        <label htmlFor={`${id}-email`}>Their email</label>
+                        <input id={`${id}-email`} className="product-input" type="email" autoComplete="off" value={email} disabled={isAdding} onChange={(event) => setEmail(event.target.value)} />
+                    </div>
+                    <div className="product-field">
+                        <label htmlFor={`${id}-password`}>Your password, to confirm it's you</label>
+                        <input id={`${id}-password`} className="product-input" type="password" autoComplete="current-password" value={password} disabled={isAdding} onChange={(event) => setPassword(event.target.value)} />
+                    </div>
+                </div>
+                <label className="settings-check">
+                    <input type="checkbox" checked={superAdmin} disabled={isAdding} onChange={(event) => setSuper(event.target.checked)} />
+                    <span>Make them a super administrator</span>
+                </label>
+                {localError && <Notice kind="error">{localError}</Notice>}
+                {problem && <ProblemNotice result={problem} />}
+                <div className="admin-actions-row">
+                    <button type="submit" className="btn btn-primary" disabled={isAdding}>{isAdding ? "Adding..." : "Add administrator"}</button>
+                    <button type="button" className="btn" disabled={isAdding} onClick={onClose}>Cancel</button>
+                </div>
+            </form>
+        </section>
+    )
+}
+
+// The administrators, for super administrators: who they are, adding someone, and removing or promoting
+// them. Every change asks for your own password and emails the person it affects.
+function AdminTeamPage() {
+    useDocumentTitle("Team")
+    const { state, setData, reload } = useApiResource("team", (signal) => fetchTeam(signal))
+    const [isAdding, setIsAdding] = useState(false)
+
+    function showTeam(team: TeamMember[]) {
+        setData(() => ({ team }))
+    }
+
+    return (
+        <div className="admin-page">
+            <AdminListHead
+                title="Team"
+                intro="Everyone who can use the admin area. Super administrators also see the platform figures, this team and the audit log."
+                action={!isAdding && (
+                    <button type="button" className="btn btn-primary" onClick={() => setIsAdding(true)}>
+                        <Plus size={16} aria-hidden="true" />Add an administrator
+                    </button>
+                )}
+            />
+
+            {isAdding && <AddAdminForm onTeam={showTeam} onClose={() => setIsAdding(false)} />}
 
             {state.kind === "loading" && <p role="status">Loading the team...</p>}
             {state.kind === "error" && (
@@ -159,43 +233,11 @@ function AdminTeamPage() {
                 </Notice>
             )}
             {state.kind === "ready" && (
-                <>
-                    <ul className="order-history">
-                        {state.data.team.map((member) => (
-                            <li key={member.id} className="card order-card">
-                                <div className="order-header">
-                                    <h2><Link to={`/admin/users/${member.id}`}>{member.name}</Link></h2>
-                                    <span className="badge">{member.isSuperAdmin ? "Super administrator" : "Administrator"}</span>
-                                </div>
-                                <p className="order-line-meta">{member.email} · joined {formatShortDate(member.createdAt)}</p>
-                                <MemberActions member={member} onTeam={showTeam} />
-                            </li>
-                        ))}
+                <div className="admin-panel">
+                    <ul className="admin-rows">
+                        {state.data.team.map((member) => <MemberRow key={member.id} member={member} onTeam={showTeam} />)}
                     </ul>
-
-                    <section aria-labelledby="add-admin-heading" className="card summary-card">
-                        <h2 id="add-admin-heading">Add an administrator</h2>
-                        <p className="field-help">The person needs an account already, with a confirmed email. They are emailed, and like every administrator they enter an emailed code each time they log in.</p>
-                        {added && <Notice kind="success">{added}</Notice>}
-                        <form onSubmit={handleAdd} className="stack-form">
-                            <label>
-                                Their email
-                                <input type="email" autoComplete="off" value={email} disabled={isAdding} onChange={(event) => setEmail(event.target.value)} />
-                            </label>
-                            <label className="checkbox-label">
-                                <input type="checkbox" checked={superAdmin} disabled={isAdding} onChange={(event) => setSuper(event.target.checked)} />
-                                Make them a super administrator
-                            </label>
-                            <label>
-                                Your password, to confirm it is you
-                                <input type="password" autoComplete="current-password" value={password} disabled={isAdding} onChange={(event) => setPassword(event.target.value)} />
-                            </label>
-                            {localError && <Notice kind="error">{localError}</Notice>}
-                            {problem && <ProblemNotice result={problem} />}
-                            <button type="submit" className="btn btn-primary" disabled={isAdding}>{isAdding ? "Adding..." : "Add administrator"}</button>
-                        </form>
-                    </section>
-                </>
+                </div>
             )}
         </div>
     )

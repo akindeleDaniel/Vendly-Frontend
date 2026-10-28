@@ -1,8 +1,11 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Link } from "react-router-dom"
+import { Image } from "lucide-react"
+import { AdminFilters, AdminListHead, AdminPager } from "../components/AdminList"
 import Notice from "../components/Notice"
-import Pagination from "../components/Pagination"
-import StarRating from "../components/StarRating"
+import PhotoViewer from "../components/PhotoViewer"
+import ReviewStars from "../components/ReviewStars"
+import { pageOf } from "../lib/adminDisplay"
 import { failureMessage } from "../lib/apiRequest"
 import { formatShortDate } from "../lib/orderApi"
 import { listAdminReviews, setReviewHidden } from "../lib/reviewApi"
@@ -17,10 +20,30 @@ const STATUS_FILTERS: Array<{ value: AdminReviewStatus, label: string }> = [
     { value: "all", label: "All" }
 ]
 
+const TYPES: Array<{ value: SellerReviewType, label: string }> = [
+    { value: "product", label: "Products" },
+    { value: "shop", label: "Shops" }
+]
+
 const REASON_MIN = 3
 const REASON_MAX = 300
 
+type OpenPhotos = { review: AdminReview, index: number }
+
+function subjectName(review: AdminReview): string {
+    return (review.type === "shop" ? review.subject.businessName : review.subject.title) ?? "Deleted"
+}
+
+function subjectLink(review: AdminReview): string | null {
+    if (review.type === "shop") {
+        return review.subject.slug ? `/shop/${review.subject.slug}` : null
+    }
+
+    return `/product/${review.subject.id}`
+}
+
 function ReviewActions({ review, onChanged }: { review: AdminReview, onChanged: () => void }) {
+    const id = useId()
     const [isHiding, setIsHiding] = useState(false)
     const [reason, setReason] = useState("")
     const [isWorking, setIsWorking] = useState(false)
@@ -51,56 +74,115 @@ function ReviewActions({ review, onChanged }: { review: AdminReview, onChanged: 
         }
     }
 
+    if (isHiding && !isHidden) {
+        return (
+            <div className="admin-confirm">
+                <div className="product-field">
+                    <label htmlFor={id}>Why is it being hidden?</label>
+                    <textarea id={id} className="product-input" rows={3} maxLength={REASON_MAX} value={reason} disabled={isWorking} onChange={(event) => setReason(event.target.value)} />
+                    <p className="product-help">{REASON_MIN} to {REASON_MAX} characters. Hiding it takes it and its photos off the shop's pages and out of the rating.</p>
+                </div>
+                {error && <Notice kind="error">{error}</Notice>}
+                <div className="admin-actions-row">
+                    <button type="button" className="btn btn-primary" onClick={() => run(true)} disabled={isWorking}>{isWorking ? "Hiding..." : "Hide the review"}</button>
+                    <button type="button" className="btn" onClick={() => { setIsHiding(false); setError("") }} disabled={isWorking}>Cancel</button>
+                </div>
+            </div>
+        )
+    }
+
     return (
-        <div className="stack-form">
-            {isHidden && (
-                <button type="button" onClick={() => run(false)} disabled={isWorking}>{isWorking ? "Working..." : "Show this review again"}</button>
-            )}
-            {!isHidden && !isHiding && <button type="button" onClick={() => setIsHiding(true)}>Hide this review</button>}
-            {!isHidden && isHiding && (
-                <>
-                    <label>
-                        Why is it being hidden?
-                        <textarea maxLength={REASON_MAX} value={reason} disabled={isWorking} onChange={(event) => setReason(event.target.value)} />
-                    </label>
-                    <div className="action-row">
-                        <button type="button" className="btn btn-primary" onClick={() => run(true)} disabled={isWorking}>{isWorking ? "Hiding..." : "Hide"}</button>
-                        <button type="button" onClick={() => setIsHiding(false)} disabled={isWorking}>Cancel</button>
-                    </div>
-                </>
-            )}
+        <>
             {error && <Notice kind="error">{error}</Notice>}
-        </div>
+            <div className="admin-actions-row is-split">
+                {isHidden
+                    ? <button type="button" className="btn" onClick={() => run(false)} disabled={isWorking}>{isWorking ? "Working..." : "Show it again"}</button>
+                    : <button type="button" className="btn" onClick={() => setIsHiding(true)}>Hide this review</button>}
+            </div>
+        </>
     )
 }
 
-// Reviews for an administrator to look at: the ones sellers reported first. Hiding a review takes it
-// off the public pages and out of the average; showing it puts it back.
+function ReviewCard({ review, onChanged, onOpenPhoto }: { review: AdminReview, onChanged: () => void, onOpenPhoto: (index: number) => void }) {
+    const photos = review.photoUrls ?? []
+    const link = subjectLink(review)
+    const isReported = review.reportedAt !== null && review.hiddenAt === null
+    const pill = review.hiddenAt !== null
+        ? { label: "Hidden", tone: "neutral" }
+        : review.reportedAt !== null ? { label: "Reported", tone: "attention" } : { label: "Visible", tone: "done" }
+
+    return (
+        <li className={`money-card admin-card${isReported ? " is-hot" : ""}`}>
+            <div className="admin-review-head">
+                <ReviewStars rating={review.rating} size={17} />
+                {link ? <Link to={link} className="admin-review-subject">{subjectName(review)}</Link> : <b className="admin-review-subject">{subjectName(review)}</b>}
+                <span className="admin-review-date">{formatShortDate(review.createdAt)}</span>
+                <span className="admin-review-side">
+                    {photos.length > 0 && (
+                        <span className="admin-photo-count"><Image size={15} aria-hidden="true" />{photos.length === 1 ? "1 photo" : `${photos.length} photos`}</span>
+                    )}
+                    <span className={`orders-status is-${pill.tone}`}>{pill.label}</span>
+                </span>
+            </div>
+            {review.comment ? <p className="admin-card-text">{review.comment}</p> : <p className="product-help">Stars only, no comment.</p>}
+            {photos.length > 0 && (
+                <div className="admin-review-photos">
+                    {photos.map((url, index) => (
+                        <button key={url} type="button" className="admin-review-photo" aria-label={`Open photo ${index + 1} of ${photos.length}`} onClick={() => onOpenPhoto(index)}>
+                            <img src={url} alt="" loading="lazy" />
+                        </button>
+                    ))}
+                </div>
+            )}
+            {review.reportedAt && (
+                <p className="admin-why is-attention">
+                    <b>Reported by the seller on {formatShortDate(review.reportedAt)}</b>
+                    {review.reportReason ? `“${review.reportReason}”` : "No reason given."}
+                </p>
+            )}
+            {review.hiddenAt && (
+                <p className="admin-why is-neutral">
+                    <b>Hidden on {formatShortDate(review.hiddenAt)}</b>
+                    {review.hiddenReason ?? "No reason given."}
+                </p>
+            )}
+            <p className="admin-review-by">
+                By <Link to={`/admin/users/${review.buyer.id}`}>{review.buyer.name}</Link> · {review.buyer.email} · <Link to={`/admin/orders/${review.orderId}`}>Order {review.orderId}</Link>
+            </p>
+            <ReviewActions review={review} onChanged={onChanged} />
+        </li>
+    )
+}
+
+// Reviews for an administrator to look at, the ones sellers reported first, with the buyers' photos.
+// Hiding a review takes it off the public pages and out of the average; showing it puts it back.
 function AdminReviewsPage() {
     useDocumentTitle("Reviews")
     const [type, setType] = useState<SellerReviewType>("product")
     const [status, setStatus] = useState<AdminReviewStatus>("reported")
     const [page, setPage] = useState(1)
+    const [openPhotos, setOpenPhotos] = useState<OpenPhotos | null>(null)
     const { state, reload } = useApiResource(`${type}|${status}|${page}`, (signal) => listAdminReviews(type, status, page, signal))
 
     return (
-        <div>
-            <h1>Reviews</h1>
+        <div className="admin-page">
+            <AdminListHead title="Reviews" intro="Reported reviews come first. Hide one that breaks the rules; its photos are hidden with it." />
 
-            <div className="filter-row">
-                <label className="field-inline">
-                    Reviews of{" "}
-                    <select value={type} onChange={(event) => { setType(event.target.value as SellerReviewType); setPage(1) }}>
-                        <option value="product">Products</option>
-                        <option value="shop">Shops</option>
-                    </select>
-                </label>
-                <label className="field-inline">
-                    Show{" "}
-                    <select value={status} onChange={(event) => { setStatus(event.target.value as AdminReviewStatus); setPage(1) }}>
-                        {STATUS_FILTERS.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
-                    </select>
-                </label>
+            <div className="admin-tools admin-tools-row">
+                <div className="admin-segments" role="group" aria-label="Reviews of">
+                    {TYPES.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={option.value === type ? "is-on" : undefined}
+                            aria-pressed={option.value === type}
+                            onClick={() => { setType(option.value); setPage(1) }}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+                <AdminFilters label="Show" options={STATUS_FILTERS} value={status} onChange={(value) => { setStatus(value); setPage(1) }} />
             </div>
 
             {state.kind === "loading" && <p role="status">Loading reviews...</p>}
@@ -112,36 +194,35 @@ function AdminReviewsPage() {
             )}
             {state.kind === "ready" && (
                 <>
-                    <p className="field-help">{state.data.total} {state.data.total === 1 ? "review" : "reviews"} found.</p>
-                    {state.data.reviews.length === 0 ? <p>No reviews match.</p> : (
-                        <ul className="order-history">
+                    <p className="admin-count">
+                        <span><b>{state.data.total.toLocaleString("en-NG")}</b> {state.data.total === 1 ? "review" : "reviews"}</span>
+                        <span>{pageOf(page, state.data.pageSize, state.data.total)}</span>
+                    </p>
+                    {state.data.reviews.length === 0 ? (
+                        <div className="orders-none"><p>{status === "reported" ? "No reported reviews. Nothing to look at." : "No reviews match."}</p></div>
+                    ) : (
+                        <ul className="admin-cards">
                             {state.data.reviews.map((review) => (
-                                <li key={`${review.type}-${review.id}`} className="card order-card">
-                                    <div className="order-header">
-                                        <StarRating average={review.rating} count={1} showCount={false} />
-                                        <span className="badge-group">
-                                            {review.reportedAt && <span className="badge badge-amber">Reported</span>}
-                                            {review.hiddenAt && <span className="badge">Hidden</span>}
-                                        </span>
-                                    </div>
-                                    <p className="order-line-meta">
-                                        {review.type === "shop" ? review.subject.businessName : review.subject.title} · {formatShortDate(review.createdAt)}
-                                    </p>
-                                    {review.comment ? <p>{review.comment}</p> : <p className="field-help">No comment.</p>}
-                                    <dl className="detail-list">
-                                        <div><dt>Written by</dt><dd><Link to={`/admin/users/${review.buyer.id}`}>{review.buyer.name}</Link>, {review.buyer.email}</dd></div>
-                                        <div><dt>Order</dt><dd><Link to={`/admin/orders/${review.orderId}`}>Order {review.orderId}</Link></dd></div>
-                                        {review.reportReason && <div><dt>Reported because</dt><dd>{review.reportReason}</dd></div>}
-                                        {review.hiddenReason && <div><dt>Hidden because</dt><dd>{review.hiddenReason}</dd></div>}
-                                    </dl>
-                                    <ReviewActions review={review} onChanged={reload} />
-                                </li>
+                                <ReviewCard
+                                    key={`${review.type}-${review.id}`}
+                                    review={review}
+                                    onChanged={reload}
+                                    onOpenPhoto={(index) => setOpenPhotos({ review, index })}
+                                />
                             ))}
                         </ul>
                     )}
-                    <Pagination page={page} pageSize={state.data.pageSize} total={state.data.total} onChange={setPage} />
+                    <AdminPager page={page} pageSize={state.data.pageSize} total={state.data.total} onChange={setPage} />
                 </>
             )}
+
+            <PhotoViewer
+                photos={openPhotos?.review.photoUrls ?? []}
+                index={openPhotos?.index ?? null}
+                caption={openPhotos ? `From ${openPhotos.review.buyer.name}'s review of ${subjectName(openPhotos.review)}` : ""}
+                onIndex={(index) => setOpenPhotos((open) => open && { ...open, index })}
+                onClose={() => setOpenPhotos(null)}
+            />
         </div>
     )
 }
