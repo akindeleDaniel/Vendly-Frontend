@@ -1,5 +1,8 @@
 import { useState } from "react"
 import Notice from "./Notice"
+import PhotoViewer from "./PhotoViewer"
+import ReviewPhotoField from "./ReviewPhotoField"
+import ReviewPhotoThumbs from "./ReviewPhotoThumbs"
 import ShopAvatar from "./ShopAvatar"
 import StarInput from "./StarInput"
 import StarRating from "./StarRating"
@@ -8,6 +11,7 @@ import type { NewReview, ReviewKind } from "../lib/reviewApi"
 import { failureMessage } from "../lib/apiRequest"
 import { formatOrderDay } from "../lib/buyerOrders"
 import { useApiResource } from "../lib/useApiResource"
+import { useReviewPhotos } from "../lib/useReviewPhotos"
 import type { BrandColor } from "../types/branding"
 import type { OrderItem } from "../types/order"
 import { REVIEW_COMMENT_MAX_LENGTH } from "../types/review"
@@ -37,34 +41,80 @@ type WrittenReviewProps = {
     onChanged: () => void
 }
 
-// A review the shopper has written, with Edit and Delete for the first 7 days.
-function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
-    const [isEditing, setIsEditing] = useState(false)
+// A photo still uploading, or one that failed, holds a review back until it is done or removed.
+function photoHoldUp(uploading: number, failed: number): string {
+    if (uploading > 0) {
+        return uploading === 1 ? "Waiting for 1 photo to finish uploading." : `Waiting for ${uploading} photos to finish uploading.`
+    }
+
+    return failed > 0 ? "A photo didn't upload. Try it again, or remove it." : ""
+}
+
+type EditReviewFormProps = {
+    about: string
+    kind: ReviewKind
+    review: MyReview
+    onSaved: () => void
+    onCancel: () => void
+}
+
+// Changing a written review: the stars, the comment and the photos.
+function EditReviewForm({ about, kind, review, onSaved, onCancel }: EditReviewFormProps) {
     const [rating, setRating] = useState(review.rating)
     const [comment, setComment] = useState(review.comment ?? "")
+    const photos = useReviewPhotos({ edit: review.photoUrls ?? [] })
     const [isWorking, setIsWorking] = useState(false)
     const [error, setError] = useState("")
-    const written = new Date(review.createdAt)
-    const changeUntil = Number.isNaN(written.getTime()) ? "" : formatOrderDay(new Date(written.getTime() + CHANGE_DAYS * 86_400_000).toISOString())
+    const holdUp = photoHoldUp(photos.countWhere(["edit"], "uploading"), photos.countWhere(["edit"], "failed"))
 
     async function save(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
-        if (isWorking) {
+        if (isWorking || holdUp) {
             return
         }
         setIsWorking(true)
         setError("")
         const trimmed = comment.trim()
-        const result = await changeReview(kind, review.id, { rating, comment: trimmed === "" ? null : trimmed })
+        const result = await changeReview(kind, review.id, { rating, comment: trimmed === "" ? null : trimmed, photoUrls: photos.urlsFor("edit") })
         setIsWorking(false)
 
         if (result.kind === "ok") {
-            setIsEditing(false)
-            onChanged()
+            onSaved()
         } else {
             setError(failureMessage(result))
         }
     }
+
+    return (
+        <form className="review-written" onSubmit={save}>
+            <div className="review-written-head">
+                <b>{about}</b>
+                <StarInput label={`Your rating of ${about}`} value={rating} onChange={setRating} disabled={isWorking} hideLabel />
+            </div>
+            <label className="review-comment">
+                Comment (optional)
+                <textarea maxLength={REVIEW_COMMENT_MAX_LENGTH} value={comment} disabled={isWorking} onChange={(event) => setComment(event.target.value)} />
+            </label>
+            <ReviewPhotoField target="edit" about={about} photos={photos} disabled={isWorking} />
+            {error && <Notice kind="error">{error}</Notice>}
+            <div className="review-actions">
+                <button type="submit" className="btn btn-primary" disabled={isWorking || holdUp !== ""}>{isWorking ? "Saving..." : "Save changes"}</button>
+                <button type="button" className="btn" disabled={isWorking} onClick={onCancel}>Cancel</button>
+                {holdUp && <span className="review-hint" role="status">{holdUp}</span>}
+            </div>
+        </form>
+    )
+}
+
+// A review the shopper has written, with its photos, and Edit and Delete for the first 7 days.
+function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [isWorking, setIsWorking] = useState(false)
+    const [error, setError] = useState("")
+    const [openPhoto, setOpenPhoto] = useState<number | null>(null)
+    const written = new Date(review.createdAt)
+    const changeUntil = Number.isNaN(written.getTime()) ? "" : formatOrderDay(new Date(written.getTime() + CHANGE_DAYS * 86_400_000).toISOString())
+    const photoUrls = review.photoUrls ?? []
 
     async function remove() {
         if (isWorking || !window.confirm(`Delete your review of ${about}?`)) {
@@ -83,30 +133,7 @@ function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
     }
 
     if (isEditing) {
-        return (
-            <form className="review-written" onSubmit={save}>
-                <div className="review-written-head">
-                    <b>{about}</b>
-                    <StarInput label={`Your rating of ${about}`} value={rating} onChange={setRating} disabled={isWorking} hideLabel />
-                </div>
-                <label className="review-comment">
-                    Comment (optional)
-                    <textarea maxLength={REVIEW_COMMENT_MAX_LENGTH} value={comment} disabled={isWorking} onChange={(event) => setComment(event.target.value)} />
-                </label>
-                {error && <Notice kind="error">{error}</Notice>}
-                <div className="review-actions">
-                    <button type="submit" className="btn btn-primary" disabled={isWorking}>{isWorking ? "Saving..." : "Save changes"}</button>
-                    <button
-                        type="button"
-                        className="btn"
-                        disabled={isWorking}
-                        onClick={() => { setIsEditing(false); setRating(review.rating); setComment(review.comment ?? ""); setError("") }}
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        )
+        return <EditReviewForm about={about} kind={kind} review={review} onSaved={() => { setIsEditing(false); onChanged() }} onCancel={() => setIsEditing(false)} />
     }
 
     return (
@@ -116,6 +143,15 @@ function WrittenReview({ about, kind, review, onChanged }: WrittenReviewProps) {
                 <StarRating average={review.rating} count={1} showCount={false} />
             </div>
             {review.comment && <p className="review-written-comment">{review.comment}</p>}
+            <ReviewPhotoThumbs urls={photoUrls} who="your" onOpen={setOpenPhoto} />
+            <PhotoViewer
+                photos={photoUrls}
+                index={openPhoto}
+                caption={`Your review of ${about}`}
+                quote={review.comment}
+                onIndex={setOpenPhoto}
+                onClose={() => setOpenPhoto(null)}
+            />
             {review.hidden && <Notice kind="warning">StoreHatch has hidden this review from the public.</Notice>}
             {error && <Notice kind="error">{error}</Notice>}
             <div className="review-written-meta">
@@ -148,6 +184,7 @@ function OrderReviewsPanel({ checkoutId, sellerOrderId, shop, items, scrollIntoV
     const { state, reload } = useApiResource(`${checkoutId}|${sellerOrderId}`, (signal) => fetchOrderReviews(checkoutId, sellerOrderId, signal))
     const [ratings, setRatings] = useState<Record<string, number>>({})
     const [comments, setComments] = useState<Record<string, string>>({})
+    const photos = useReviewPhotos()
     const [isPosting, setIsPosting] = useState(false)
     const [error, setError] = useState("")
 
@@ -192,15 +229,20 @@ function OrderReviewsPanel({ checkoutId, sellerOrderId, shop, items, scrollIntoV
             : [])
     ]
 
+    // Only the photos of what is being rated count: a photo under a target with no stars is not sent.
+    const ratedKeys = pending.filter((target) => (ratings[target.key] ?? 0) > 0).map((target) => target.key)
+    const holdUp = photoHoldUp(photos.countWhere(ratedKeys, "uploading"), photos.countWhere(ratedKeys, "failed"))
+
     async function post(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
-        if (isPosting) {
+        if (isPosting || holdUp) {
             return
         }
 
         const reviewOf = (key: string): NewReview => {
             const comment = (comments[key] ?? "").trim()
-            return { rating: ratings[key], ...(comment ? { comment } : {}) }
+            const photoUrls = photos.urlsFor(key)
+            return { rating: ratings[key], ...(comment ? { comment } : {}), ...(photoUrls.length > 0 ? { photoUrls } : {}) }
         }
         const rated = pending.filter((target) => (ratings[target.key] ?? 0) > 0)
 
@@ -222,6 +264,7 @@ function OrderReviewsPanel({ checkoutId, sellerOrderId, shop, items, scrollIntoV
         if (result.kind === "ok") {
             setRatings({})
             setComments({})
+            photos.clear()
             reload()
         } else {
             setError(failureMessage(result))
@@ -256,24 +299,29 @@ function OrderReviewsPanel({ checkoutId, sellerOrderId, shop, items, scrollIntoV
                                     <span className="review-target-word" aria-live="polite">{RATING_WORDS[rating]}</span>
                                 </div>
                                 {rating > 0 && (
-                                    <label className="review-comment">
-                                        {target.isShop ? "About the shop (optional)" : `About the ${target.name} (optional)`}
-                                        <textarea
-                                            maxLength={REVIEW_COMMENT_MAX_LENGTH}
-                                            value={comments[target.key] ?? ""}
-                                            disabled={isPosting}
-                                            placeholder={target.isShop ? "What went well, or what could be better?" : "Was it as described? Would you buy it again?"}
-                                            onChange={(event) => setComments((current) => ({ ...current, [target.key]: event.target.value }))}
-                                        />
-                                    </label>
+                                    <>
+                                        <label className="review-comment">
+                                            {target.isShop ? "About the shop (optional)" : `About the ${target.name} (optional)`}
+                                            <textarea
+                                                maxLength={REVIEW_COMMENT_MAX_LENGTH}
+                                                value={comments[target.key] ?? ""}
+                                                disabled={isPosting}
+                                                placeholder={target.isShop ? "What went well, or what could be better?" : "Was it as described? Would you buy it again?"}
+                                                onChange={(event) => setComments((current) => ({ ...current, [target.key]: event.target.value }))}
+                                            />
+                                        </label>
+                                        <ReviewPhotoField target={target.key} about={target.isShop ? "the shop" : target.name} photos={photos} disabled={isPosting} />
+                                    </>
                                 )}
                             </div>
                         )
                     })}
                     {error && <Notice kind="error">{error}</Notice>}
                     <div className="review-actions">
-                        <button type="submit" className="btn btn-primary" disabled={isPosting}>{isPosting ? "Posting..." : "Post review"}</button>
-                        {pending.length > 1 && <span className="review-hint">Rate the shop, a product, or both.</span>}
+                        <button type="submit" className="btn btn-primary" disabled={isPosting || holdUp !== ""}>{isPosting ? "Posting..." : "Post review"}</button>
+                        {holdUp
+                            ? <span className="review-hint" role="status">{holdUp}</span>
+                            : pending.length > 1 && <span className="review-hint">Rate the shop, a product, or both.</span>}
                     </div>
                 </form>
             )}

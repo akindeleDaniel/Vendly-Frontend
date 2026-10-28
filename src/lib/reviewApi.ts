@@ -21,7 +21,7 @@ export function fetchOrderReviews(checkoutId: number, sellerOrderId: number, sig
     })
 }
 
-export type NewReview = { rating: number, comment?: string }
+export type NewReview = { rating: number, comment?: string, photoUrls?: string[] }
 
 // Saves new reviews of the shop, of products in the order, or both at once. Nothing is saved unless
 // every part is valid. Leave out products rather than sending an empty list.
@@ -36,7 +36,8 @@ export function createOrderReview(
 // kind is "products" or "shops" in the backend's paths.
 export type ReviewKind = "products" | "shops"
 
-export function changeReview(kind: ReviewKind, reviewId: number, change: { rating?: number, comment?: string | null }): Promise<ApiResult<unknown>> {
+// photoUrls replaces the review's photos; an empty list removes them all.
+export function changeReview(kind: ReviewKind, reviewId: number, change: { rating?: number, comment?: string | null, photoUrls?: string[] }): Promise<ApiResult<unknown>> {
     return apiRequest<unknown>(`/reviews/${kind}/${reviewId}`, { method: "PATCH", body: change })
 }
 
@@ -48,12 +49,18 @@ function reviewPageValid(value: unknown): value is ReviewPage {
     return hasArray("reviews")(value) && isRecord(value) && isRecord(value.summary)
 }
 
-export function fetchListingReviews(listingId: string | number, page: number, signal?: AbortSignal): Promise<ApiResult<ReviewPage>> {
-    return apiRequest<ReviewPage>(`/listings/${encodeURIComponent(String(listingId))}/reviews?page=${page}`, { signal, isValid: reviewPageValid })
-}
-
-export function fetchShopReviews(slug: string, page: number, signal?: AbortSignal): Promise<ApiResult<ReviewPage>> {
-    return apiRequest<ReviewPage>(`/seller/shop/${encodeURIComponent(slug)}/reviews?page=${page}`, { signal, isValid: reviewPageValid })
+// A product's or shop's public reviews. With `withPhotos` only the reviews that have photos are
+// listed; the summary still covers every review.
+export function fetchPublicReviews(
+    kind: "product" | "shop",
+    subject: string, // the listing's id, or the shop's slug
+    page: number,
+    withPhotos: boolean,
+    signal?: AbortSignal
+): Promise<ApiResult<ReviewPage>> {
+    const path = kind === "product" ? `/listings/${encodeURIComponent(subject)}/reviews` : `/seller/shop/${encodeURIComponent(subject)}/reviews`
+    const query = new URLSearchParams({ page: String(page), ...(withPhotos ? { withPhotos: "true" } : {}) })
+    return apiRequest<ReviewPage>(`${path}?${query}`, { signal, isValid: reviewPageValid })
 }
 
 export function fetchMyReviews(type: SellerReviewType, page: number, signal?: AbortSignal): Promise<ApiResult<SellerReviewPage>> {

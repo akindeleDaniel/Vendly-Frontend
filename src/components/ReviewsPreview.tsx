@@ -1,13 +1,17 @@
 import { useState } from "react"
-import { Check } from "lucide-react"
 import Notice from "./Notice"
-import ReviewList from "./ReviewList"
+import PhotoViewer from "./PhotoViewer"
+import ReviewList, { PublicReviewCard, ReviewBars } from "./ReviewList"
 import StarRating from "./StarRating"
-import { fetchListingReviews, fetchShopReviews } from "../lib/reviewApi"
-import { formatShortDate } from "../lib/orderApi"
+import { fetchPublicReviews } from "../lib/reviewApi"
+import { reviewPhotoCaption } from "../lib/reviewCaption"
 import { useApiResource } from "../lib/useApiResource"
+import type { PublicReview } from "../types/review"
 
 const PREVIEW_COUNT = 3
+const STRIP_COUNT = 5 // photos in the strip before "See all"
+
+type OpenPhoto = { review: PublicReview, index: number }
 
 type ReviewsPreviewProps = {
     kind: "product" | "shop"
@@ -16,17 +20,66 @@ type ReviewsPreviewProps = {
     headingId: string // the section around it is labelled by this heading
 }
 
-// Reviews on a shop or product page: the average and the three newest reviews, with a button that
-// opens them all.
+type PhotoStripProps = {
+    kind: "product" | "shop"
+    subject: string
+    reviewsWithPhotos: number
+    onOpen: (photo: OpenPhoto) => void
+    onSeeAll: () => void
+}
+
+// The newest buyer photos in a row, from the reviews that have them. Only drawn when there are some.
+function BuyerPhotoStrip({ kind, subject, reviewsWithPhotos, onOpen, onSeeAll }: PhotoStripProps) {
+    const { state } = useApiResource(`review-photos|${kind}|${subject}`, (signal) => fetchPublicReviews(kind, subject, 1, true, signal))
+
+    if (state.kind !== "ready") {
+        return null
+    }
+
+    const photos = state.data.reviews.flatMap((review) => (review.photoUrls ?? []).map((url, index) => ({ review, url, index })))
+
+    if (photos.length === 0) {
+        return null
+    }
+
+    return (
+        <div className="review-strip" role="group" aria-labelledby={`${kind}-review-strip`}>
+            <div className="review-strip-top">
+                <b id={`${kind}-review-strip`}>Photos from buyers</b>
+                <button type="button" className="btn-text" onClick={onSeeAll}>
+                    See the {reviewsWithPhotos === 1 ? "review" : `${reviewsWithPhotos} reviews`} with photos
+                </button>
+            </div>
+            <div className="review-strip-row">
+                {photos.slice(0, STRIP_COUNT).map((photo, position) => (
+                    <button
+                        key={`${photo.review.id}-${photo.index}`}
+                        type="button"
+                        className={`review-strip-photo${position >= 3 ? " is-wide-only" : ""}`}
+                        aria-label={`Open ${photo.review.reviewer}'s photo`}
+                        onClick={() => onOpen({ review: photo.review, index: photo.index })}
+                    >
+                        <img src={photo.url} alt="" loading="lazy" />
+                    </button>
+                ))}
+                <button type="button" className="review-strip-more" onClick={onSeeAll}>See<small>all</small></button>
+            </div>
+        </div>
+    )
+}
+
+// Reviews on a shop or product page: the average, the buyers' photos and the three newest reviews,
+// with buttons that open them all, or only the ones with photos.
 function ReviewsPreview({ kind, subject, heading, headingId }: ReviewsPreviewProps) {
-    const [showAll, setShowAll] = useState(false)
+    const [showAll, setShowAll] = useState<null | "all" | "photos">(null)
+    const [openPhoto, setOpenPhoto] = useState<OpenPhoto | null>(null)
     const { state, reload } = useApiResource(
         `reviews-preview|${kind}|${subject}`,
-        (signal) => kind === "product" ? fetchListingReviews(subject, 1, signal) : fetchShopReviews(subject, 1, signal)
+        (signal) => fetchPublicReviews(kind, subject, 1, false, signal)
     )
 
     if (showAll) {
-        return <ReviewList kind={kind} subject={subject} />
+        return <ReviewList kind={kind} subject={subject} initialWithPhotos={showAll === "photos"} />
     }
 
     if (state.kind === "loading") {
@@ -43,6 +96,7 @@ function ReviewsPreview({ kind, subject, heading, headingId }: ReviewsPreviewPro
     }
 
     const { summary, reviews } = state.data
+    const withPhotos = summary.withPhotos ?? 0
 
     if (summary.count === 0) {
         return (
@@ -62,25 +116,32 @@ function ReviewsPreview({ kind, subject, heading, headingId }: ReviewsPreviewPro
                 <p className="shop-reviews-note">
                     From {summary.count} {summary.count === 1 ? "buyer" : "buyers"}. Only buyers whose order was delivered can leave a review.
                 </p>
+                <ReviewBars summary={summary} />
                 {summary.count > PREVIEW_COUNT && (
-                    <button type="button" className="shop-btn is-plain" onClick={() => setShowAll(true)}>
+                    <button type="button" className="shop-btn is-plain review-read-all" onClick={() => setShowAll("all")}>
                         Read all {summary.count} reviews
                     </button>
                 )}
             </div>
-            <ul className="shop-review-cards">
-                {reviews.slice(0, PREVIEW_COUNT).map((review) => (
-                    <li key={review.id} className="shop-review-card">
-                        <StarRating average={review.rating} count={1} showCount={false} />
-                        {review.comment && <p>{review.comment}</p>}
-                        <p className="shop-review-meta">
-                            <b>{review.reviewer}</b>
-                            <span>{formatShortDate(review.createdAt)}{review.edited ? " · edited" : ""}</span>
-                        </p>
-                        <span className="shop-verified"><Check aria-hidden="true" size={16} />Verified buyer</span>
-                    </li>
-                ))}
-            </ul>
+            <div className="review-preview-main">
+                {withPhotos > 0 && (
+                    <BuyerPhotoStrip kind={kind} subject={subject} reviewsWithPhotos={withPhotos} onOpen={setOpenPhoto} onSeeAll={() => setShowAll("photos")} />
+                )}
+                <ul className="public-review-list">
+                    {reviews.slice(0, PREVIEW_COUNT).map((review) => (
+                        <PublicReviewCard key={review.id} review={review} onOpenPhoto={(index) => setOpenPhoto({ review, index })} />
+                    ))}
+                </ul>
+            </div>
+
+            <PhotoViewer
+                photos={openPhoto?.review.photoUrls ?? []}
+                index={openPhoto?.index ?? null}
+                caption={openPhoto ? reviewPhotoCaption(openPhoto.review) : ""}
+                quote={openPhoto?.review.comment}
+                onIndex={(index) => setOpenPhoto((open) => open && { ...open, index })}
+                onClose={() => setOpenPhoto(null)}
+            />
         </div>
     )
 }

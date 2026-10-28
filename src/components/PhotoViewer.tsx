@@ -5,6 +5,7 @@ type PhotoViewerProps = {
     photos: string[]
     index: number | null // null: closed
     caption: string
+    quote?: string | null // the review's words, under the photo
     onIndex: (index: number) => void
     onClose: () => void
 }
@@ -12,7 +13,7 @@ type PhotoViewerProps = {
 // Shows a review's photos one at a time, large, with Previous and Next and small pictures to jump
 // between them. A real modal dialog: the keyboard stays inside it, Escape closes it and the arrow keys
 // move between photos.
-function PhotoViewer({ photos, index, caption, onIndex, onClose }: PhotoViewerProps) {
+function PhotoViewer({ photos, index, caption, quote, onIndex, onClose }: PhotoViewerProps) {
     const dialogRef = useRef<HTMLDialogElement>(null)
     const isOpen = index !== null && photos.length > 0
 
@@ -66,6 +67,7 @@ function PhotoViewer({ photos, index, caption, onIndex, onClose }: PhotoViewerPr
                             </>
                         )}
                     </div>
+                    {quote && <p className="photo-viewer-quote">“{quote}”</p>}
                     <div className="photo-viewer-foot">
                         {photos.length > 1 && (
                             <div className="photo-viewer-thumbs">

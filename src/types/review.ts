@@ -10,6 +10,7 @@ export type MyReview = {
   createdAt: string
   hidden: boolean // an administrator has hidden it from the public
   canChange: boolean // false 7 days after it was written
+  photoUrls?: string[] // up to 3; often none
 }
 
 // GET /orders/:id/seller-orders/:orderId/reviews
@@ -23,6 +24,7 @@ export type ReviewSummary = {
   average: number | null
   count: number
   distribution: Record<string, number> // "1" to "5"
+  withPhotos?: number // how many visible reviews have photos
 }
 
 // A review on a product or shop page.
@@ -33,6 +35,7 @@ export type PublicReview = {
   reviewer: string // for example "Ada O."
   createdAt: string
   edited: boolean
+  photoUrls?: string[] // up to 3; often none
 }
 
 // GET /listings/:id/reviews and GET /seller/shop/:slug/reviews
@@ -64,7 +67,7 @@ export type SellerReviewPage = {
   total: number
   reviews: SellerReview[]
   // The open tab's visible reviews, as shoppers' rating counts them.
-  summary?: ReviewSummary & { withPhotos: number }
+  summary?: ReviewSummary
   // How many reviews each tab lists, hidden and reported ones included.
   counts?: { shop: number, product: number }
 }
