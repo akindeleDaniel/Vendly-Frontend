@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react"
-import { Link, useLocation } from "react-router-dom"
-import { PackageOpen, Plus, ShoppingBag } from "lucide-react"
+import { Link, useLocation, useSearchParams } from "react-router-dom"
+import { PackageOpen, ShoppingBag } from "lucide-react"
 import { markShopSetupPromptDismissed } from "../lib/shopSetupPrompt"
 import type { Listing } from "../types/listing"
 import { apiFetch } from "../lib/api"
 import { apiRequest, failureMessage } from "../lib/apiRequest"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import AddProductsMenu from "../components/AddProductsMenu"
+import DraftsPanel from "../components/DraftsPanel"
 import Notice from "../components/Notice"
 import Greeting from "../components/Greeting"
 import SellerStandingNotice from "../components/SellerStandingNotice"
@@ -15,7 +17,9 @@ import StoreProductRow from "../components/StoreProductRow"
 import { toStoreProfile } from "../lib/storeProfile"
 import { LOW_STOCK_THRESHOLD, sellerStockStatus } from "../lib/stock"
 
-type ProductView = "on-sale" | "low" | "sold-out" | "archived"
+type ProductView = "on-sale" | "drafts" | "low" | "sold-out" | "archived"
+
+const VIEWS: ProductView[] = ["on-sale", "drafts", "low", "sold-out", "archived"]
 
 type StockAlertBoxProps = { low: number, soldOut: number, shopAlertNumber: number | null, onShow: () => void }
 
@@ -54,20 +58,27 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const addedTitle = typeof location.state === "object" && location.state !== null && "added" in location.state && typeof location.state.added === "string"
         ? location.state.added
         : null
+    // A message from the page the seller came from, for example after importing or making drafts.
+    const arrivalNote = typeof location.state === "object" && location.state !== null && "note" in location.state && typeof location.state.note === "string"
+        ? location.state.note
+        : null
+    const [searchParams] = useSearchParams()
+    const viewParam = searchParams.get("view")
 
     const [listings, setListings] = useState<Listing[]>([])
     const [profile, setProfile] = useState<StoreProfile | null>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [deleteError, setDeleteError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
-    const [view, setView] = useState<ProductView>("on-sale")
+    const [view, setView] = useState<ProductView>(VIEWS.find((value) => value === viewParam) ?? "on-sale")
+    const [drafts, setDrafts] = useState<Listing[]>([])
     const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
     const [isArchiving, setIsArchiving] = useState(false)
     const [needsShop, setNeedsShop] = useState(false)// no shop yet: products need one, so setup is offered first
     const [shopAlertNumber, setShopAlertNumber] = useState<number | null>(null)// the shop's low-stock alert number
 
     async function handleDelete(id: number) {
-        const listing = listings.find((candidate) => candidate.id === id)
+        const listing = [...listings, ...drafts].find((candidate) => candidate.id === id)
         if (!window.confirm(`Delete "${listing?.title ?? "this product"}"? This cannot be undone.`)) {
             return
         }
@@ -96,6 +107,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
             }
 
             setListings((current) => current.filter((candidate) => candidate.id !== id))
+            setDrafts((current) => current.filter((candidate) => candidate.id !== id))
         } catch {
             setDeleteError("Something went wrong. Please check your connection and try again.")
         }
@@ -139,9 +151,11 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
             setLoadError(null)
 
             try {
-                const [profileResponse, listingsResponse] = await Promise.all([
+                const [profileResponse, listingsResponse, draftsResponse] = await Promise.all([
                     apiFetch("/seller/profile", { credentials: "include", signal: controller.signal }),
-                    apiFetch("/listings/Mylisting?archived=all", { credentials: "include", signal: controller.signal })
+                    apiFetch("/listings/Mylisting?archived=all", { credentials: "include", signal: controller.signal }),
+                    // Drafts are listed apart from the products on sale. Without them the tab is simply missing.
+                    apiFetch("/listings/Mylisting?drafts=only", { credentials: "include", signal: controller.signal }).catch(() => null)
                 ])
 
                 if (controller.signal.aborted) {
@@ -164,6 +178,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
 
                 const profileBody: unknown = await profileResponse.json()
                 const myListings: Listing[] = await listingsResponse.json()
+                const myDrafts: unknown = draftsResponse?.ok ? await draftsResponse.json().catch(() => []) : []
                 if (controller.signal.aborted) {
                     return
                 }
@@ -171,6 +186,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                 const alertNumber = typeof profileBody === "object" && profileBody !== null && "lowStockThreshold" in profileBody ? profileBody.lowStockThreshold : null
                 setShopAlertNumber(typeof alertNumber === "number" ? alertNumber : null)
                 setListings(myListings)
+                setDrafts(Array.isArray(myDrafts) ? myDrafts.filter((draft: Listing) => draft.isDraft !== false) : [])
             } catch {
                 if (!controller.signal.aborted) {
                     setLoadError("We could not load your store. Please check your connection and try again.")
@@ -187,11 +203,12 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const soldOutListings = onSaleListings.filter((listing) => sellerStockStatus(listing) === "sold_out")
     const archivedListings = listings.filter((listing) => listing.archivedAt)
     // An empty tab other than On sale is gone, so the page goes back to the products on sale.
+    const showDrafts = view === "drafts" && drafts.length > 0
     const shownListings = view === "archived" && archivedListings.length > 0
         ? archivedListings
         : view === "low" && lowListings.length > 0 ? lowListings
             : view === "sold-out" && soldOutListings.length > 0 ? soldOutListings : onSaleListings
-    const shownView: ProductView = shownListings === onSaleListings ? "on-sale" : view
+    const shownView: ProductView = showDrafts ? "drafts" : shownListings === onSaleListings ? "on-sale" : view
 
     // Without a shop there is nothing to list yet: setting one up is required to add a product, and
     // shopping stays open in the meantime.
@@ -215,6 +232,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const firstName = userName.trim().split(/\s+/)[0] ?? ""
     const tabs: Array<{ value: ProductView, label: string, count: number }> = [
         { value: "on-sale", label: "On sale", count: onSaleListings.length },
+        ...(drafts.length > 0 ? [{ value: "drafts" as const, label: "Drafts", count: drafts.length }] : []),
         ...(lowListings.length > 0 ? [{ value: "low" as const, label: "Running low", count: lowListings.length }] : []),
         ...(soldOutListings.length > 0 ? [{ value: "sold-out" as const, label: "Sold out", count: soldOutListings.length }] : []),
         ...(archivedListings.length > 0 ? [{ value: "archived" as const, label: "Archived", count: archivedListings.length }] : [])
@@ -229,6 +247,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                 </Notice>
             )}
             {addedTitle && <Notice kind="success">&ldquo;{addedTitle}&rdquo; is now on sale in your shop.</Notice>}
+            {arrivalNote && <Notice kind="success">{arrivalNote}</Notice>}
 
             <SellerStandingNotice />
 
@@ -239,7 +258,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
             <section aria-labelledby="products-heading">
                 <div className="store-section-title">
                     <h2 id="products-heading">Your products</h2>
-                    <Link to="/seller/products/new" className="btn btn-primary"><Plus size={18} aria-hidden="true" />Add a product</Link>
+                    <AddProductsMenu hasProducts={onSaleListings.length > 0} />
                 </div>
 
                 {deleteError && <Notice kind="error">{deleteError}</Notice>}
@@ -278,7 +297,9 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     </div>
                 )}
 
-                {shownListings.length === 0 ? (
+                {shownView === "drafts" ? (
+                    <DraftsPanel drafts={drafts} onChanged={() => setLoadAttempt((attempt) => attempt + 1)} onDelete={handleDelete} />
+                ) : shownListings.length === 0 ? (
                     <div className="store-empty">
                         <span className="store-empty-icon" aria-hidden="true"><ShoppingBag size={30} /></span>
                         <h3>No products yet</h3>

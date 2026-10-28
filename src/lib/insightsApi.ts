@@ -1,6 +1,6 @@
-import { apiFetch, getErrorMessage } from "./api"
 import { apiRequest, isRecord } from "./apiRequest"
 import type { ApiResult } from "./apiRequest"
+import { downloadFile } from "./productBulkApi"
 import type { CustomerSort, SellerCustomerPage, SellerSummary } from "../types/insights"
 
 function periodQuery(from: string, to: string): string {
@@ -27,28 +27,7 @@ export function fetchSellerCustomers(sort: CustomerSort, page: number, signal?: 
     })
 }
 
-// Saves the period's paid orders as a CSV file. The file is fetched with the login cookie, then handed
-// to the browser as a download. Returns an error message, or null when it worked.
-export async function downloadOrdersCsv(from: string, to: string): Promise<string | null> {
-    try {
-        const response = await apiFetch(`/seller/orders/export${periodQuery(from, to)}`, { credentials: "include" })
-
-        if (!response.ok) {
-            return await getErrorMessage(response, `The spreadsheet couldn't be made (status ${response.status}).`)
-        }
-
-        const blob = await response.blob()
-        const named = /filename="?([^";]+)"?/.exec(response.headers.get("Content-Disposition") ?? "")?.[1]
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = url
-        link.download = named ?? `storehatch-orders-${from}-to-${to}.csv`
-        document.body.append(link)
-        link.click()
-        link.remove()
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-        return null
-    } catch {
-        return "The spreadsheet couldn't be downloaded. Please check your connection and try again."
-    }
+// Saves the period's paid orders as a CSV file. Returns an error message, or null when it worked.
+export function downloadOrdersCsv(from: string, to: string): Promise<string | null> {
+    return downloadFile(`/seller/orders/export${periodQuery(from, to)}`, `storehatch-orders-${from}-to-${to}.csv`)
 }

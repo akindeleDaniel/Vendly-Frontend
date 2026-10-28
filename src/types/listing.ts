@@ -61,7 +61,12 @@ export type Listing = {
   effectiveLowStockThreshold?: number // the number in force
   stockStatus?: StockStatus // with options: sold out when every option is, low when any is low or sold out
   lowStockOptions?: LowStockOption[] // the options that are low or sold out
+  // Drafts (GET /listings/Mylisting?drafts=only): hidden from shoppers until published.
+  isDraft?: boolean
+  draftMissing?: DraftField[] // what a draft still needs before it can be published
 }
+
+export type DraftField = "title" | "description" | "price" | "stockQuantity" | "category" | "imageUrl"
 
 export type ListingFormData = {
   title: string
