@@ -7,7 +7,6 @@ import { formatNaira, } from "../lib/money"
 import { formatOrderStatus, formatShortDate, hasAmount } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
-import BackArrow from "../components/BackArrow"
 
 const STATUS_FILTERS = [
     { value: "", label: "Paid orders" },
@@ -27,8 +26,9 @@ function AdminOrdersPage() {
     const [searchParams, setSearchParams] = useSearchParams()
     const buyerId = searchParams.get("buyerId") ?? ""
     const sellerId = searchParams.get("sellerId") ?? ""
-    const [searchInput, setSearchInput] = useState("")
-    const [search, setSearch] = useState("")
+    const initialSearch = searchParams.get("search") ?? ""// from the search box on the Overview
+    const [searchInput, setSearchInput] = useState(initialSearch)
+    const [search, setSearch] = useState(initialSearch)
     const [status, setStatus] = useState("")
     const [page, setPage] = useState(1)
     const { state, reload } = useApiResource(
@@ -44,7 +44,6 @@ function AdminOrdersPage() {
 
     return (
         <div>
-            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Find an order</h1>
 
             <form role="search" onSubmit={applySearch} className="search-form">

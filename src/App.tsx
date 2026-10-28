@@ -281,7 +281,7 @@ function App() {
 
           <Route path="/disputes/:id" element={<RequireBuyer {...guardProps}><DisputeDetailPage viewer="buyer" /></RequireBuyer>} />
 
-          <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminDashboardPage /></AdminShell></RequireAdmin>} />
+          <Route path="/admin" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminDashboardPage userName={userName} isSuperAdmin={isSuperAdmin} /></AdminShell></RequireAdmin>} />
 
           <Route path="/admin/orders" element={<RequireAdmin {...guardProps}><AdminShell isSuperAdmin={isSuperAdmin}><AdminOrdersPage /></AdminShell></RequireAdmin>} />
 

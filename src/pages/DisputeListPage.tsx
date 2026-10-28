@@ -23,7 +23,7 @@ const DETAIL_PATHS: Record<DisputeViewer, string> = {
 const BACK_LINKS: Record<DisputeViewer, { to: string, label: string }> = {
     buyer: { to: "/orders", label: "Back to my orders" },
     seller: { to: "/seller/myListing", label: "Back to my store" },
-    admin: { to: "/admin", label: "Back to the admin dashboard" }
+    admin: { to: "/admin", label: "Back to the admin dashboard" }// not shown: the admin menu is beside the list
 }
 
 const INTRO: Record<DisputeViewer, string> = {
@@ -157,7 +157,7 @@ function DisputeListPage({ viewer }: { viewer: DisputeViewer }) {
 
     return (
         <div className="complaints-page">
-            <BackArrow to={BACK_LINKS[viewer].to} label={BACK_LINKS[viewer].label} />
+            {viewer !== "admin" && <BackArrow to={BACK_LINKS[viewer].to} label={BACK_LINKS[viewer].label} />}
             <div className="complaints-head">
                 <h1>Complaints</h1>
                 <p>{INTRO[viewer]}</p>

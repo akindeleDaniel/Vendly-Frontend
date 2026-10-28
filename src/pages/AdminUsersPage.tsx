@@ -1,18 +1,19 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import Notice from "../components/Notice"
 import Pagination from "../components/Pagination"
 import { listAdminUsers } from "../lib/adminLookupApi"
 import { formatShortDate } from "../lib/orderApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
-import BackArrow from "../components/BackArrow"
 
 // Finds a person by id, name, email or shop name.
 function AdminUsersPage() {
     useDocumentTitle("Find a person")
-    const [searchInput, setSearchInput] = useState("")
-    const [search, setSearch] = useState("")
+    const [searchParams] = useSearchParams()
+    const initialSearch = searchParams.get("search") ?? ""// from the search box on the Overview
+    const [searchInput, setSearchInput] = useState(initialSearch)
+    const [search, setSearch] = useState(initialSearch)
     const [role, setRole] = useState("")
     const [adminsOnly, setAdminsOnly] = useState(false)
     const [page, setPage] = useState(1)
@@ -29,7 +30,6 @@ function AdminUsersPage() {
 
     return (
         <div>
-            <BackArrow to="/admin" label="Back to the admin dashboard" />
             <h1>Find a person</h1>
 
             <form role="search" onSubmit={applySearch} className="search-form">
