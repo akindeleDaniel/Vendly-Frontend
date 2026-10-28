@@ -274,6 +274,8 @@ function ProductFormPage() {
             }
 
             // A product with options refuses a price and stock of its own, so they are left out and sent with the options.
+            // That includes a product going back to one version: it still has options until the PUT below takes them away.
+            const removingOptions = options === null && hadOptions
             const response = await apiFetch(`/listings/${saved.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -283,7 +285,7 @@ function ProductFormPage() {
                     description: form.description,
                     category: form.category,
                     imageUrls,
-                    ...(options === null ? { price: Number(form.price), stockQuantity: Number(form.stockQuantity) } : {}),
+                    ...(options === null && !removingOptions ? { price: Number(form.price), stockQuantity: Number(form.stockQuantity) } : {}),
                     ...(alertChanged ? { lowStockThreshold: alertValue(alertChoice, alertOwn) } : {})
                 })
             })
@@ -291,6 +293,20 @@ function ProductFormPage() {
                 // Shows the backend's own message, for example when stock would go below what shoppers have reserved.
                 setError(await getErrorMessage(response, `Unable to save this product (status ${response.status}).`))
                 return
+            }
+
+            // Back to one version: every option is taken away, and the product gets its own price and stock again.
+            if (removingOptions) {
+                const optionsResponse = await apiFetch(`/listings/${saved.id}/options`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ options: [], stockQuantity: Number(form.stockQuantity), price: Number(form.price) })
+                })
+                if (!optionsResponse.ok) {
+                    setError(await getErrorMessage(optionsResponse, `Unable to remove the options (status ${optionsResponse.status}).`))
+                    return
+                }
             }
 
             // The options are replaced as a whole.
