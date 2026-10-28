@@ -19,6 +19,7 @@ import { describeStock } from "../lib/stock"
 import { useAddToCart } from "../lib/useAddToCart"
 import { useCartCount } from "../lib/useCartCount"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
+import { useStructuredData } from "../lib/useStructuredData"
 import { usePendingCartAdd } from "../lib/usePendingCartAdd"
 import type { Listing } from "../types/listing"
 import type { ShopProfile } from "../types/shop"
@@ -77,6 +78,7 @@ function ProductPage({ userRole, authStatus }: ProductPageProps) {
     const pendingResult = usePendingCartAdd(userRole)
     const cartCount = useCartCount(userRole, `${cart.feedback?.kind}|${pendingResult?.text}`)
     useDocumentTitle(listing ? listing.title : "Product")
+    useStructuredData(listing?.structuredData)
 
     useEffect(() => {
         const controller = new AbortController()
