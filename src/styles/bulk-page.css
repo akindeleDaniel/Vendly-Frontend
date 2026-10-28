@@ -4,6 +4,7 @@
 
 /* My store: Quick edit, Add a product and the menu of other ways */
 .add-products {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -970,7 +971,9 @@
     width: 100%;
   }
 
+  /* The menu hangs from the whole row of buttons, which is as wide as the screen's content. */
   .add-products-split {
+    position: static;
     flex: 1;
   }
 
@@ -979,9 +982,10 @@
   }
 
   .add-products-menu {
-    right: auto;
+    right: 0;
     left: 0;
-    width: calc(100vw - 32px);
+    width: auto;
+    max-width: none;
   }
 
   .drafts-bar .btn {
