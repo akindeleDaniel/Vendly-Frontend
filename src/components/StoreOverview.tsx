@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { BarChart3, Check, ChevronRight, CircleAlert, Clock, ExternalLink, Landmark, Package, Pencil, Settings, Star, Truck } from "lucide-react"
+import { BarChart3, Check, ChevronRight, CircleAlert, Clock, ExternalLink, Landmark, Package, Pencil, Settings, Star, Truck, Users } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import ShopAvatar from "./ShopAvatar"
 import { fetchSellerEarnings } from "../lib/adminLookupApi"
@@ -258,7 +258,7 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
                 <section aria-labelledby="store-month-title">
                     <div className="store-section-title">
                         <h2 id="store-month-title">{new Date().toLocaleDateString("en-NG", { month: "long" })} so far</h2>
-                        <Link to="/seller/earnings">See earnings</Link>
+                        <Link to="/seller/earnings">See sales</Link>
                     </div>
                     <div className="store-stats">
                         <div className="store-stat"><small>Sales</small><b>{formatNaira(overview.month.sales)}</b><span>{overview.month.orders === 1 ? "From 1 order" : `From ${overview.month.orders} orders`}</span></div>
@@ -280,7 +280,8 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
 export function StoreShortcuts() {
     const shortcuts: Array<{ to: string, icon: LucideIcon, title: string, text: string }> = [
         { to: "/seller/orders", icon: Package, title: "Orders", text: "Ship and track" },
-        { to: "/seller/earnings", icon: BarChart3, title: "Earnings", text: "Sales by month" },
+        { to: "/seller/earnings", icon: BarChart3, title: "Sales", text: "How it's going, money" },
+        { to: "/seller/customers", icon: Users, title: "Customers", text: "Who buys, who returns" },
         { to: "/seller/reviews", icon: Star, title: "Reviews", text: "What buyers say" },
         { to: "/seller/delivery", icon: Truck, title: "Delivery fees", text: "By state" },
         { to: "/seller/payouts", icon: Landmark, title: "Payouts", text: "Your bank account" },

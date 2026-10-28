@@ -1,9 +1,12 @@
-import { useId, useState } from "react"
-import { Link } from "react-router-dom"
-import { RotateCcw } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
+import { Download, RotateCcw } from "lucide-react"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
+import SalesOverview from "../components/SalesOverview"
 import { fetchSellerEarnings } from "../lib/adminLookupApi"
+import { apiFetch } from "../lib/api"
+import { downloadOrdersCsv } from "../lib/insightsApi"
 import { formatNaira } from "../lib/money"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -11,15 +14,21 @@ import type { EarningsMonth } from "../types/earnings"
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-type RangeId = "month" | "three" | "year" | "all" | "custom"
+type RangeId = "week" | "days30" | "month" | "three" | "year" | "all" | "custom"
+type Tab = "overview" | "money"
 
-const RANGES: Array<{ id: RangeId, label: string }> = [
+// "All time" is only on Money: the overview compares one period of at most 366 days with the one before.
+const RANGES: Array<{ id: RangeId, label: string, moneyOnly?: boolean }> = [
+    { id: "week", label: "Last 7 days" },
+    { id: "days30", label: "Last 30 days" },
     { id: "month", label: "This month" },
     { id: "three", label: "Last 3 months" },
     { id: "year", label: "This year" },
-    { id: "all", label: "All time" },
+    { id: "all", label: "All time", moneyOnly: true },
     { id: "custom", label: "Pick dates" }
 ]
+
+const MAX_PERIOD_DAYS = 366
 
 const STATUSES: Array<{ value: string, label: string, tone: string }> = [
     { value: "PAID", label: "To ship", tone: "is-amber" },
@@ -39,16 +48,21 @@ function isoDay(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
-// The dates sent to the backend for a preset; "" leaves that end open.
+// The dates sent to the backend for a preset, ending today; "" leaves that end open.
 function presetDates(id: RangeId): { from: string, to: string } {
     const today = new Date()
+    const daysAgo = (count: number) => isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() - count))
     switch (id) {
+        case "week":
+            return { from: daysAgo(6), to: isoDay(today) }
+        case "days30":
+            return { from: daysAgo(29), to: isoDay(today) }
         case "month":
-            return { from: isoDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: "" }
+            return { from: isoDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: isoDay(today) }
         case "three":
-            return { from: isoDay(new Date(today.getFullYear(), today.getMonth() - 2, 1)), to: "" }
+            return { from: isoDay(new Date(today.getFullYear(), today.getMonth() - 2, 1)), to: isoDay(today) }
         case "year":
-            return { from: isoDay(new Date(today.getFullYear(), 0, 1)), to: "" }
+            return { from: isoDay(new Date(today.getFullYear(), 0, 1)), to: isoDay(today) }
         default:
             return { from: "", to: "" }
     }
@@ -56,6 +70,10 @@ function presetDates(id: RangeId): { from: string, to: string } {
 
 function rangeName(id: RangeId, from: string, to: string): string {
     switch (id) {
+        case "week":
+            return "the last 7 days"
+        case "days30":
+            return "the last 30 days"
         case "month":
             return MONTH_NAMES[new Date().getMonth()]
         case "three":
@@ -142,64 +160,15 @@ function MonthChart({ months, from, to }: { months: EarningsMonth[], from: strin
     )
 }
 
-// The seller's sales record: paid orders, what the payment providers took, and what they paid out,
-// for a period, with the last twelve months as a chart and a table. It is built from the figures the
-// providers reported for each order, so it is a record of sales and not a bank statement.
-function SellerEarningsPage() {
-    useDocumentTitle("Earnings")
-    const fromId = useId()
-    const toId = useId()
-    const [rangeId, setRangeId] = useState<RangeId>("year")
-    const [fromInput, setFromInput] = useState("")
-    const [toInput, setToInput] = useState("")
-    const [custom, setCustom] = useState({ from: "", to: "" })
-    const [rangeError, setRangeError] = useState("")
-    const range = rangeId === "custom" ? custom : presetDates(rangeId)
+// Money: what the payment providers took and paid out for the period, with the last twelve months as a
+// chart and a table. It is built from the figures the providers reported for each order, so it is a
+// record of sales and not a bank statement.
+function MoneyTab({ range, name }: { range: { from: string, to: string }, name: string }) {
     const { state, reload } = useApiResource(`${range.from}|${range.to}`, (signal) => fetchSellerEarnings(range.from, range.to, signal))
-    const name = rangeName(rangeId, range.from, range.to)
-
-    function applyCustom(event: React.SubmitEvent<HTMLFormElement>) {
-        event.preventDefault()
-
-        if (fromInput && toInput && fromInput > toInput) {
-            setRangeError("The start date must not be after the end date.")
-            return
-        }
-
-        setRangeError("")
-        setCustom({ from: fromInput, to: toInput })
-    }
 
     return (
-        <div className="money-page">
-            <BackArrow to="/seller/myListing" label="Back to my store" />
-            <div className="product-form-title">
-                <h1>Earnings</h1>
-                <p>Your paid orders and what the payment providers took and paid out. It isn't a bank statement: money reaches your bank through Paystack or Flutterwave on their own schedule.</p>
-            </div>
-
-            <div className="money-chips" role="group" aria-label="Time period">
-                {RANGES.map((option) => (
-                    <button key={option.id} type="button" className={`money-chip${rangeId === option.id ? " is-on" : ""}`} aria-pressed={rangeId === option.id} onClick={() => setRangeId(option.id)}>
-                        {option.label}
-                    </button>
-                ))}
-            </div>
-            {rangeId === "custom" && (
-                <form className="earnings-dates" onSubmit={applyCustom}>
-                    <div className="product-field">
-                        <label htmlFor={fromId}>From</label>
-                        <input id={fromId} className="product-input" type="date" value={fromInput} max={toInput || undefined} onChange={(event) => setFromInput(event.target.value)} />
-                    </div>
-                    <div className="product-field">
-                        <label htmlFor={toId}>To</label>
-                        <input id={toId} className="product-input" type="date" value={toInput} min={fromInput || undefined} onChange={(event) => setToInput(event.target.value)} />
-                    </div>
-                    <button type="submit" className="btn btn-primary">Show</button>
-                </form>
-            )}
-            {rangeError && <Notice kind="error">{rangeError}</Notice>}
-
+        <>
+            <p className="product-help sales-tab-lead">Money reaches your bank through Paystack or Flutterwave on their own schedule, so this isn't a bank statement.</p>
             {state.kind === "loading" && <p role="status">Loading your earnings...</p>}
             {state.kind === "error" && (
                 <Notice kind="error">
@@ -284,6 +253,138 @@ function SellerEarningsPage() {
                     </>
                 )
             })()}
+        </>
+    )
+}
+
+// The days from one date to another, both included.
+function daysBetween(from: string, to: string): number {
+    return Math.round((new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime()) / 86_400_000) + 1
+}
+
+// The seller's sales in two tabs that share the period: Overview (how the shop is doing, compared with
+// the period before) and Money (fees, payouts and refunds). The period's paid orders can be downloaded
+// as a spreadsheet.
+function SellerEarningsPage() {
+    useDocumentTitle("Sales")
+    const fromId = useId()
+    const toId = useId()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const tab: Tab = searchParams.get("tab") === "money" ? "money" : "overview"
+    const [chosenRange, setRangeId] = useState<RangeId>("days30")
+    const [fromInput, setFromInput] = useState("")
+    const [toInput, setToInput] = useState("")
+    const [custom, setCustom] = useState({ from: "", to: "" })
+    const [rangeError, setRangeError] = useState("")
+    const [isDownloading, setIsDownloading] = useState(false)
+    const [downloadError, setDownloadError] = useState("")
+    const [shopLink, setShopLink] = useState<string | null>(null)
+    // All time is only on Money; the overview falls back to the last 30 days.
+    const rangeId: RangeId = tab === "overview" && chosenRange === "all" ? "days30" : chosenRange
+    const range = rangeId === "custom" ? custom : presetDates(rangeId)
+    const name = rangeName(rangeId, range.from, range.to)
+    const today = isoDay(new Date())
+    const overviewRange = { from: range.from, to: range.to || today }
+    const customIncomplete = rangeId === "custom" && (custom.from === "" || custom.to === "")
+    const canDownload = rangeId !== "all" && !customIncomplete
+
+    // The shop's link, for the "no orders yet" box on the overview.
+    useEffect(() => {
+        const controller = new AbortController()
+        apiFetch("/seller/profile", { credentials: "include", signal: controller.signal })
+            .then((response) => response.ok ? response.json() : null)
+            .then((profile: unknown) => {
+                if (!controller.signal.aborted && typeof profile === "object" && profile !== null && "slug" in profile && typeof profile.slug === "string") {
+                    setShopLink(`${window.location.origin}/shop/${profile.slug}`)
+                }
+            })
+            .catch(() => null)
+        return () => controller.abort()
+    }, [])
+
+    function showTab(next: Tab) {
+        setSearchParams(next === "money" ? { tab: "money" } : {}, { replace: true })
+    }
+
+    function applyCustom(event: React.SubmitEvent<HTMLFormElement>) {
+        event.preventDefault()
+
+        if (fromInput && toInput && fromInput > toInput) {
+            setRangeError("The start date must not be after the end date.")
+            return
+        }
+
+        if (tab === "overview" && (!fromInput || !toInput)) {
+            setRangeError("Choose both dates.")
+            return
+        }
+
+        if (tab === "overview" && daysBetween(fromInput, toInput) > MAX_PERIOD_DAYS) {
+            setRangeError(`Choose a period of at most ${MAX_PERIOD_DAYS} days.`)
+            return
+        }
+
+        setRangeError("")
+        setCustom({ from: fromInput, to: toInput })
+    }
+
+    async function download() {
+        setIsDownloading(true)
+        setDownloadError("")
+        const failure = await downloadOrdersCsv(overviewRange.from, overviewRange.to)
+        setIsDownloading(false)
+        setDownloadError(failure ?? "")
+    }
+
+    return (
+        <div className="money-page">
+            <BackArrow to="/seller/myListing" label="Back to my store" />
+            <div className="sales-head">
+                <div className="product-form-title">
+                    <h1>Sales</h1>
+                    <p>How your shop is doing, and the money from your orders. Only paid orders count, by Nigerian days.</p>
+                </div>
+                <div className="sales-download">
+                    <button type="button" className="btn" disabled={!canDownload || isDownloading} onClick={download}>
+                        <Download size={16} aria-hidden="true" />{isDownloading ? "Preparing..." : "Download orders"}
+                    </button>
+                    <small>{canDownload ? `A spreadsheet of ${name}, for Excel or Google Sheets` : "Choose a period of at most 366 days"}</small>
+                </div>
+            </div>
+            {downloadError && <Notice kind="error">{downloadError}</Notice>}
+
+            <div className="sales-tabs" role="tablist" aria-label="Sales">
+                <button type="button" role="tab" aria-selected={tab === "overview"} className={tab === "overview" ? "is-on" : undefined} onClick={() => showTab("overview")}>Overview</button>
+                <button type="button" role="tab" aria-selected={tab === "money"} className={tab === "money" ? "is-on" : undefined} onClick={() => showTab("money")}>Money</button>
+            </div>
+
+            <div className="money-chips" role="group" aria-label="Time period">
+                {RANGES.filter((option) => tab === "money" || !option.moneyOnly).map((option) => (
+                    <button key={option.id} type="button" className={`money-chip${rangeId === option.id ? " is-on" : ""}`} aria-pressed={rangeId === option.id} onClick={() => { setRangeId(option.id); setRangeError("") }}>
+                        {option.label}
+                    </button>
+                ))}
+            </div>
+            {rangeId === "custom" && (
+                <form className="earnings-dates" onSubmit={applyCustom}>
+                    <div className="product-field">
+                        <label htmlFor={fromId}>From</label>
+                        <input id={fromId} className="product-input" type="date" value={fromInput} max={toInput || today} onChange={(event) => setFromInput(event.target.value)} />
+                    </div>
+                    <div className="product-field">
+                        <label htmlFor={toId}>To</label>
+                        <input id={toId} className="product-input" type="date" value={toInput} min={fromInput || undefined} max={today} onChange={(event) => setToInput(event.target.value)} />
+                    </div>
+                    <button type="submit" className="btn btn-primary">Show</button>
+                </form>
+            )}
+            {rangeError && <Notice kind="error">{rangeError}</Notice>}
+
+            {tab === "overview"
+                ? (customIncomplete
+                    ? <p className="product-help">Choose the dates and press Show.</p>
+                    : <SalesOverview from={overviewRange.from} to={overviewRange.to} shopLink={shopLink} />)
+                : <MoneyTab range={range} name={name} />}
         </div>
     )
 }

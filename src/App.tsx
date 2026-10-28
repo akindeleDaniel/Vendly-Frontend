@@ -23,6 +23,7 @@ import AdminOrdersPage from "./pages/AdminOrdersPage"
 import AdminUserDetailPage from "./pages/AdminUserDetailPage"
 import AdminUsersPage from "./pages/AdminUsersPage"
 import SellerEarningsPage from "./pages/SellerEarningsPage"
+import SellerCustomersPage from "./pages/SellerCustomersPage"
 import SellerReviewsPage from "./pages/SellerReviewsPage"
 import DeliveryFeesPage from "./pages/DeliveryFeesPage"
 import PreOrderListPage from "./pages/PreOrderListPage"
@@ -256,6 +257,8 @@ function App() {
           <Route path="/seller/reviews" element={<RequireRole role="SELLER" {...guardProps}><SellerReviewsPage /></RequireRole>} />
 
           <Route path="/seller/earnings" element={<RequireRole role="SELLER" {...guardProps}><SellerEarningsPage /></RequireRole>} />
+
+          <Route path="/seller/customers" element={<RequireRole role="SELLER" {...guardProps}><SellerCustomersPage /></RequireRole>} />
 
           <Route path="/seller/liabilities" element={<RequireRole role="SELLER" {...guardProps}><SellerLiabilitiesPage /></RequireRole>} />
 
