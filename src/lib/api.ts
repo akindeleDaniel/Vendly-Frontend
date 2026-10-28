@@ -117,6 +117,33 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
     return response
 }
 
+// The full backend address for a path, for links the browser follows itself (downloads).
+export function apiUrl(path: string): string {
+    return `${normalizedApiBaseUrl}${path}`
+}
+
+// Downloads a file from the backend as a plain link, so the browser saves it itself (the login cookie goes with
+// the link) instead of the page holding the file in memory. The access cookie only lasts 15 minutes, so the
+// session is checked first, which renews it when needed. Returns an error message, or null once the download starts.
+export async function openDownload(path: string): Promise<string | null> {
+    try {
+        const response = await apiFetch("/users/check", { credentials: "include" })
+
+        if (response.status === 401) {
+            return "Your session has ended. Please log in again, then download it."
+        }
+    } catch {
+        return "We could not reach the server. Please check your connection and try again."
+    }
+
+    const link = document.createElement("a")
+    link.href = apiUrl(path)
+    document.body.append(link)
+    link.click()
+    link.remove()
+    return null
+}
+
 // Reads a user-facing message from a failed response. The backend sends either
 // {"message": "..."} or a plain text body, so both are handled; anything else uses the fallback.
 export async function getErrorMessage(response: Response, fallback: string): Promise<string> {

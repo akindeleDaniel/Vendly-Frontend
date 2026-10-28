@@ -1,6 +1,6 @@
 import { apiRequest, isRecord } from "./apiRequest"
 import type { ApiResult } from "./apiRequest"
-import { downloadFile } from "./productBulkApi"
+import { openDownload } from "./api"
 import type { CustomerSort, SellerCustomerPage, SellerSummary } from "../types/insights"
 
 function periodQuery(from: string, to: string): string {
@@ -29,5 +29,5 @@ export function fetchSellerCustomers(sort: CustomerSort, page: number, signal?: 
 
 // Saves the period's paid orders as a CSV file. Returns an error message, or null when it worked.
 export function downloadOrdersCsv(from: string, to: string): Promise<string | null> {
-    return downloadFile(`/seller/orders/export${periodQuery(from, to)}`, `storehatch-orders-${from}-to-${to}.csv`)
+    return openDownload(`/seller/orders/export${periodQuery(from, to)}`)
 }

@@ -1,4 +1,3 @@
-import { apiFetch, getErrorMessage } from "./api"
 import { apiRequest, isRecord } from "./apiRequest"
 import type { ApiResult } from "./apiRequest"
 import type { Listing } from "../types/listing"
@@ -108,28 +107,3 @@ export function readImportProblems(result: ApiResult<unknown>): ImportProblem[] 
         : [])
 }
 
-// Fetches a file with the login cookie and hands it to the browser as a download. Returns an error
-// message, or null when it worked.
-export async function downloadFile(path: string, fallbackName: string): Promise<string | null> {
-    try {
-        const response = await apiFetch(path, { credentials: "include" })
-
-        if (!response.ok) {
-            return await getErrorMessage(response, `The file couldn't be downloaded (status ${response.status}).`)
-        }
-
-        const blob = await response.blob()
-        const named = /filename="?([^";]+)"?/.exec(response.headers.get("Content-Disposition") ?? "")?.[1]
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = url
-        link.download = named ?? fallbackName
-        document.body.append(link)
-        link.click()
-        link.remove()
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-        return null
-    } catch {
-        return "The file couldn't be downloaded. Please check your connection and try again."
-    }
-}

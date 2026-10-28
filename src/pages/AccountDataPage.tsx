@@ -196,6 +196,7 @@ function AccountDataPage({ hasPassword, userRole, onDeleted }: AccountDataPagePr
         return (
             <form className="account-confirm" aria-labelledby="account-confirm-title" onSubmit={handleDelete} noValidate>
                 <h3 id="account-confirm-title">Enter your password to delete your account</h3>
+                <p className="account-small">Want a copy of your data? Download it above first: once the account is deleted, it can't be downloaded.</p>
                 <label htmlFor="account-delete-password">
                     Your password
                     <input

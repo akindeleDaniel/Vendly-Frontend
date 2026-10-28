@@ -5,7 +5,8 @@ import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import { failureMessage } from "../lib/apiRequest"
 import { formatNaira } from "../lib/money"
-import { checkImport, downloadFile, readImportProblems, saveImport } from "../lib/productBulkApi"
+import { openDownload } from "../lib/api"
+import { checkImport, readImportProblems, saveImport } from "../lib/productBulkApi"
 import type { ImportCheck, ImportProblem } from "../lib/productBulkApi"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 
@@ -111,7 +112,7 @@ function ImportProductsPage() {
     }
 
     async function downloadTemplate() {
-        const failure = await downloadFile("/listings/import/template", "storehatch-products-template.csv")
+        const failure = await openDownload("/listings/import/template")
         setError(failure ?? "")
     }
 
@@ -124,6 +125,7 @@ function ImportProductsPage() {
             <div className="product-form-title">
                 <h1>Import products</h1>
                 <p>Add up to 200 products at once from a spreadsheet saved as CSV. You check them before anything is added.</p>
+                <p><b>Moving from Shopify?</b> Upload your Shopify product export as it is (Products &gt; Export &gt; CSV). Its products come in as drafts.</p>
             </div>
 
             <ol className="bulk-steps">
