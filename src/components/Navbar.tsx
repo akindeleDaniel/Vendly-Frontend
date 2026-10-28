@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { AuthStatus, UserRole } from "../types/user"
 import Logo from "./Logo"
 import LogoutDialog from "./LogoutDialog"
-import SellerMenu from "./SellerMenu"
+import SellerStoreLink from "./SellerStoreLink"
 import { ChevronLeftIcon, HomeIcon } from "./Icons"
 import { BRAND_WORDMARK } from "../lib/brand"
 import { Lock, UserRound } from "lucide-react"
@@ -140,7 +140,6 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
         <>
             <header className={isShopPage ? "site-header is-shop-strip" : "site-header"}>
                 <div className="header-brand">
-                    {authStatus === "authenticated" && userRole === "SELLER" && <SellerMenu />}
                     {isShopPage ? (
                         <Link to={backToSearch} className="back-link strip-back">
                             <ChevronLeftIcon />
@@ -156,6 +155,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                                 {isShopPage && firstName && (
                                     <span className="strip-hi"><UserRound aria-hidden="true" size={16} />Hi {firstName}</span>
                                 )}
+                                {userRole === "SELLER" && <SellerStoreLink />}
                                 {/* On the cart page the cart icon would point to itself, so a Home icon takes its place. */}
                                 {isConsumer && pathname !== "/orders" && (
                                     <Link to="/orders" className="header-link">
