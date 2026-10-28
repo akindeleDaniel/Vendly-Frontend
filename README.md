@@ -132,3 +132,7 @@ The backend sets a session cookie, and the app learns who is signed in from `GET
 - `getErrorMessage` in `src/lib/api.ts` reads the backend's error message, which is either JSON or plain text.
 
 Frontend route checks only improve the user experience. The backend enforces authentication and authorization.
+
+### Your data and account
+
+`/account` (opened from the "Your account" pop-up behind Logout) lets anyone signed in download everything StoreHatch holds about them (`GET /users/me/data`) or delete their account. The page asks `GET /users/me/deletion-check` first and lists anything that has to be finished before deleting, with a link to where it is sorted out. Deleting needs the account's password (`POST /users/me/delete`), so an account made with Google is sent to set one first. Afterwards the app forgets the login and shows `/account/deleted`, which needs no login. The backend checks the password and decides whether an account can be deleted; the page only explains.

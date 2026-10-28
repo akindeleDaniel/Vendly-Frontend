@@ -213,6 +213,7 @@ function Navbar ({authStatus, userRole, isAdmin, hasPassword, userName, onLogout
                 onLogout={() => handleLogout(false)}
                 onLogoutAll={() => handleLogout(true)}
                 onPassword={() => { setIsLogoutDialogOpen(false); navigate("/change-password") }}
+                onAccount={() => { setIsLogoutDialogOpen(false); navigate("/account") }}
             />
         </>
     )

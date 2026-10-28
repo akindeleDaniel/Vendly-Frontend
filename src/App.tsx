@@ -33,6 +33,8 @@ import PreOrderListPage from "./pages/PreOrderListPage"
 import PreOrderDetailPage from "./pages/PreOrderDetailPage"
 import AdminReviewsPage from "./pages/AdminReviewsPage"
 import NotFoundPage from "./pages/NotFoundPage"
+import AccountDataPage from "./pages/AccountDataPage"
+import AccountDeletedPage from "./pages/AccountDeletedPage"
 import ProductPage from "./pages/ProductPage"
 import PasswordPage from "./pages/PasswordPage"
 import SetPasswordPrompt from "./components/SetPasswordPrompt"
@@ -132,6 +134,14 @@ function App() {
       throw new Error(await getErrorMessage(response, `Unable to log out on all devices (status ${response.status}).`))
     }
 
+    clearPendingCartItem()
+    setAuthStatus("unauthenticated")
+    setUserRole(null)
+    setIsAdmin(false)
+  }
+
+  // The account was deleted: the backend has already ended every login, so only the app's memory of it is cleared.
+  function handleAccountDeleted() {
     clearPendingCartItem()
     setAuthStatus("unauthenticated")
     setUserRole(null)
@@ -320,6 +330,8 @@ function App() {
 
           <Route path="/checkout/payment-return" element={<RequireBuyer {...guardProps}><PaymentReturnPage userName={userName} /></RequireBuyer>} />
 
+          <Route path="/account" element={<RequireSession {...guardProps}><AccountDataPage hasPassword={hasPassword} userRole={userRole} onDeleted={handleAccountDeleted} /></RequireSession>} />
+          <Route path="/account/deleted" element={<AccountDeletedPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

@@ -11,12 +11,13 @@ type LogoutDialogProps = {
     onLogout: () => void
     onLogoutAll: () => void
     onPassword: () => void
+    onAccount: () => void
 }
 
 // What Logout offers: end the login on this device, or on every device, go to the password page
-// (set one, or change it), or switch cart reminder emails on or off. It is a real modal dialog, so the keyboard stays inside it and Escape
+// (set one, or change it), open "Your data and account", or switch cart reminder emails on or off. It is a real modal dialog, so the keyboard stays inside it and Escape
 // closes it.
-function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout, onLogoutAll, onPassword }: LogoutDialogProps) {
+function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout, onLogoutAll, onPassword, onAccount }: LogoutDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null)
 
     useEffect(() => {
@@ -73,6 +74,13 @@ function LogoutDialog({ isOpen, isWorking, error, hasPassword, onClose, onLogout
                             ? "Choose a new password. This logs you out on your other devices."
                             : "You signed in with Google. Add a password to log in with your email too."}
                     </p>
+                </div>
+
+                <div className="logout-option">
+                    <button type="button" className="btn btn-block" disabled={isWorking} onClick={onAccount}>
+                        Your data and account
+                    </button>
+                    <p className="field-help">Download a copy of your data, or delete your account.</p>
                 </div>
 
                 {isOpen && <CartReminderSwitch />}

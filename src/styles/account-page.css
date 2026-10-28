@@ -1,0 +1,296 @@
+/* "Your data and account" (AccountDataPage) and the page shown after deleting an account (AccountDeletedPage). */
+
+.account-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.account-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.account-title h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.account-lead {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.account-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.account-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.account-card-head h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.account-card-head p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.account-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  border-radius: 50%;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.account-icon.is-danger {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.account-icon.is-large {
+  width: 64px;
+  height: 64px;
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.account-small {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.account-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.account-list {
+  padding: 14px var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.account-list h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.account-list .is-removed {
+  color: var(--color-error);
+}
+
+.account-list .is-kept {
+  color: var(--color-forest);
+}
+
+.account-list ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* Where deleting stands: ready, waiting on something, or needing a password */
+.account-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.account-status > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.account-status b {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.account-status.is-ok {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.account-status.is-waiting {
+  flex-direction: column;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.account-status.is-info {
+  flex-direction: column;
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.account-blockers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-blockers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+}
+
+.account-blockers a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap-size);
+  padding: 0 10px;
+  color: var(--color-forest);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* The password step */
+.account-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1.5px solid var(--color-error-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.account-confirm h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.account-confirm label {
+  margin: 0;
+}
+
+.account-confirm input[type="password"] {
+  max-width: 380px;
+}
+
+.account-confirm .field-error {
+  margin: calc(var(--space-2) * -1) 0 0;
+}
+
+/* The global label is a column and the global input is padded and 44px tall: this is a checkbox row. */
+.account-confirm .account-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap-size);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.account-check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-error);
+}
+
+/* After deleting */
+.account-deleted {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 620px;
+  margin: var(--space-10) auto 0;
+  text-align: center;
+}
+
+.account-deleted .account-icon {
+  background: var(--color-forest-tint);
+  color: var(--color-forest);
+}
+
+.account-deleted h1 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.account-deleted p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .account-page {
+    gap: var(--space-4);
+  }
+
+  .account-title h1,
+  .account-deleted h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .account-card {
+    padding: 18px;
+  }
+
+  .account-lists {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-confirm .btn {
+    flex: 1 1 100%;
+  }
+}
