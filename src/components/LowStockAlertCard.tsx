@@ -54,7 +54,7 @@ function LowStockAlertCard({ value, onChange, disabled = false }: LowStockAlertC
                 <>
                     <div className="settings-stepper">
                         <label htmlFor={numberId}>Alert me at</label>
-                        <span className="settings-step">
+                        <span className="settings-number-step">
                             <button type="button" aria-label="One fewer" disabled={disabled || value <= 1} onClick={() => set(value - 1)}><Minus size={18} aria-hidden="true" /></button>
                             <input
                                 id={numberId}

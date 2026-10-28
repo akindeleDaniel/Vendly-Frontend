@@ -864,6 +864,12 @@
   margin: 0;
 }
 
+/* The field's own gap spaces its label; the global label margin would push these boxes lower than the bank box. */
+.settings-bank-fields .product-field > label,
+.settings-narrow > label {
+  margin-bottom: 0;
+}
+
 .settings-bank-fields .bank-picker-label {
   display: block;
   font-size: var(--text-sm);
@@ -1053,7 +1059,7 @@
   font-weight: 600;
 }
 
-.settings-step {
+.settings-number-step {
   display: inline-flex;
   overflow: hidden;
   border: 1.5px solid var(--color-border-strong);
@@ -1061,7 +1067,7 @@
   background: var(--color-surface);
 }
 
-.settings-step button {
+.settings-number-step button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1073,12 +1079,12 @@
   cursor: pointer;
 }
 
-.settings-step button:disabled {
+.settings-number-step button:disabled {
   color: var(--color-border-muted);
   cursor: default;
 }
 
-.settings-step input {
+.settings-number-step input {
   width: 72px;
   min-height: 0;
   padding: 0;
@@ -1094,8 +1100,8 @@
   appearance: textfield;
 }
 
-.settings-step input::-webkit-inner-spin-button,
-.settings-step input::-webkit-outer-spin-button {
+.settings-number-step input::-webkit-inner-spin-button,
+.settings-number-step input::-webkit-outer-spin-button {
   margin: 0;
   appearance: none;
 }
@@ -1145,4 +1151,23 @@
 .settings-example-dot.is-out {
   background: var(--color-error-bg);
   color: var(--color-error);
+}
+
+/* "This number will be public." under the WhatsApp number */
+.settings-public-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.settings-public-warning svg {
+  flex: none;
+  margin-top: 2px;
 }
