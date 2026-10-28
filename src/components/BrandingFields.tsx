@@ -1,4 +1,5 @@
 import { useId } from "react"
+import type { ReactNode } from "react"
 import ImagePicker from "./ImagePicker"
 import { ABOUT_MAX_LENGTH, BRAND_COLORS } from "../types/branding"
 import type { BrandingForm } from "../types/branding"
@@ -11,10 +12,11 @@ type ShopLookFieldsProps = {
     onRemoveBanner: () => void
     disabled?: boolean
     pickerKey?: number // change it to clear a banner that was chosen but not saved
+    bannerStatus?: ReactNode // how the banner's upload is going, shown under it
 }
 
 // How the shop looks to shoppers: a wide banner, one colour and a short "about" text. All optional.
-export function ShopLookFields({ form, setForm, bannerUrl, onBannerFile, onRemoveBanner, disabled, pickerKey }: ShopLookFieldsProps) {
+export function ShopLookFields({ form, setForm, bannerUrl, onBannerFile, onRemoveBanner, disabled, pickerKey, bannerStatus }: ShopLookFieldsProps) {
     const colorName = useId()
     const aboutId = useId()
     const update = (change: Partial<BrandingForm>) => setForm({ ...form, ...change })
@@ -32,6 +34,7 @@ export function ShopLookFields({ form, setForm, bannerUrl, onBannerFile, onRemov
                     disabled={disabled}
                     aspect={3}
                 />
+                {bannerStatus}
                 {bannerUrl && <button type="button" className="btn-text settings-remove" onClick={onRemoveBanner}>Remove the banner</button>}
 
                 <fieldset className="settings-fieldset">

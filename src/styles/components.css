@@ -424,3 +424,55 @@ button {
     transform: scale(1.03);
   }
 }
+
+/* How an image's background upload is going, under its picker */
+.upload-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.upload-status svg {
+  flex: none;
+}
+
+.upload-status.is-done {
+  color: var(--color-success);
+}
+
+.upload-status.is-failed {
+  align-items: flex-start;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  font-weight: 500;
+}
+
+.upload-status.is-failed svg {
+  margin-top: 2px;
+}
+
+.upload-status.is-failed span {
+  flex: 1;
+  min-width: 200px;
+  line-height: 1.45;
+}
+
+.upload-status.is-uploading svg {
+  animation: upload-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes upload-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-status.is-uploading svg {
+    animation: none;
+  }
+}

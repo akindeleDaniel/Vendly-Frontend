@@ -23,6 +23,11 @@ export function validateSellerProfile(profile: SellerProfile): string | null {
     return null
 }
 
+// The shop link the backend makes from a name (lib/generateSlug.ts there). A taken one gets a number added.
+export function shopSlug(name: string): string {
+    return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "shop"
+}
+
 // The backend rejects a shipping cost sent with the FREE policy, so it is only included for FIXED.
 export function buildSellerProfileBody(profile: SellerProfile, logoUrl: string) {
     return {

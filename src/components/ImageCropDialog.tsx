@@ -9,6 +9,7 @@ import Notice from "./Notice"
 const MAX_OUTPUT_SIZE = 1000// pixels across the shorter side of a square image
 const MAX_OUTPUT_WIDTH = 1800// pixels across a wide image, such as a banner
 const MIN_OUTPUT_SIZE = 200
+const JPEG_QUALITY = 0.82// noticeably smaller files than 0.9, with no visible difference at the sizes shown
 const MAX_ZOOM = 4
 const KEY_STEP = 12// pixels the arrow keys move the photo
 
@@ -17,6 +18,7 @@ type Point = { x: number, y: number }
 type ImageCropDialogProps = {
     file: File
     aspect?: number // width divided by height of the crop: 1 is square, 3 is a 3:1 banner
+    maxWidth?: number // the most pixels across the saved image; smaller for a logo, which is never shown large
     onCancel: () => void
     onDone: (croppedFile: File) => void
 }
@@ -30,7 +32,7 @@ function clampOffset(offset: Point, displayWidth: number, displayHeight: number,
     return { x: clamp(offset.x, -maxX, maxX), y: clamp(offset.y, -maxY, maxY) }
 }
 
-function ImageCropDialog({ file, aspect = 1, onCancel, onDone }: ImageCropDialogProps) {
+function ImageCropDialog({ file, aspect = 1, maxWidth, onCancel, onDone }: ImageCropDialogProps) {
     const titleId = useId()
     const dialogRef = useRef<HTMLDialogElement>(null)
     const frameRef = useRef<HTMLDivElement>(null)
@@ -199,7 +201,7 @@ function ImageCropDialog({ file, aspect = 1, onCancel, onDone }: ImageCropDialog
         const keepsTransparency = file.type === "image/png" || file.type === "image/gif"
         const outputType = keepsTransparency ? "image/png" : "image/jpeg"
         const sourcePixelsAcrossFrame = frameSize / scale
-        const width = Math.round(clamp(sourcePixelsAcrossFrame, MIN_OUTPUT_SIZE, aspect === 1 ? MAX_OUTPUT_SIZE : MAX_OUTPUT_WIDTH))
+        const width = Math.round(clamp(sourcePixelsAcrossFrame, MIN_OUTPUT_SIZE, maxWidth ?? (aspect === 1 ? MAX_OUTPUT_SIZE : MAX_OUTPUT_WIDTH)))
         const height = Math.round(width / aspect)
         const outputScale = width / frameSize
 
@@ -221,7 +223,7 @@ function ImageCropDialog({ file, aspect = 1, onCancel, onDone }: ImageCropDialog
         context.scale(scale * outputScale, scale * outputScale)
         context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2)
 
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, 0.9))
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, JPEG_QUALITY))
         if (!blob) {
             throw new Error("The image could not be saved.")
         }

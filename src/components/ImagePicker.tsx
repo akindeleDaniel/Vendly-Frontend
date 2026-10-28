@@ -9,12 +9,13 @@ type ImagePickerProps = {
     currentUrl?: string // an image that already exists; shown until a new one is chosen
     disabled?: boolean
     aspect?: number // width divided by height of the crop; 1 (square) unless given
+    maxWidth?: number // the most pixels across the saved image, passed to the crop screen
 }
 
 // Choose an image, crop it to a square, and see the result. A file that is the wrong type or too
 // large is rejected with a clear message. Only the cropped copy is passed on, so what the seller
 // sees in the preview is exactly what gets uploaded and shown to shoppers.
-function ImagePicker({ label, onChange, currentUrl, disabled, aspect = 1 }: ImagePickerProps) {
+function ImagePicker({ label, onChange, currentUrl, disabled, aspect = 1, maxWidth }: ImagePickerProps) {
     const labelId = useId()
     const helpId = useId()
     const inputRef = useRef<HTMLInputElement>(null)
@@ -94,6 +95,7 @@ function ImagePicker({ label, onChange, currentUrl, disabled, aspect = 1 }: Imag
                 <ImageCropDialog
                     file={pendingFile}
                     aspect={aspect}
+                    maxWidth={maxWidth}
                     onCancel={() => setPendingFile(null)}
                     onDone={handleCropDone}
                 />
