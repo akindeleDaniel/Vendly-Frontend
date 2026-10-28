@@ -30,9 +30,7 @@ export const BRAND_COLORS: BrandColor[] = [
   { key: "wine", name: "Wine", background: "#7A1F2B", text: "#FFFFFF", tint: "#F2E9EA", light: false },
   { key: "terracotta", name: "Terracotta", background: "#9C3D22", text: "#FFFFFF", tint: "#F5ECE9", light: false },
   { key: "charcoal", name: "Charcoal", background: "#2B2F33", text: "#FFFFFF", tint: "#EAEAEB", light: false },
-  { key: "brown", name: "Brown", background: "#6B3E26", text: "#FFFFFF", tint: "#F0ECE9", light: false },
-  { key: "cream", name: "Cream", background: "#F3EBDD", text: "#242923", tint: "#FBF8F3", light: true },
-  { key: "beige", name: "Beige", background: "#E3D3B8", text: "#242923", tint: "#F8F3EB", light: true }
+  { key: "brown", name: "Brown", background: "#6B3E26", text: "#FFFFFF", tint: "#F0ECE9", light: false }
 ]
 
 export const ABOUT_MAX_LENGTH = 500

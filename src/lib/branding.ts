@@ -1,3 +1,4 @@
+import { BRAND_COLORS } from "../types/branding"
 import type { BrandingForm, ShopBranding } from "../types/branding"
 
 export const EMPTY_BRANDING_FORM: BrandingForm = {
@@ -17,7 +18,8 @@ export function brandingFormFrom(branding: ShopBranding | undefined | null): Bra
     }
 
     return {
-        brandColor: branding.brandColor?.key ?? "forest",
+        // A colour that is no longer offered (Cream and Beige were removed) shows as Forest, the default.
+        brandColor: BRAND_COLORS.some((color) => color.key === branding.brandColor?.key) ? branding.brandColor!.key : "forest",
         about: branding.about ?? "",
         instagram: branding.social?.instagram?.handle ?? "",
         tiktok: branding.social?.tiktok?.handle ?? "",
