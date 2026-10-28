@@ -850,7 +850,9 @@
 
 .product-alert-choice {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
+  margin: 0;
   gap: var(--space-3);
   padding: var(--space-3) 14px;
   border: 1.5px solid var(--color-border);
@@ -867,7 +869,9 @@
   flex: none;
   width: 20px;
   height: 20px;
+  min-height: 0;
   margin: 2px 0 0;
+  padding: 0;
   accent-color: var(--color-forest);
 }
 
@@ -880,6 +884,10 @@
 .product-alert-choice > span > span {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+}
+
+.product-alert-own label {
+  margin: 0;
 }
 
 .product-alert-own {

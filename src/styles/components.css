@@ -474,6 +474,7 @@ button {
 /* The cart reminder email switch in the account dialog */
 .cart-reminder-switch {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: var(--space-3);
   min-height: var(--tap-size);
@@ -487,7 +488,9 @@ button {
   flex: none;
   width: 20px;
   height: 20px;
+  min-height: 0;
   margin: 2px 0 0;
+  padding: 0;
   accent-color: var(--color-forest);
 }
 

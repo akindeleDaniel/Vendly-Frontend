@@ -882,6 +882,7 @@
 
 .settings-check {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: var(--space-3);
   min-height: var(--tap-size);
@@ -895,6 +896,8 @@
   flex: none;
   width: 20px;
   height: 20px;
+  min-height: 0;
+  padding: 0;
   margin: 1px 0 0;
   accent-color: var(--color-forest);
 }
@@ -969,9 +972,12 @@
 }
 
 /* Shop details: low-stock alerts */
+/* A label is a column everywhere else, and an input has padding and a 44px height; both are undone here. */
 .settings-switch {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  margin: 0;
   gap: var(--space-3);
   min-height: var(--tap-size);
   cursor: pointer;
@@ -982,7 +988,11 @@
   flex: none;
   width: 46px;
   height: 28px;
+  min-height: 0;
+  max-width: none;
   margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-pill);
   background: var(--color-border-muted);
   appearance: none;
@@ -1018,20 +1028,28 @@
 
 .settings-switch > span {
   display: flex;
+  font-weight: 600;
   flex-direction: column;
   gap: 2px;
 }
 
 .settings-switch > span > span {
   color: var(--color-text-muted);
+  font-weight: 400;
   font-size: 0.8125rem;
 }
 
 .settings-stepper {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+  font-weight: 600;
+}
+
+.settings-stepper label {
+  margin: 0;
   font-weight: 600;
 }
 
@@ -1062,7 +1080,10 @@
 
 .settings-step input {
   width: 72px;
+  min-height: 0;
+  padding: 0;
   border: 0;
+  border-radius: 0;
   border-right: 1px solid var(--color-border);
   border-left: 1px solid var(--color-border);
   color: var(--color-charcoal);
