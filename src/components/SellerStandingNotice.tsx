@@ -6,10 +6,13 @@ import { formatNaira } from "../lib/money"
 import { useApiResource } from "../lib/useApiResource"
 
 // Shoppers are not told why; the seller is, so they can put it right.
-function OrdersPausedNotice({ amountOwed }: { amountOwed: string }) {
+function OrdersPausedNotice({ amountOwed, limit }: { amountOwed: string, limit: string | null }) {
     return (
         <Notice kind="warning">
-            <p><strong>New orders are paused until you repay what you owe for refunds.</strong> You owe {formatNaira(amountOwed)}.</p>
+            <p>
+                <strong>New orders are paused until you repay what you owe for refunds.</strong> You owe {formatNaira(amountOwed)}
+                {limit !== null ? `, and a shop can owe up to ${formatNaira(limit)} before new orders stop.` : "."}
+            </p>
             <p>Your shop stays visible, and the orders you already have carry on as normal.</p>
             <Link to="/seller/liabilities" className="btn">See what you owe</Link>
         </Notice>
@@ -37,7 +40,7 @@ function SellerStandingNotice() {
         )
     }
 
-    const paused = standing.debt?.ordersPaused ? <OrdersPausedNotice amountOwed={standing.debt.amountOwed} /> : null
+    const paused = standing.debt?.ordersPaused ? <OrdersPausedNotice amountOwed={standing.debt.amountOwed} limit={standing.debt.limit} /> : null
 
     if (standing.strikes === 0) {
         return paused
