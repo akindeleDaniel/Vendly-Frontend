@@ -316,6 +316,22 @@
   font-size: var(--text-sm);
 }
 
+.drafts-variant small {
+  color: var(--color-text-muted);
+}
+
+/* A size under its option: its own stock, the option's price */
+.drafts-variant.is-size > span:first-child {
+  padding-left: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+/* A camera name such as IMG_2041: allowed, but shoppers search by name */
+.drafts-name .drafts-hint {
+  color: var(--color-amber-text);
+  font-weight: 600;
+}
+
 .drafts-problems {
   color: var(--color-error);
   font-size: 0.8125rem;
@@ -841,6 +857,22 @@
   font-weight: 600;
 }
 
+.quick-option-name small {
+  display: block;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* A size under its option: its own stock, the option's price */
+.quick-row.is-size {
+  border-top-style: dotted;
+}
+
+.quick-row.is-size .quick-option-name {
+  padding-left: 28px;
+  font-weight: 500;
+}
+
 .quick-alert-help {
   display: flex;
   align-items: flex-start;
@@ -949,6 +981,14 @@
   .quick-option-name {
     grid-column: 1 / -1;
     padding-left: 0;
+  }
+
+  .quick-row.is-size .quick-option-name {
+    padding-left: var(--space-3);
+  }
+
+  .quick-row.is-option > span:empty {
+    display: none;
   }
 
   .bulk-table-head,

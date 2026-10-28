@@ -1,5 +1,5 @@
 import { useId, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { BellRing, Search, ShoppingBag } from "lucide-react"
 import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
@@ -13,16 +13,28 @@ import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { Listing } from "../types/listing"
 
-type Filter = "all" | "low" | "sold-out"
+type Filter = "all" | "low" | "sold-out" | "drafts"
 type Edit = { price?: string, stock?: string, alert?: string, category?: string }
-type Variant = { listingId: number, label: string, price: number, stock: number }
+// One option of a product. Sizes share their option's price, so the price is one box on the option, sent on any
+// one size's listingId (the backend gives it to every size); each size keeps its own stock.
+type OptionRow = { label: string, priceId: number, price: number, stockId: number | null, stock: number, sizes: Array<{ listingId: number, label: string, stock: number }> }
 
 const FIELD_OF: Record<keyof Edit, string> = { price: "price", stock: "stockQuantity", alert: "lowStockThreshold", category: "category" }
 
-function variantsOf(product: Listing): Variant[] {
-    return (product.options ?? []).flatMap((option) => option.sizes.length > 0
-        ? option.sizes.map((size) => ({ listingId: size.listingId, label: `${option.label} / ${size.label}`, price: option.price, stock: size.stockQuantity }))
-        : option.listingId !== null ? [{ listingId: option.listingId, label: option.label, price: option.price, stock: option.stockQuantity ?? 0 }] : [])
+function optionRowsOf(product: Listing): OptionRow[] {
+    return (product.options ?? []).flatMap((option): OptionRow[] => {
+        if (option.sizes.length > 0) {
+            const sizes = option.sizes.map((size) => ({ listingId: size.listingId, label: size.label, stock: size.stockQuantity }))
+            return [{ label: option.label, priceId: sizes[0].listingId, price: option.price, stockId: null, stock: 0, sizes }]
+        }
+        return option.listingId !== null
+            ? [{ label: option.label, priceId: option.listingId, price: option.price, stockId: option.listingId, stock: option.stockQuantity ?? 0, sizes: [] }]
+            : []
+    })
+}
+
+function isListingArray(value: unknown): value is Listing[] {
+    return Array.isArray(value)
 }
 
 function toPrice(value: string): number | null {
@@ -36,18 +48,21 @@ function toWhole(value: string, max: number): number | null {
 
 // Many products' prices, stock, low-stock alerts and categories in one table. Nothing is saved until
 // Save all, and then everything is saved together or nothing is. Products with options show each
-// option's price and stock under them.
+// option's price and stock under them. Drafts are under their own filter (?show=drafts opens it), to fill in
+// before publishing them from the Drafts tab.
 function QuickEditPage() {
     useDocumentTitle("Quick edit")
     const searchId = useId()
-    const { state, reload } = useApiResource("quick-edit", (signal) => apiRequest<Listing[]>("/listings/Mylisting", { signal, isValid: (value): value is Listing[] => Array.isArray(value) }))
+    const [searchParams] = useSearchParams()
+    const { state, reload } = useApiResource("quick-edit", (signal) => apiRequest<Listing[]>("/listings/Mylisting", { signal, isValid: isListingArray }))
+    const draftsResource = useApiResource("quick-edit-drafts", (signal) => apiRequest<Listing[]>("/listings/Mylisting?drafts=only", { signal, isValid: isListingArray }))
     // The shop's low-stock alert number, which a product without its own uses.
     const profile = useApiResource("quick-edit-profile", (signal) => apiRequest<{ lowStockThreshold?: number }>("/seller/profile", { signal }))
     const shopAlert = profile.state.kind === "ready" && typeof profile.state.data.lowStockThreshold === "number" ? profile.state.data.lowStockThreshold : LOW_STOCK_THRESHOLD
     const shopAlertText = shopAlert === 0 ? "Off" : String(shopAlert)
     const [edits, setEdits] = useState<Record<number, Edit>>({})
     const [search, setSearch] = useState("")
-    const [filter, setFilter] = useState<Filter>("all")
+    const [filter, setFilter] = useState<Filter>(searchParams.get("show") === "drafts" ? "drafts" : "all")
     const [problems, setProblems] = useState<FieldProblem[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState("")
@@ -75,16 +90,24 @@ function QuickEditPage() {
     }
 
     const products = state.data.filter((product) => !product.archivedAt && !product.isDraft)
+    // Without the drafts (if they can't be loaded) the page still works for the products on sale.
+    const drafts = draftsResource.state.kind === "ready" ? draftsResource.state.data.filter((draft) => draft.isDraft !== false) : []
     const originals = new Map<number, { price: string, stock: string, alert: string, category: string }>()
-    for (const product of products) {
+    for (const product of [...products, ...drafts]) {
+        const missing = product.draftMissing ?? []
         originals.set(product.id, {
-            price: String(product.price),
-            stock: String(product.stockQuantity),
+            price: missing.includes("price") ? "" : String(product.price),
+            stock: missing.includes("stockQuantity") ? "" : String(product.stockQuantity),
             alert: product.lowStockThreshold === null || product.lowStockThreshold === undefined ? "" : String(product.lowStockThreshold),
-            category: product.category
+            category: product.category ?? ""
         })
-        for (const variant of variantsOf(product)) {
-            originals.set(variant.listingId, { price: String(variant.price), stock: String(variant.stock), alert: "", category: "" })
+        for (const option of optionRowsOf(product)) {
+            if (option.stockId !== null) {
+                originals.set(option.stockId, { price: String(option.price), stock: String(option.stock), alert: "", category: "" })
+            }
+            for (const size of option.sizes) {
+                originals.set(size.listingId, { price: String(option.price), stock: String(size.stock), alert: "", category: "" })
+            }
         }
     }
 
@@ -102,8 +125,8 @@ function QuickEditPage() {
     const low = products.filter((product) => sellerStockStatus(product) === "low")
     const soldOut = products.filter((product) => sellerStockStatus(product) === "sold_out")
     const term = search.trim().toLowerCase()
-    const shown = products
-        .filter((product) => filter === "all" || (filter === "low" ? sellerStockStatus(product) === "low" : sellerStockStatus(product) === "sold_out"))
+    const shown = (filter === "drafts" ? drafts : products)
+        .filter((product) => filter === "all" || filter === "drafts" || (filter === "low" ? sellerStockStatus(product) === "low" : sellerStockStatus(product) === "sold_out"))
         .filter((product) => term === "" || product.title.toLowerCase().includes(term))
 
     function valueOf(listingId: number, field: keyof Edit): string {
@@ -160,6 +183,7 @@ function QuickEditPage() {
             setProblems([])
             setSaved(`${result.data.count} ${result.data.count === 1 ? "product" : "products"} saved.`)
             reload()
+            draftsResource.reload()
         } else if (result.kind !== "unauthorized") {
             setProblems(readFieldProblems(result))
             setError(result.kind === "failed" && result.code === "BULK_STOCK_RESERVED"
@@ -197,7 +221,8 @@ function QuickEditPage() {
     const filters: Array<{ value: Filter, label: string, count: number }> = [
         { value: "all", label: "All", count: products.length },
         ...(low.length > 0 ? [{ value: "low" as const, label: "Running low", count: low.length }] : []),
-        ...(soldOut.length > 0 ? [{ value: "sold-out" as const, label: "Sold out", count: soldOut.length }] : [])
+        ...(soldOut.length > 0 ? [{ value: "sold-out" as const, label: "Sold out", count: soldOut.length }] : []),
+        ...(drafts.length > 0 || filter === "drafts" ? [{ value: "drafts" as const, label: "Drafts", count: drafts.length }] : [])
     ]
 
     return (
@@ -235,8 +260,15 @@ function QuickEditPage() {
             </p>
 
             {saved && <Notice kind="success">{saved}</Notice>}
+            {filter === "drafts" && (
+                <Notice kind="info" role="none">
+                    <p>Drafts stay hidden from shoppers. Fill them in here, then publish them from the <Link to="/seller/myListing?view=drafts">Drafts tab</Link>.</p>
+                </Notice>
+            )}
 
-            {products.length === 0 ? (
+            {filter === "drafts" && drafts.length === 0 ? (
+                <div className="store-empty"><h3>No drafts</h3><p>Products you start from photos or an import wait here until you publish them.</p></div>
+            ) : filter !== "drafts" && products.length === 0 ? (
                 <div className="store-empty"><h3>No products on sale</h3><p>Products you add show here, ready to change in one go.</p></div>
             ) : shown.length === 0 ? (
                 <p className="product-help">No products match.</p>
@@ -245,7 +277,7 @@ function QuickEditPage() {
                     <div className="quick-head" aria-hidden="true"><span /><span>Product</span><span>Price</span><span>Stock</span><span>Low-stock alert</span><span>Category</span></div>
                     <ul>
                         {shown.map((product) => {
-                            const variants = product.hasOptions ? variantsOf(product) : []
+                            const optionRows = product.hasOptions ? optionRowsOf(product) : []
                             const alertProblem = problemFor(product.id, "alert")
                             const categoryProblem = problemFor(product.id, "category")
 
@@ -255,8 +287,8 @@ function QuickEditPage() {
                                         {product.imageUrl
                                             ? <img className="quick-photo" src={product.imageUrl} alt="" loading="lazy" />
                                             : <span className="quick-photo" aria-hidden="true"><ShoppingBag size={18} /></span>}
-                                        <span className="quick-name"><b>{product.title}</b><small>{variants.length > 0 ? `${variants.length} ${variants.length === 1 ? "option" : "options"}` : `${product.stockQuantity} in stock`}</small></span>
-                                        {variants.length > 0 ? <span className="quick-on-options">On each option</span> : (
+                                        <span className="quick-name"><b>{product.title}</b><small>{optionRows.length > 0 ? `${optionRows.length} ${optionRows.length === 1 ? "option" : "options"}` : product.isDraft ? "Draft" : `${product.stockQuantity} in stock`}</small></span>
+                                        {optionRows.length > 0 ? <span className="quick-on-options">On each option</span> : (
                                             <>
                                                 {numberCell(product.id, "price", `Price of ${product.title}`)}
                                                 {numberCell(product.id, "stock", `Stock of ${product.title}`)}
@@ -284,17 +316,28 @@ function QuickEditPage() {
                                                 disabled={isSaving}
                                                 onChange={(event) => edit(product.id, { category: event.target.value })}
                                             >
+                                                {valueOf(product.id, "category") === "" && <option value="">Choose a category</option>}
                                                 {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
                                             </select>
                                             {categoryProblem && <span className="quick-error">{categoryProblem}</span>}
                                         </label>
                                     </div>
-                                    {variants.map((variant) => (
-                                        <div key={variant.listingId} className="quick-row is-option">
-                                            <span />
-                                            <span className="quick-option-name">{variant.label}</span>
-                                            {numberCell(variant.listingId, "price", `Price of ${product.title}, ${variant.label}`)}
-                                            {numberCell(variant.listingId, "stock", `Stock of ${product.title}, ${variant.label}`)}
+                                    {optionRows.map((option) => (
+                                        <div key={option.priceId} className="quick-option">
+                                            <div className="quick-row is-option">
+                                                <span />
+                                                <span className="quick-option-name">{option.label}{option.sizes.length > 0 && <small>Price for every size</small>}</span>
+                                                {numberCell(option.priceId, "price", `Price of ${product.title}, ${option.label}`)}
+                                                {option.stockId !== null ? numberCell(option.stockId, "stock", `Stock of ${product.title}, ${option.label}`) : <span />}
+                                            </div>
+                                            {option.sizes.map((size) => (
+                                                <div key={size.listingId} className="quick-row is-option is-size">
+                                                    <span />
+                                                    <span className="quick-option-name">{option.label} / {size.label}</span>
+                                                    <span />
+                                                    {numberCell(size.listingId, "stock", `Stock of ${product.title}, ${option.label} / ${size.label}`)}
+                                                </div>
+                                            ))}
                                         </div>
                                     ))}
                                 </li>
