@@ -6,6 +6,8 @@ import InlineConfirm from "../components/InlineConfirm"
 import ListingOptionsEditor from "../components/ListingOptionsEditor"
 import ListingPhotosPicker from "../components/ListingPhotosPicker"
 import Notice from "../components/Notice"
+import ProductAlertChoice from "../components/ProductAlertChoice"
+import type { AlertChoice } from "../components/ProductAlertChoice"
 import { CATEGORIES } from "../data/categories"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { apiRequest, failureMessage } from "../lib/apiRequest"
@@ -14,6 +16,7 @@ import { photosChanged, savedPhotos, uploadListingPhotos, type ListingPhoto } fr
 import { formatMinorUnits, toMinorUnits } from "../lib/money"
 import { buildOptionsBody, draftsFromListing, newOptionDraft, validateOptionDrafts } from "../lib/optionDrafts"
 import type { OptionDraft } from "../lib/optionDrafts"
+import { ALERT_MAX } from "../lib/stock"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { Listing, ListingFormData } from "../types/listing"
 
@@ -25,7 +28,21 @@ type LoadState =
     | { kind: "not-found" }
     | { kind: "error", message: string }
 
-type Shop = { name: string, location: string | null }
+type Shop = { name: string, location: string | null, alertNumber: number | null }
+
+// A product's own low-stock number as a choice: none of its own uses the shop's, 0 is no alerts.
+function alertFrom(listing: Listing | null): { choice: AlertChoice, own: string } {
+    const own = listing?.lowStockThreshold
+    if (own === null || own === undefined) {
+        return { choice: "shop", own: "" }
+    }
+    return own === 0 ? { choice: "off", own: "" } : { choice: "own", own: String(own) }
+}
+
+// What to send as the product's lowStockThreshold for a choice.
+function alertValue(choice: AlertChoice, own: string): number | null {
+    return choice === "shop" ? null : choice === "off" ? 0 : Number(own)
+}
 
 function formFrom(listing: Listing): ListingFormData {
     return {
@@ -73,6 +90,8 @@ function ProductFormPage() {
     const [error, setError] = useState("")
     const [savedMessage, setSavedMessage] = useState("")
     const [attempt, setAttempt] = useState(0)
+    const [alertChoice, setAlertChoice] = useState<AlertChoice>("shop")
+    const [alertOwn, setAlertOwn] = useState("")
 
     useEffect(() => {
         const controller = new AbortController()
@@ -103,7 +122,8 @@ function ProductFormPage() {
                 const record = typeof profile === "object" && profile !== null ? profile as Record<string, unknown> : {}
                 setShop({
                     name: typeof record.businessName === "string" ? record.businessName : "Your shop",
-                    location: typeof record.location === "string" && record.location ? record.location : null
+                    location: typeof record.location === "string" && record.location ? record.location : null,
+                    alertNumber: typeof record.lowStockThreshold === "number" ? record.lowStockThreshold : null
                 })
 
                 if (listingsResponse) {
@@ -118,6 +138,9 @@ function ProductFormPage() {
                     setPhotos(savedPhotos(found))
                     setOptionsState(found.hasOptions ? draftsFromListing(found) : null)
                     setOptionsTouched(false)
+                    const alert = alertFrom(found)
+                    setAlertChoice(alert.choice)
+                    setAlertOwn(alert.own)
                 }
 
                 setLoad({ kind: "ready" })
@@ -145,8 +168,11 @@ function ProductFormPage() {
     }
 
     const hadOptions = listing?.hasOptions === true
+    const savedAlert = alertFrom(listing)
+    const alertChanged = alertValue(alertChoice, alertOwn) !== alertValue(savedAlert.choice, savedAlert.own)
     const hasChanges = !isEdit || listing === null || (
         optionsTouched ||
+        alertChanged ||
         photosChanged(listing, photos) ||
         form.title !== listing.title ||
         form.description !== listing.description ||
@@ -167,6 +193,12 @@ function ProductFormPage() {
         }
         if (options !== null && !hadOptions && form.price === "") {
             return "Add a price. Options use it unless you give them their own."
+        }
+        if (alertChoice === "own") {
+            const own = Number(alertOwn)
+            if (alertOwn.trim() === "" || !Number.isInteger(own) || own < 1 || own > ALERT_MAX) {
+                return `Give the low-stock alert a whole number from 1 to ${ALERT_MAX.toLocaleString("en-NG")}, or choose another option.`
+            }
         }
         // With options, stock lives on the options; a product that already has options keeps its prices there too.
         return validateListingFields({
@@ -206,6 +238,19 @@ function ProductFormPage() {
                 setError(await getErrorMessage(response, `Unable to add this product (status ${response.status}).`))
                 return
             }
+            // Adding a product takes no alert number, so a choice other than the shop's is saved straight after.
+            if (alertChoice !== "shop") {
+                const created: unknown = await response.json().catch(() => null)
+                const createdId = typeof created === "object" && created !== null && "id" in created ? created.id : null
+                if (typeof createdId === "number") {
+                    await apiFetch(`/listings/${createdId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ lowStockThreshold: alertValue(alertChoice, alertOwn) })
+                    }).catch(() => null)// the product is added either way; the number can be set again on its edit page
+                }
+            }
             navigate("/seller/myListing", { state: { added: form.title.trim() } })
         } catch {
             setError("Something went wrong. Please check your connection and try again.")
@@ -238,7 +283,8 @@ function ProductFormPage() {
                     description: form.description,
                     category: form.category,
                     imageUrls,
-                    ...(options === null ? { price: Number(form.price), stockQuantity: Number(form.stockQuantity) } : {})
+                    ...(options === null ? { price: Number(form.price), stockQuantity: Number(form.stockQuantity) } : {}),
+                    ...(alertChanged ? { lowStockThreshold: alertValue(alertChoice, alertOwn) } : {})
                 })
             })
             if (!response.ok) {
@@ -455,6 +501,20 @@ function ProductFormPage() {
                                 />
                             </>
                         )}
+
+                        <ProductAlertChoice
+                            choice={alertChoice}
+                            ownNumber={alertOwn}
+                            shopNumber={shop?.alertNumber ?? null}
+                            hasOptions={options !== null}
+                            disabled={isWorking}
+                            onChange={(choice, own) => {
+                                setAlertChoice(choice)
+                                // "Its own number" starts from the shop's number, ready to change.
+                                setAlertOwn(choice === "own" && own === "" ? String(shop?.alertNumber || 3) : own)
+                                setSavedMessage("")
+                            }}
+                        />
                     </section>
 
                     {isEdit && listing && (

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { Check } from "lucide-react"
 import { ShopLinksFields, ShopLookFields } from "../components/BrandingFields"
 import ImagePicker from "../components/ImagePicker"
+import LowStockAlertCard from "../components/LowStockAlertCard"
 import Notice from "../components/Notice"
 import SettingsLayout from "../components/SettingsLayout"
 import ShopBasicsFields from "../components/ShopBasicsFields"
@@ -11,6 +12,7 @@ import UploadStatus from "../components/UploadStatus"
 import { apiFetch, getErrorMessage } from "../lib/api"
 import { EMPTY_BRANDING_FORM, brandingBody, brandingChanged, brandingFormFrom } from "../lib/branding"
 import { buildSellerProfileBody, validateSellerProfile } from "../lib/sellerProfile"
+import { LOW_STOCK_THRESHOLD } from "../lib/stock"
 import { uploadFailureMessage } from "../lib/uploadImage"
 import { useBackgroundUpload } from "../lib/useBackgroundUpload"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -39,6 +41,8 @@ function EditSellerProfilePage() {
     const [foodOrderType, setFoodOrderType] = useState<FoodOrderType>("NOW")
     const [savedFoodOrderType, setSavedFoodOrderType] = useState<FoodOrderType>("NOW")
     const [sellsFood, setSellsFood] = useState(false)// has a Food & Grocery listing on sale
+    const [alertNumber, setAlertNumber] = useState(LOW_STOCK_THRESHOLD)// the shop's low-stock alert number; 0 is off
+    const [savedAlertNumber, setSavedAlertNumber] = useState<number | null>(null)// null: the backend did not send one, so the card is hidden
     const [currentLogoUrl, setCurrentLogoUrl] = useState("")
     const [logoFile, setLogoFile] = useState<File | null>(null)// only filled if the seller picks a new logo
     const [branding, setBranding] = useState<BrandingForm>(EMPTY_BRANDING_FORM)
@@ -102,6 +106,9 @@ function EditSellerProfilePage() {
                 setSlug(typeof data.slug === "string" ? data.slug : "")
                 setFoodOrderType(loadedFoodOrderType)
                 setSavedFoodOrderType(loadedFoodOrderType)
+                const loadedAlertNumber = typeof data.lowStockThreshold === "number" ? data.lowStockThreshold : null
+                setAlertNumber(loadedAlertNumber ?? LOW_STOCK_THRESHOLD)
+                setSavedAlertNumber(loadedAlertNumber)
                 setCurrentLogoUrl(data.logoUrl ?? "")
                 const loadedBranding = brandingFormFrom(data.branding)
                 setBranding(loadedBranding)
@@ -130,6 +137,7 @@ function EditSellerProfilePage() {
             removeBanner ||
             brandingChanged(branding, savedBranding) ||
             foodOrderType !== savedFoodOrderType ||
+            (savedAlertNumber !== null && alertNumber !== savedAlertNumber) ||
             formData.businessName.trim() !== savedProfile.businessName.trim() ||
             formData.state !== savedProfile.state ||
             formData.lga !== savedProfile.lga
@@ -147,6 +155,7 @@ function EditSellerProfilePage() {
         setFormData(savedProfile)
         setBranding(savedBranding)
         setFoodOrderType(savedFoodOrderType)
+        setAlertNumber(savedAlertNumber ?? LOW_STOCK_THRESHOLD)
         setLogoFile(null)
         setBannerFile(null)
         logoUpload.start(null)
@@ -199,7 +208,8 @@ function EditSellerProfilePage() {
                 body: JSON.stringify({
                     ...buildSellerProfileBody(formData, logoUrl),
                     ...brandingBody(branding, nextBannerUrl),
-                    ...(foodOrderType !== savedFoodOrderType ? { foodOrderType } : {})
+                    ...(foodOrderType !== savedFoodOrderType ? { foodOrderType } : {}),
+                    ...(savedAlertNumber !== null && alertNumber !== savedAlertNumber ? { lowStockThreshold: alertNumber } : {})
                 }),
                 credentials: "include"
             })
@@ -212,6 +222,9 @@ function EditSellerProfilePage() {
             // Only now are the submitted values the new baseline.
             setSavedProfile(formData)
             setSavedFoodOrderType(foodOrderType)
+            if (savedAlertNumber !== null) {
+                setSavedAlertNumber(alertNumber)
+            }
             setCurrentLogoUrl(logoUrl)
             setLogoFile(null)
             logoUpload.start(null)
@@ -230,7 +243,7 @@ function EditSellerProfilePage() {
         }
     }
 
-    const lead = "Your shop's name, where you are, and how your shop page looks."
+    const lead = "Your shop's name, where you are, how your shop page looks, and when we email you about stock."
 
     if (loadStatus === "loading") {
         return <SettingsLayout title="Shop details" lead={lead}><p role="status">Loading your shop...</p></SettingsLayout>
@@ -307,6 +320,10 @@ function EditSellerProfilePage() {
                                 With pre-orders, buyers ask for a ready time and you have 48 hours to approve or decline before they pay. "Pre-orders only" applies to everything you sell, not just food.
                             </p>
                         </section>
+                    )}
+
+                    {savedAlertNumber !== null && (
+                        <LowStockAlertCard value={alertNumber} onChange={(next) => edit(() => setAlertNumber(next))} disabled={isSubmitting} />
                     )}
 
                     {error && <Notice kind="error">{error}</Notice>}

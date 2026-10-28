@@ -18,6 +18,20 @@ export type ListingOption = {
 
 import type { ShopTrust } from "./trust"
 
+// Where a product or option stands against its low-stock alert number (the seller's own list only).
+export type StockStatus = "in_stock" | "low" | "sold_out"
+
+// An option or size that is running low or sold out, on the seller's own list.
+export type LowStockOption = {
+  listingId: number
+  optionLabel: string | null
+  sizeLabel: string | null
+  stockQuantity: number
+  lowStockThreshold: number | null
+  effectiveLowStockThreshold: number
+  stockStatus: StockStatus
+}
+
 export type Listing = {
   id: number
   // GET /listings/:id only: a WhatsApp link with a message naming the product, its price and a link to it.
@@ -42,6 +56,11 @@ export type Listing = {
   options?: ListingOption[] // on the product page and the seller's own list
   selectedListingId?: number | null // set when the page was opened with one choice's id
   archivedAt?: string | null // set when the seller has taken the listing off sale; null while it is on sale
+  // The seller's own list only: the low-stock alert. An item is "low" at this many or fewer; 0 means no alerts.
+  lowStockThreshold?: number | null // its own number, or null to use the shop's
+  effectiveLowStockThreshold?: number // the number in force
+  stockStatus?: StockStatus // with options: sold out when every option is, low when any is low or sold out
+  lowStockOptions?: LowStockOption[] // the options that are low or sold out
 }
 
 export type ListingFormData = {

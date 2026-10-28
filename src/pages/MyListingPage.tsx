@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { Plus, ShoppingBag } from "lucide-react"
+import { PackageOpen, Plus, ShoppingBag } from "lucide-react"
 import { markShopSetupPromptDismissed } from "../lib/shopSetupPrompt"
 import type { Listing } from "../types/listing"
 import { apiFetch } from "../lib/api"
@@ -13,9 +13,38 @@ import StoreOverview, { StoreShortcuts } from "../components/StoreOverview"
 import type { StoreProfile } from "../components/StoreOverview"
 import StoreProductRow from "../components/StoreProductRow"
 import { toStoreProfile } from "../lib/storeProfile"
-import { LOW_STOCK_THRESHOLD } from "../lib/stock"
+import { LOW_STOCK_THRESHOLD, sellerStockStatus } from "../lib/stock"
 
-type ProductView = "on-sale" | "low" | "archived"
+type ProductView = "on-sale" | "low" | "sold-out" | "archived"
+
+type StockAlertBoxProps = { low: number, soldOut: number, shopAlertNumber: number | null, onShow: () => void }
+
+// Over the products when something is running low or sold out, with the way to them and to the alert number.
+function StockAlertBox({ low, soldOut, shopAlertNumber, onShow }: StockAlertBoxProps) {
+    const lowText = `${low} ${low === 1 ? "product is" : "products are"} running low`
+    const heading = low > 0 && soldOut > 0
+        ? `${lowText} and ${soldOut} ${soldOut === 1 ? "is" : "are"} sold out`
+        : low > 0 ? lowText : `${soldOut} ${soldOut === 1 ? "product is" : "products are"} sold out`
+    const shopNumber = shopAlertNumber ?? LOW_STOCK_THRESHOLD
+
+    return (
+        <div className="store-stock-alert" role="status">
+            <span className="store-stock-alert-icon" aria-hidden="true"><PackageOpen size={20} /></span>
+            <div>
+                <b>{heading}</b>
+                <p>
+                    {shopNumber === 0
+                        ? "Low-stock emails are off for your shop, unless a product has its own number."
+                        : `We email you when something drops to its alert number, so you can restock before you miss sales. Your shop alerts at ${shopNumber} or fewer.`}
+                </p>
+                <div className="store-stock-alert-actions">
+                    <button type="button" className="btn" onClick={onShow}>See them</button>
+                    <Link to="/seller/profile/edit#low-stock" className="btn-text">Change the alert number</Link>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 // The seller's dashboard: the shop as shoppers see it, what needs the seller, and the products.
 // Products are added and edited on their own page (ProductFormPage).
@@ -35,6 +64,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const [archivePrompt, setArchivePrompt] = useState<{ id: number, title: string } | null>(null)
     const [isArchiving, setIsArchiving] = useState(false)
     const [needsShop, setNeedsShop] = useState(false)// no shop yet: products need one, so setup is offered first
+    const [shopAlertNumber, setShopAlertNumber] = useState<number | null>(null)// the shop's low-stock alert number
 
     async function handleDelete(id: number) {
         const listing = listings.find((candidate) => candidate.id === id)
@@ -138,6 +168,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     return
                 }
                 setProfile(toStoreProfile(profileBody))
+                const alertNumber = typeof profileBody === "object" && profileBody !== null && "lowStockThreshold" in profileBody ? profileBody.lowStockThreshold : null
+                setShopAlertNumber(typeof alertNumber === "number" ? alertNumber : null)
                 setListings(myListings)
             } catch {
                 if (!controller.signal.aborted) {
@@ -151,12 +183,14 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     }, [loadAttempt])
 
     const onSaleListings = listings.filter((listing) => !listing.archivedAt)
-    const lowListings = onSaleListings.filter((listing) => listing.stockQuantity <= LOW_STOCK_THRESHOLD)
+    const lowListings = onSaleListings.filter((listing) => sellerStockStatus(listing) === "low")
+    const soldOutListings = onSaleListings.filter((listing) => sellerStockStatus(listing) === "sold_out")
     const archivedListings = listings.filter((listing) => listing.archivedAt)
     // An empty tab other than On sale is gone, so the page goes back to the products on sale.
     const shownListings = view === "archived" && archivedListings.length > 0
         ? archivedListings
-        : view === "low" && lowListings.length > 0 ? lowListings : onSaleListings
+        : view === "low" && lowListings.length > 0 ? lowListings
+            : view === "sold-out" && soldOutListings.length > 0 ? soldOutListings : onSaleListings
     const shownView: ProductView = shownListings === onSaleListings ? "on-sale" : view
 
     // Without a shop there is nothing to list yet: setting one up is required to add a product, and
@@ -181,7 +215,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
     const firstName = userName.trim().split(/\s+/)[0] ?? ""
     const tabs: Array<{ value: ProductView, label: string, count: number }> = [
         { value: "on-sale", label: "On sale", count: onSaleListings.length },
-        ...(lowListings.length > 0 ? [{ value: "low" as const, label: "Low or sold out", count: lowListings.length }] : []),
+        ...(lowListings.length > 0 ? [{ value: "low" as const, label: "Running low", count: lowListings.length }] : []),
+        ...(soldOutListings.length > 0 ? [{ value: "sold-out" as const, label: "Sold out", count: soldOutListings.length }] : []),
         ...(archivedListings.length > 0 ? [{ value: "archived" as const, label: "Archived", count: archivedListings.length }] : [])
     ]
 
@@ -223,6 +258,10 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                     </Notice>
                 )}
 
+                {shownView === "on-sale" && (lowListings.length > 0 || soldOutListings.length > 0) && (
+                    <StockAlertBox low={lowListings.length} soldOut={soldOutListings.length} shopAlertNumber={shopAlertNumber} onShow={() => setView(lowListings.length > 0 ? "low" : "sold-out")} />
+                )}
+
                 {tabs.length > 1 && (
                     <div className="orders-filters" aria-label="Show products">
                         {tabs.map((tab) => (
@@ -233,7 +272,7 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                                 aria-pressed={tab.value === shownView}
                                 onClick={() => setView(tab.value)}
                             >
-                                {tab.label}<span className="orders-filter-count">{tab.count}</span>
+                                {tab.label}<span className={`orders-filter-count${tab.value === "low" ? " is-low" : tab.value === "sold-out" ? " is-out" : ""}`}>{tab.count}</span>
                             </button>
                         ))}
                     </div>
@@ -257,6 +296,8 @@ function MyListingsPage({ userName = "" }: { userName?: string }) {
                                     <StoreProductRow
                                         listing={listing}
                                         isArchived={shownView === "archived"}
+                                        canRestock={shownView === "low" || shownView === "sold-out"}
+                                        onRestocked={() => setLoadAttempt((attempt) => attempt + 1)}
                                         onDelete={() => handleDelete(listing.id)}
                                         onRestore={() => handleRestore(listing.id)}
                                     />
