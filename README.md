@@ -136,3 +136,15 @@ Frontend route checks only improve the user experience. The backend enforces aut
 ### Your data and account
 
 `/account` (opened from the "Your account" pop-up behind Logout) lets anyone signed in download everything StoreHatch holds about them (`GET /users/me/data`) or delete their account. The page asks `GET /users/me/deletion-check` first and lists anything that has to be finished before deleting, with a link to where it is sorted out. Deleting needs the account's password (`POST /users/me/delete`), so an account made with Google is sent to set one first. Afterwards the app forgets the login and shows `/account/deleted`, which needs no login. The backend checks the password and decides whether an account can be deleted; the page only explains.
+
+### Downloads
+
+The orders export, "Download my data" and the import template are plain links to the backend (`openDownload` in `src/lib/api.ts`), so the browser saves the file itself. The login cookie goes with the link only while the backend's `COOKIE_SAME_SITE` is `lax` (its default) or `none`; with `strict`, these downloads fail. The access cookie lasts 15 minutes, so the session is checked (and renewed) just before each download.
+
+### Nigerian time
+
+Dates and times are shown in Nigerian time (`Africa/Lagos`, UTC+1 all year) whatever the device's time zone, with the helpers in `src/lib/lagosTime.ts`. The backend counts days the same way. The pre-order "Ready on" box is read as Nigerian time too.
+
+### robots.txt
+
+`robots.txt` is written by the build (`vite.config.ts`), with a `Sitemap:` line pointing at the backend's `/sitemap.xml` from `VITE_API_BASE_URL`, so no address is typed into `public/`.

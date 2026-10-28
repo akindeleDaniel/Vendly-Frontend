@@ -10,6 +10,7 @@ import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { AUDIT_ACTION_LABELS } from "../types/platform"
 import type { AdminAction, AuditEntry } from "../types/platform"
+import { LAGOS_TIME_ZONE, lagosDay } from "../lib/lagosTime"
 
 const ACTION_ICONS: Record<AdminAction, { icon: LucideIcon, tone: string }> = {
     ADMIN_GRANTED: { icon: Plus, tone: "is-forest" },
@@ -26,15 +27,14 @@ function PersonLink({ person }: { person: { id: number, name: string, email: str
 }
 
 function dayKey(date: Date): string {
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+    return lagosDay(date)
 }
 
 // "Today", "Yesterday" or the date, for the heading over each day's entries.
 function dayLabel(isoTime: string): string {
     const date = new Date(isoTime)
     const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(today.getDate() - 1)
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
 
     if (dayKey(date) === dayKey(today)) {
         return "Today"
@@ -62,7 +62,7 @@ function groupByDay(entries: AuditEntry[]): Array<{ label: string, entries: Audi
 
 function EntryRow({ entry }: { entry: AuditEntry }) {
     const { icon: Icon, tone } = ACTION_ICONS[entry.action] ?? { icon: Check, tone: "is-stone" }
-    const time = new Date(entry.createdAt).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })
+    const time = new Date(entry.createdAt).toLocaleTimeString("en-NG", { timeZone: LAGOS_TIME_ZONE, hour: "numeric", minute: "2-digit" })
 
     return (
         <li className="admin-audit-row">

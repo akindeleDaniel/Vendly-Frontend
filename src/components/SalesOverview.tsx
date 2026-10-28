@@ -6,6 +6,7 @@ import { fetchSellerSummary } from "../lib/insightsApi"
 import { formatNaira } from "../lib/money"
 import { useApiResource } from "../lib/useApiResource"
 import type { SellerSummary } from "../types/insights"
+import { LAGOS_TIME_ZONE } from "../lib/lagosTime"
 
 type Metric = "sales" | "orders" | "views"
 
@@ -17,10 +18,10 @@ const METRICS: Array<{ value: Metric, label: string }> = [
 
 // "2026-10-21" as "Tue 21 Oct", read as a Nigerian calendar day.
 function dayName(date: string, withWeekday = true): string {
-    const parsed = new Date(`${date}T12:00:00`)
+    const parsed = new Date(`${date}T12:00:00+01:00`)
     return Number.isNaN(parsed.getTime())
         ? date
-        : parsed.toLocaleDateString("en-NG", { ...(withWeekday ? { weekday: "short" as const } : {}), day: "numeric", month: "short" })
+        : parsed.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, ...(withWeekday ? { weekday: "short" as const } : {}), day: "numeric", month: "short" })
 }
 
 function plural(count: number, one: string, many: string): string {
@@ -59,8 +60,8 @@ function Figure({ label, value, change, note, isMain = false }: { label: string,
 }
 
 // The day-by-day bars. Choosing a day shows its sales, orders and visits underneath.
-function DayChart({ days }: { days: SellerSummary["days"] }) {
-    const [metric, setMetric] = useState<Metric>("sales")
+function DayChart({ days, startWith = "sales" }: { days: SellerSummary["days"], startWith?: Metric }) {
+    const [metric, setMetric] = useState<Metric>(startWith)
     const [picked, setPicked] = useState(days.length - 1)
     const valueOf = (day: SellerSummary["days"][number]) => metric === "sales" ? Number(day.sales) : metric === "orders" ? day.orders : day.views
     const highest = Math.max(...days.map(valueOf), 1)
@@ -199,11 +200,13 @@ function SalesOverview({ from, to, shopLink }: SalesOverviewProps) {
                     label="Shop visits"
                     value={totals.views.total.toLocaleString("en-NG")}
                     change={changeOf(totals.views.total, previous.views.total, true)}
-                    note={conversion === null ? "No visits yet" : hasOrders ? `${conversion} orders per 100 visits` : `No orders yet from ${plural(totals.views.total, "visit", "visits")}`}
+                    note={conversion === null ? "No visits yet" : hasOrders ? `${conversion}% bought` : `No orders yet from ${plural(totals.views.total, "visit", "visits")}`}
                 />
             </dl>
 
-            {hasOrders ? <DayChart days={days} /> : (
+            {/* Visits without orders still show day by day, starting on visits. */}
+            {(hasOrders || totals.views.total > 0) && <DayChart key={hasOrders ? "sales" : "views"} days={days} startWith={hasOrders ? "sales" : "views"} />}
+            {!hasOrders && (
                 <section className="money-card sales-empty" aria-labelledby="no-orders-heading">
                     <h2 id="no-orders-heading">No orders in this period yet</h2>
                     <p>
@@ -255,7 +258,7 @@ function SalesOverview({ from, to, shopLink }: SalesOverviewProps) {
                                     </span>
                                     <span className="sales-product-figure">
                                         <b>{plural(product.views, "view", "views")}</b>
-                                        {product.orders === 0 ? "No orders yet" : `${product.conversionRate ?? 0} orders per 100`}
+                                        {product.orders === 0 ? "No orders yet" : `${plural(product.orders, "order", "orders")} · ${product.conversionRate ?? 0}% bought`}
                                     </span>
                                 </li>
                             ))}

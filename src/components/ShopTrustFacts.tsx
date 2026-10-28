@@ -1,5 +1,6 @@
 import { CalendarDays, MessagesSquare, PackageCheck, ShieldCheck } from "lucide-react"
 import type { ShopTrust } from "../types/trust"
+import { LAGOS_TIME_ZONE } from "../lib/lagosTime"
 
 type ShopTrustFactsProps = {
     trust: ShopTrust
@@ -15,7 +16,7 @@ function plural(count: number, one: string, many: string): string {
 
 function sellingSince(isoTime: string): string | null {
     const date = new Date(isoTime)
-    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("en-NG", { month: "long", year: "numeric" })
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, month: "long", year: "numeric" })
 }
 
 function complaintsLine(trust: ShopTrust): string | null {

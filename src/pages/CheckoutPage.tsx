@@ -15,6 +15,7 @@ import type { CheckoutResult, CheckoutReview, DeliveryDetails, LockedCheckout } 
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import { formatNaira } from "../lib/money"
 import BackArrow from "../components/BackArrow"
+import { LAGOS_TIME_ZONE } from "../lib/lagosTime"
 
 type PreviewStatus = "loading" | "ready" | "empty" | "blocked" | "too-large" | "own" | "error"
 
@@ -73,7 +74,7 @@ function findItemTitle(review: CheckoutReview | null, listingId: number | null):
 
 function formatTime(isoTime: string): string {
   const date = new Date(isoTime)
-  return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString()
+  return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
 }
 
 function formatStatus(status: string): string {

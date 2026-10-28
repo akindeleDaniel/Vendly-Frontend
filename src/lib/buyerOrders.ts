@@ -1,5 +1,6 @@
 import { formatOrderStatus } from "./orderApi"
 import type { Fulfilment } from "../types/order"
+import { LAGOS_TIME_ZONE, lagosParts } from "./lagosTime"
 
 // What the shopper's order pages (My orders and an order's own page) show about one shop's part of an order.
 
@@ -13,8 +14,8 @@ export function formatOrderDay(isoTime: string | null | undefined, options: { ye
         return ""
     }
 
-    const day = date.toLocaleDateString("en-NG", { day: "numeric", month: "short", ...(options.year ? { year: "numeric" } : {}) })
-    return options.time ? `${day}, ${date.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}` : day
+    const day = date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short", ...(options.year ? { year: "numeric" } : {}) })
+    return options.time ? `${day}, ${date.toLocaleTimeString("en-NG", { timeZone: LAGOS_TIME_ZONE, hour: "numeric", minute: "2-digit" })}` : day
 }
 
 // A pre-order's ready time as a calendar tile shows it ("SAT", "1", "NOV", "2:00 pm"), plus the
@@ -26,14 +27,14 @@ export function readyTimeParts(isoTime: string): { weekday: string, day: string,
         return { weekday: "", day: "", month: "", time: "", long: isoTime }
     }
 
-    const time = date.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })
-    const weekday = date.toLocaleDateString("en-NG", { weekday: "long" })
-    const dayMonth = date.toLocaleDateString("en-NG", { day: "numeric", month: "short" })
+    const time = date.toLocaleTimeString("en-NG", { timeZone: LAGOS_TIME_ZONE, hour: "numeric", minute: "2-digit" })
+    const weekday = date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, weekday: "long" })
+    const dayMonth = date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short" })
 
     return {
         weekday: weekday.slice(0, 3).toUpperCase(),
-        day: String(date.getDate()),
-        month: date.toLocaleDateString("en-NG", { month: "short" }).toUpperCase(),
+        day: String(lagosParts(date).day),
+        month: date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, month: "short" }).toUpperCase(),
         time,
         long: `${weekday} ${dayMonth}, ${time}`
     }

@@ -5,17 +5,12 @@ import { failureMessage } from "../lib/apiRequest"
 import { askForPreOrder } from "../lib/preOrderApi"
 import { formatNaira } from "../lib/money"
 import { ORDER_MAX_VALUE } from "../lib/limits"
+import { fromLagosInput, lagosInputValue } from "../lib/lagosTime"
 import {
     PRE_ORDER_MAX_DAYS_AHEAD,
     PRE_ORDER_MIN_HOURS_AHEAD,
     PRE_ORDER_NOTE_MAX_LENGTH
 } from "../types/preOrder"
-
-// The value a datetime-local box wants ("2026-11-02T14:00"), in the shopper's own time zone.
-function toLocalInputValue(date: Date): string {
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    return local.toISOString().slice(0, 16)
-}
 
 type PreOrderRequestFormProps = {
     sellerSlug: string
@@ -36,8 +31,8 @@ function PreOrderRequestForm({ sellerSlug, businessName, optional }: PreOrderReq
     const [sentId, setSentId] = useState<number | null>(null)
 
     const now = new Date()
-    const earliest = toLocalInputValue(new Date(now.getTime() + PRE_ORDER_MIN_HOURS_AHEAD * 3600000))
-    const latest = toLocalInputValue(new Date(now.getTime() + PRE_ORDER_MAX_DAYS_AHEAD * 86400000))
+    const earliest = lagosInputValue(new Date(now.getTime() + PRE_ORDER_MIN_HOURS_AHEAD * 3600000))
+    const latest = lagosInputValue(new Date(now.getTime() + PRE_ORDER_MAX_DAYS_AHEAD * 86400000))
 
     async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -46,7 +41,7 @@ function PreOrderRequestForm({ sellerSlug, businessName, optional }: PreOrderReq
             return
         }
 
-        const chosen = new Date(readyAt)
+        const chosen = fromLagosInput(readyAt)// the time is Nigerian time, wherever the phone is set
         if (readyAt === "" || Number.isNaN(chosen.getTime())) {
             setError("Choose the date and time you want it ready.")
             return
@@ -91,7 +86,7 @@ function PreOrderRequestForm({ sellerSlug, businessName, optional }: PreOrderReq
             </p>
             <p className="field-help">An order from one shop, pre-orders included, can be up to {formatNaira(ORDER_MAX_VALUE)}, delivery included.</p>
             <label>
-                Ready on
+                Ready on (Nigerian time)
                 <input type="datetime-local" min={earliest} max={latest} value={readyAt} disabled={isSending} onChange={(event) => setReadyAt(event.target.value)} />
             </label>
             <label>

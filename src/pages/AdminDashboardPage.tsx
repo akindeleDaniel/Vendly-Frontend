@@ -9,6 +9,7 @@ import { fetchPlatformSummary } from "../lib/platformApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { PlatformSummary } from "../types/platform"
+import { lagosParts } from "../lib/lagosTime"
 
 type TaskProps = {
     to: string
@@ -74,7 +75,7 @@ function AdminDashboardPage({ userName, isSuperAdmin }: { userName: string, isSu
     return (
         <div className="admin-page">
             <div className="admin-head">
-                <h1>{greetingFor(new Date().getHours())}{firstName ? `, ${firstName}` : ""}</h1>
+                <h1>{greetingFor(lagosParts().hour)}{firstName ? `, ${firstName}` : ""}</h1>
                 <p>Here's what needs an administrator today.</p>
             </div>
 

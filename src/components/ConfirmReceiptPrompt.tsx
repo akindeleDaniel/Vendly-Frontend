@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { confirmOrderReceived } from "../lib/orderApi"
 import type { CustomerOrder } from "../types/order"
+import { LAGOS_TIME_ZONE } from "../lib/lagosTime"
 
 // How long after the seller reports delivery the order is closed as delivered without an answer
 // (deliveryAutoCloseAfterDays in the backend).
@@ -19,7 +20,7 @@ type ConfirmReceiptPromptProps = {
 }
 
 function formatDay(date: Date): string {
-    return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" })
+    return date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short" })
 }
 
 // Asks the buyer whether one seller's order arrived, after the seller has said it was delivered.

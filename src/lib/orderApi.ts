@@ -1,5 +1,6 @@
 import { apiFetch, getErrorMessage } from "./api"
 import type { CustomerOrder, Fulfilment, MyOrderFilter, MyOrderPage, OrderPage, SellerOrder, SellerOrderSummary } from "../types/order"
+import { LAGOS_TIME_ZONE, lagosDay } from "./lagosTime"
 
 export type OrderOutcome<T> =
     | { kind: "ok", data: T }
@@ -175,15 +176,15 @@ export function formatHeldUntil(isoTime: string): string {
     if (Number.isNaN(date.getTime())) {
         return isoTime
     }
-    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    return date.toDateString() === new Date().toDateString() ? time : `${time} on ${date.toLocaleDateString()}`
+    const time = date.toLocaleTimeString("en-NG", { timeZone: LAGOS_TIME_ZONE, hour: "numeric", minute: "2-digit" })
+    return lagosDay(date) === lagosDay() ? time : `${time} on ${date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short" })}`
 }
 
 export function formatShortDate(isoTime: string): string {
     const date = new Date(isoTime)
     return Number.isNaN(date.getTime())
         ? isoTime
-        : date.toLocaleString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })
+        : date.toLocaleString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })
 }
 
 // True when a money string from the server is more than zero, for showing a line only when it matters.
@@ -201,5 +202,5 @@ export function formatDate(isoTime: string | null): string {
     }
 
     const date = new Date(isoTime)
-    return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString()
+    return Number.isNaN(date.getTime()) ? isoTime : date.toLocaleString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })
 }

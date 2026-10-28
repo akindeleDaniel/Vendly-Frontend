@@ -17,6 +17,7 @@ import {
 import { useAccountCheck } from "../lib/useAccountCheck"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { PayoutAccount, PayoutBank, PayoutOverview, PayoutStatus } from "../types/payout"
+import { LAGOS_TIME_ZONE } from "../lib/lagosTime"
 
 type LoadStatus = "loading" | "ready" | "error"
 
@@ -36,7 +37,7 @@ function formatDate(value: string | null): string | null {
     const date = new Date(value)
     return Number.isNaN(date.getTime())
         ? null
-        : date.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })
+        : date.toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, day: "numeric", month: "long", year: "numeric" })
 }
 
 function isFullySetUp(accounts: PayoutAccount[]): boolean {

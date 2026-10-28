@@ -7,10 +7,12 @@ import SalesOverview from "../components/SalesOverview"
 import { fetchSellerEarnings } from "../lib/adminLookupApi"
 import { apiFetch } from "../lib/api"
 import { downloadOrdersCsv } from "../lib/insightsApi"
+import { useShopShareUrl } from "../lib/useShopShareUrl"
 import { formatNaira } from "../lib/money"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { EarningsMonth } from "../types/earnings"
+import { calendarDay, lagosDay, lagosParts } from "../lib/lagosTime"
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -44,25 +46,22 @@ function formatMonth(month: string, short = false): string {
     return name ? (short ? name.slice(0, 3) : `${name} ${year}`) : month
 }
 
-function isoDay(date: Date): string {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-}
-
-// The dates sent to the backend for a preset, ending today; "" leaves that end open.
+// The dates sent to the backend for a preset, ending today in Nigeria; "" leaves that end open.
 function presetDates(id: RangeId): { from: string, to: string } {
-    const today = new Date()
-    const daysAgo = (count: number) => isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() - count))
+    const { year, month, day } = lagosParts()
+    const today = lagosDay()
+    const daysAgo = (count: number) => calendarDay(year, month - 1, day - count)
     switch (id) {
         case "week":
-            return { from: daysAgo(6), to: isoDay(today) }
+            return { from: daysAgo(6), to: today }
         case "days30":
-            return { from: daysAgo(29), to: isoDay(today) }
+            return { from: daysAgo(29), to: today }
         case "month":
-            return { from: isoDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: isoDay(today) }
+            return { from: calendarDay(year, month - 1, 1), to: today }
         case "three":
-            return { from: isoDay(new Date(today.getFullYear(), today.getMonth() - 2, 1)), to: isoDay(today) }
+            return { from: calendarDay(year, month - 3, 1), to: today }
         case "year":
-            return { from: isoDay(new Date(today.getFullYear(), 0, 1)), to: isoDay(today) }
+            return { from: calendarDay(year, 0, 1), to: today }
         default:
             return { from: "", to: "" }
     }
@@ -75,11 +74,11 @@ function rangeName(id: RangeId, from: string, to: string): string {
         case "days30":
             return "the last 30 days"
         case "month":
-            return MONTH_NAMES[new Date().getMonth()]
+            return MONTH_NAMES[lagosParts().month - 1]
         case "three":
             return "the last 3 months"
         case "year":
-            return String(new Date().getFullYear())
+            return String(lagosParts().year)
         case "all":
             return "all time"
         default:
@@ -278,12 +277,13 @@ function SellerEarningsPage() {
     const [rangeError, setRangeError] = useState("")
     const [isDownloading, setIsDownloading] = useState(false)
     const [downloadError, setDownloadError] = useState("")
-    const [shopLink, setShopLink] = useState<string | null>(null)
+    const [shopSlug, setShopSlug] = useState<string | null>(null)
+    const shopLink = useShopShareUrl(shopSlug)// shows the shop's picture when pasted into WhatsApp
     // All time is only on Money; the overview falls back to the last 30 days.
     const rangeId: RangeId = tab === "overview" && chosenRange === "all" ? "days30" : chosenRange
     const range = rangeId === "custom" ? custom : presetDates(rangeId)
     const name = rangeName(rangeId, range.from, range.to)
-    const today = isoDay(new Date())
+    const today = lagosDay()
     const overviewRange = { from: range.from, to: range.to || today }
     const customIncomplete = rangeId === "custom" && (custom.from === "" || custom.to === "")
     const canDownload = rangeId !== "all" && !customIncomplete
@@ -295,7 +295,7 @@ function SellerEarningsPage() {
             .then((response) => response.ok ? response.json() : null)
             .then((profile: unknown) => {
                 if (!controller.signal.aborted && typeof profile === "object" && profile !== null && "slug" in profile && typeof profile.slug === "string") {
-                    setShopLink(`${window.location.origin}/shop/${profile.slug}`)
+                    setShopSlug(profile.slug)
                 }
             })
             .catch(() => null)

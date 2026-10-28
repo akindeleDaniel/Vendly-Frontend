@@ -4,11 +4,13 @@ import { BarChart3, Check, ChevronRight, CircleAlert, Clock, ExternalLink, Landm
 import type { LucideIcon } from "lucide-react"
 import ShopAvatar from "./ShopAvatar"
 import { fetchSellerEarnings } from "../lib/adminLookupApi"
-import { fetchComplaintsAwaitingSeller } from "../lib/disputeApi"
 import { formatNaira } from "../lib/money"
 import { fetchPayoutOverview } from "../lib/payoutApi"
-import { fetchPreOrdersAwaitingAnswer } from "../lib/preOrderApi"
+import { fetchSellerSummary } from "../lib/insightsApi"
+import { useShopShareUrl } from "../lib/useShopShareUrl"
 import type { BrandColor } from "../types/branding"
+import type { SellerSummary } from "../types/insights"
+import { LAGOS_TIME_ZONE, lagosDay, lagosParts } from "../lib/lagosTime"
 
 // What My store knows about the shop itself, from GET /seller/profile.
 export type StoreProfile = {
@@ -33,9 +35,8 @@ type StoreOverviewProps = {
 // The month's figures and what is waiting for the seller. Each is loaded on its own and simply left
 // out when it cannot be read, so one slow or failing figure never holds up the page.
 type Overview = {
-    toShip: number | null
-    complaintsToAnswer: number | null
-    preOrdersToAnswer: number | null
+    // What is waiting right now, from one GET /seller/summary call.
+    needs: SellerSummary["needsAttention"] | null
     hasPayouts: boolean | null
     month: { sales: string, paidOut: string, orders: number } | null
 }
@@ -45,12 +46,11 @@ function greetingFor(hour: number): string {
 }
 
 function currentMonthKey(): string {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    return lagosDay().slice(0, 7)
 }
 
 function useOverview(): Overview {
-    const [overview, setOverview] = useState<Overview>({ toShip: null, complaintsToAnswer: null, preOrdersToAnswer: null, hasPayouts: null, month: null })
+    const [overview, setOverview] = useState<Overview>({ needs: null, hasPayouts: null, month: null })
 
     useEffect(() => {
         const controller = new AbortController()
@@ -67,14 +67,17 @@ function useOverview(): Overview {
             }
             const thisMonth = result.data.months.find((month) => month.month === currentMonthKey())
             update({
-                toShip: result.data.ordersByStatus.PAID ?? 0,
                 month: thisMonth
                     ? { sales: thisMonth.sales, paidOut: thisMonth.paidOutByProvider, orders: thisMonth.orders }
                     : { sales: "0.00", paidOut: "0.00", orders: 0 }
             })
         })
-        fetchComplaintsAwaitingSeller(signal).then((count) => update({ complaintsToAnswer: count }))
-        fetchPreOrdersAwaitingAnswer(signal).then((count) => update({ preOrdersToAnswer: count }))
+        // The period doesn't matter here: what needs the seller is counted as it is right now.
+        fetchSellerSummary("", "", signal).then((result) => {
+            if (result.kind === "ok") {
+                update({ needs: result.data.needsAttention })
+            }
+        })
         fetchPayoutOverview(signal).then((result) => {
             if (result.kind === "ok") {
                 update({ hasPayouts: result.data.accounts.some((account) => account.status === "ACTIVE") })
@@ -107,8 +110,15 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
     const overview = useOverview()
     const [copied, setCopied] = useState(false)
     const shopPath = `/shop/${profile.slug}`
+    const shareUrl = useShopShareUrl(profile.slug)// shows the shop's picture when pasted into WhatsApp
     const brandColor = profile.branding.brandColor
     const isNewShop = productsOnSale === 0 && overview.month?.orders === 0
+    const toShip = overview.needs?.ordersToShip ?? 0
+    const toAnswer = overview.needs?.complaintsToAnswer ?? 0
+    const openComplaints = overview.needs?.openComplaints ?? 0
+    const preOrdersToAnswer = overview.needs?.preOrdersToAnswer ?? 0
+    const awaitingConfirmation = overview.needs?.awaitingBuyerConfirmation ?? 0
+    const otherOpen = openComplaints - toAnswer// open, but waiting on the buyer or StoreHatch rather than the seller
 
     const steps = [
         { done: true, title: "Shop name and area", text: [profile.businessName, profile.location].filter(Boolean).join(", "), to: "/seller/profile/edit", action: "Store details" },
@@ -123,7 +133,7 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
 
     async function copyLink() {
         try {
-            await navigator.clipboard.writeText(`${window.location.origin}${shopPath}`)
+            await navigator.clipboard.writeText(shareUrl ?? `${window.location.origin}${shopPath}`)
             setCopied(true)
             window.setTimeout(() => setCopied(false), 2000)
         } catch {
@@ -135,7 +145,7 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
         <>
             <div className="store-greet">
                 <div>
-                    <h1>{isNewShop ? `Welcome to your shop${firstName ? `, ${firstName}` : ""}` : `${greetingFor(new Date().getHours())}${firstName ? `, ${firstName}` : ""}`}</h1>
+                    <h1>{isNewShop ? `Welcome to your shop${firstName ? `, ${firstName}` : ""}` : `${greetingFor(lagosParts().hour)}${firstName ? `, ${firstName}` : ""}`}</h1>
                     <p>{isNewShop ? "A few steps and your shop is ready for buyers." : "Here is what needs you today."}</p>
                 </div>
             </div>
@@ -222,32 +232,46 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
                     <div className="store-section-title"><h2 id="store-needs-title">Needs you</h2></div>
                     <div className="store-tasks">
                         <TaskCard
-                            to="/seller/orders"
+                            to="/seller/orders?status=PAID"
                             icon={Truck}
                             tone="amber"
-                            count={overview.toShip ?? 0}
-                            label={overview.toShip === 1 ? "order to ship" : "orders to ship"}
-                            text={overview.toShip ? "Paid and waiting for you to send." : "Nothing to send right now."}
+                            count={toShip}
+                            label={toShip === 1 ? "order to ship" : "orders to ship"}
+                            text={toShip ? "Paid and waiting for you to send." : "Nothing to send right now."}
                             action="Go to orders"
                         />
                         <TaskCard
                             to="/seller/disputes?group=open"
                             icon={CircleAlert}
                             tone="red"
-                            count={overview.complaintsToAnswer ?? 0}
-                            label={overview.complaintsToAnswer === 1 ? "complaint to answer" : "complaints to answer"}
-                            text={overview.complaintsToAnswer ? "Answer in time, or StoreHatch decides without your side." : "No complaints waiting for you."}
+                            count={toAnswer}
+                            label={toAnswer === 1 ? "complaint to answer" : "complaints to answer"}
+                            text={[
+                                toAnswer ? "Answer in time, or StoreHatch decides without your side." : "No complaints waiting for you.",
+                                otherOpen > 0 ? `${otherOpen} more open, waiting on the buyer or StoreHatch.` : ""
+                            ].filter(Boolean).join(" ")}
                             action="Go to complaints"
                         />
-                        {(profile.takesPreOrders || (overview.preOrdersToAnswer ?? 0) > 0) && (
+                        {(profile.takesPreOrders || preOrdersToAnswer > 0) && (
                             <TaskCard
                                 to="/seller/pre-orders?group=waiting"
                                 icon={Clock}
                                 tone="green"
-                                count={overview.preOrdersToAnswer ?? 0}
-                                label={overview.preOrdersToAnswer === 1 ? "pre-order to answer" : "pre-orders to answer"}
-                                text={overview.preOrdersToAnswer ? "Approve or decline within 48 hours." : "No requests waiting."}
+                                count={preOrdersToAnswer}
+                                label={preOrdersToAnswer === 1 ? "pre-order to answer" : "pre-orders to answer"}
+                                text={preOrdersToAnswer ? "Approve or decline within 48 hours." : "No requests waiting."}
                                 action="Go to pre-orders"
+                            />
+                        )}
+                        {awaitingConfirmation > 0 && (
+                            <TaskCard
+                                to="/seller/orders?status=SHIPPED"
+                                icon={Check}
+                                tone="green"
+                                count={awaitingConfirmation}
+                                label={awaitingConfirmation === 1 ? "order waiting for the buyer" : "orders waiting for buyers"}
+                                text="You said they arrived. The buyer confirms delivery next; nothing to do."
+                                action="See shipped orders"
                             />
                         )}
                     </div>
@@ -257,7 +281,7 @@ function StoreOverview({ firstName, profile, productsOnSale, productsLow }: Stor
             {!isNewShop && overview.month && (
                 <section aria-labelledby="store-month-title">
                     <div className="store-section-title">
-                        <h2 id="store-month-title">{new Date().toLocaleDateString("en-NG", { month: "long" })} so far</h2>
+                        <h2 id="store-month-title">{new Date().toLocaleDateString("en-NG", { timeZone: LAGOS_TIME_ZONE, month: "long" })} so far</h2>
                         <Link to="/seller/earnings">See sales</Link>
                     </div>
                     <div className="store-stats">
