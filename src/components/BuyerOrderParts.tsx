@@ -37,6 +37,11 @@ export function OrderProgress({ steps, large = false }: { steps: ProgressStep[],
 // An order, complaint or pre-order line. Pre-order lines have no line total, so it is worked out.
 type ItemLine = Pick<OrderItem, "title" | "quantity" | "unitPrice" | "imageUrl" | "optionLabel" | "sizeLabel" | "productTitle"> & { lineTotal?: string }
 
+function itemTitle(item: ItemLine): string {
+    const option = [item.optionLabel, item.sizeLabel].filter(Boolean).join(", ")
+    return `${item.productTitle ?? item.title}${option ? ` (${option})` : ""}`
+}
+
 // One line of an order: the photo, the product with its options and quantity, and the line total.
 export function OrderItemRow({ item }: { item: ItemLine }) {
     const lineTotal = item.lineTotal ? formatNaira(item.lineTotal) : formatMinorUnits(toMinorUnits(Number(item.unitPrice)) * item.quantity)
@@ -53,7 +58,7 @@ export function OrderItemRow({ item }: { item: ItemLine }) {
                 ? <img className="orders-item-photo" src={item.imageUrl} alt="" loading="lazy" />
                 : <span className="orders-item-photo" aria-hidden="true"><ShoppingBag size={22} /></span>}
             <div className="orders-item-text">
-                <span className="orders-item-title">{item.productTitle ?? item.title}</span>
+                <span className="orders-item-title">{itemTitle(item)}</span>
                 <span className="orders-item-details">{details}</span>
             </div>
             <span className="orders-item-price">{lineTotal}</span>

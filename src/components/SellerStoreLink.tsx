@@ -19,7 +19,9 @@ function SellerStoreLink() {
             fetchPreOrdersAwaitingAnswer(controller.signal)
         ]).then(([toAnswer, unread, preOrders]) => {
             if (!controller.signal.aborted) {
-                setWaiting((toAnswer ?? 0) + (unread ?? 0) + (preOrders ?? 0))
+                // A complaint waiting for an answer is usually unread too, so adding the two counts it twice. The
+                // counts carry no ids, so the larger one stands for complaints (never more than there really are).
+                setWaiting(Math.max(toAnswer ?? 0, unread ?? 0) + (preOrders ?? 0))
             }
         })
 

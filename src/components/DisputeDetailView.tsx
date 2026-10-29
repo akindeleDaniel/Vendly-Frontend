@@ -11,6 +11,7 @@ import type { ProgressStep, StatusTone } from "../lib/buyerOrders"
 import { describeDispute, isDisputeClosed } from "../lib/disputeApi"
 import type { DisputeViewer } from "../lib/disputeApi"
 import { formatNaira } from "../lib/money"
+import DisputeCountdown from "./DisputeCountdown"
 import type { Dispute } from "../types/dispute"
 
 type DisputeDetailViewProps = {
@@ -120,6 +121,7 @@ function DisputeDetailView({ dispute, viewer, children, composer }: DisputeDetai
                     <NextIcon size={18} aria-hidden="true" />
                     <span><b>{next.title}</b> {next.text}</span>
                 </p>
+                {viewer === "seller" && dispute.status === "OPEN" && dispute.responseDueAt && <p className="complaint-row-meta"><DisputeCountdown deadline={dispute.responseDueAt} /></p>}
             </section>
 
             <div className="complaint-grid">

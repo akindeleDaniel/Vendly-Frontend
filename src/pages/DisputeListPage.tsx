@@ -13,6 +13,8 @@ import { formatNaira } from "../lib/money"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { DisputeGroup, DisputePage, DisputeSummary } from "../types/dispute"
 import BackArrow from "../components/BackArrow"
+import ShopAvatar from "../components/ShopAvatar"
+import DisputeCountdown from "../components/DisputeCountdown"
 
 const DETAIL_PATHS: Record<DisputeViewer, string> = {
     buyer: "/disputes",
@@ -89,8 +91,10 @@ function DisputeRow({ dispute, viewer }: { dispute: DisputeSummary, viewer: Disp
 
     return (
         <li>
-            <Link to={`${DETAIL_PATHS[viewer]}/${dispute.id}`} className="complaint-row">
-                {photo
+            <Link to={`${DETAIL_PATHS[viewer]}/${dispute.id}`} className={`complaint-row${viewer !== "seller" && dispute.seller ? " has-shop-avatar" : ""}`}>
+                {viewer !== "seller" && dispute.seller
+                    ? <ShopAvatar name={dispute.seller.businessName} logoUrl={dispute.seller.logoUrl} brandColor={dispute.seller.brandColor ?? undefined} />
+                    : photo
                     ? <img className="complaint-row-photo" src={photo} alt="" loading="lazy" />
                     : <span className="complaint-row-photo" aria-hidden="true"><ShoppingBag size={22} /></span>}
                 <div className="complaint-row-body">
@@ -102,6 +106,8 @@ function DisputeRow({ dispute, viewer }: { dispute: DisputeSummary, viewer: Disp
                     <p className="complaint-row-meta">
                         {viewer === "admin" ? <><b>{dispute.buyerName}</b> about <b>{who}</b></> : who} · {isOffer ? "Offer" : "Complaint"} #{dispute.id} · Order #{dispute.orderId} · Opened {formatOrderDay(dispute.createdAt)}
                     </p>
+                    <p className="complaint-row-meta">{dispute.items.map((item) => `${item.title}${[item.optionLabel, item.sizeLabel].filter(Boolean).length ? ` (${[item.optionLabel, item.sizeLabel].filter(Boolean).join(", ")})` : ""}`).join(", ")}</p>
+                    {viewer === "seller" && dispute.status === "OPEN" && dispute.responseDueAt && <p className="complaint-row-meta"><DisputeCountdown deadline={dispute.responseDueAt} /></p>}
                     <p className="complaint-row-meta">
                         {isOffer ? "Refund offered" : "Refund asked for"}:{" "}
                         <b>{dispute.requestedAmount ? formatNaira(dispute.requestedAmount) : `the full order, ${formatNaira(dispute.orderTotal)}`}</b>

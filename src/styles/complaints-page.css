@@ -75,6 +75,14 @@
   object-fit: cover;
 }
 
+.complaint-row.has-shop-avatar > .shop-avatar,
+.preorder-row .complaint-row-top > .shop-avatar {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+}
+
 .complaint-row-body,
 .preorder-row-body {
   display: flex;
@@ -605,6 +613,12 @@
   }
 
   .complaint-row-photo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .complaint-row.has-shop-avatar > .shop-avatar,
+  .preorder-row .complaint-row-top > .shop-avatar {
     width: 52px;
     height: 52px;
   }

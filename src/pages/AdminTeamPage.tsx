@@ -18,6 +18,10 @@ type Problem = Exclude<TeamResult, { kind: "ok" }>
 // Turns a failed result into the words to show. An account with no password (for example one made with
 // Google) cannot confirm a change, so it is sent to set one.
 function ProblemNotice({ result }: { result: Problem }) {
+    if (result.kind === "failed" && result.code === "LAST_SUPER_ADMIN") {
+        return <Notice kind="warning">The last super administrator cannot be removed or demoted. Make another administrator a super administrator first.</Notice>
+    }
+
     if (result.kind === "failed" && result.code === "ADMIN_PASSWORD_REQUIRED") {
         return (
             <Notice kind="warning">

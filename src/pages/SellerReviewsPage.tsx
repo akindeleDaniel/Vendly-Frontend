@@ -4,8 +4,10 @@ import BackArrow from "../components/BackArrow"
 import Notice from "../components/Notice"
 import Pagination from "../components/Pagination"
 import Stars from "../components/ReviewStars"
+import PhotoViewer from "../components/PhotoViewer"
 import { failureMessage } from "../lib/apiRequest"
 import { formatOrderDay } from "../lib/buyerOrders"
+import { reviewPhotoCaption } from "../lib/reviewCaption"
 import { fetchMyReviews, reportReview } from "../lib/reviewApi"
 import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
@@ -116,6 +118,7 @@ function ReportForm({ type, review, onReported, onCancel }: ReportFormProps) {
 
 function ReviewCard({ type, review, onReported }: { type: SellerReviewType, review: SellerReview, onReported: () => void }) {
     const [isReporting, setIsReporting] = useState(false)
+    const [photoIndex, setPhotoIndex] = useState<number | null>(null)
     const photos = review.photoUrls ?? []
 
     return (
@@ -136,14 +139,14 @@ function ReviewCard({ type, review, onReported }: { type: SellerReviewType, revi
             {review.comment ? <p className="review-comment">{review.comment}</p> : <p className="product-help">Stars only, no comment.</p>}
             {photos.length > 0 && (
                 <div className="review-photos">
-                    {photos.map((url) => (
-                        <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt="Photo from the buyer" loading="lazy" />
-                            <span className="visually-hidden"> (opens in a new tab)</span>
-                        </a>
+                    {photos.map((url, index) => (
+                        <button key={url} type="button" className="review-thumb" aria-label={`Open buyer photo ${index + 1} of ${photos.length}`} onClick={() => setPhotoIndex(index)}>
+                            <img src={url} alt="" loading="lazy" />
+                        </button>
                     ))}
                 </div>
             )}
+            <PhotoViewer photos={photos} index={photoIndex} caption={reviewPhotoCaption(review)} quote={review.comment} onIndex={setPhotoIndex} onClose={() => setPhotoIndex(null)} />
             {review.hidden && <p className="product-help">StoreHatch hid this review, so shoppers don't see it and it doesn't count in your rating.</p>}
             {review.reported && !review.hidden && <p className="product-help">You reported this review. StoreHatch will look at it.</p>}
             {!review.reported && !review.hidden && (isReporting

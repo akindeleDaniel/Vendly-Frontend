@@ -35,12 +35,14 @@ function dayLabel(isoTime: string): string {
     const date = new Date(isoTime)
     const today = new Date()
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+    const todayKey = dayKey(today)
+    const yesterdayKey = dayKey(yesterday)
 
-    if (dayKey(date) === dayKey(today)) {
+    if (dayKey(date) === todayKey) {
         return "Today"
     }
 
-    return dayKey(date) === dayKey(yesterday) ? "Yesterday" : formatOrderDay(isoTime, { year: true })
+    return dayKey(date) === yesterdayKey ? "Yesterday" : formatOrderDay(isoTime, { year: true })
 }
 
 // The page's entries in days, newest first, as the backend sends them.

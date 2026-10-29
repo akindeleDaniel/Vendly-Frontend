@@ -13,6 +13,7 @@ import { useApiResource } from "../lib/useApiResource"
 import { useDocumentTitle } from "../lib/useDocumentTitle"
 import type { PreOrder, PreOrderGroup } from "../types/preOrder"
 import BackArrow from "../components/BackArrow"
+import ShopAvatar from "../components/ShopAvatar"
 
 const DETAIL_PATHS: Record<PreOrderViewer, string> = {
     buyer: "/pre-orders",
@@ -73,6 +74,7 @@ function PreOrderRow({ preOrder, viewer }: { preOrder: PreOrder, viewer: PreOrde
             <ReadyTile preOrder={preOrder} />
             <div className="preorder-row-body">
                 <div className="complaint-row-top">
+                    {viewer === "buyer" && <ShopAvatar name={preOrder.seller.businessName} logoUrl={preOrder.seller.logoUrl} brandColor={preOrder.seller.brandColor ?? undefined} />}
                     <Link to={`${DETAIL_PATHS[viewer]}/${preOrder.id}`} className="preorder-row-title">
                         {viewer === "buyer" ? preOrder.seller.businessName ?? "Shop" : preOrder.buyerName ?? "A buyer"}
                         <span className="visually-hidden">, {ended ? "was for" : "ready"} {ready.long}</span>
@@ -83,7 +85,7 @@ function PreOrderRow({ preOrder, viewer }: { preOrder: PreOrder, viewer: PreOrde
                     {photo
                         ? <img src={photo} alt="" loading="lazy" />
                         : <span className="preorder-row-photo" aria-hidden="true"><ShoppingBag size={18} /></span>}
-                    <span>{preOrder.items.map((item) => `${item.title} × ${item.quantity}`).join(", ")}</span>
+                    <span>{preOrder.items.map((item) => `${item.title}${[item.optionLabel, item.sizeLabel].filter(Boolean).length ? ` (${[item.optionLabel, item.sizeLabel].filter(Boolean).join(", ")})` : ""} × ${item.quantity}`).join(", ")}</span>
                 </div>
                 <p className="complaint-row-meta">
                     Pre-order #{preOrder.id} · {formatNaira(preOrder.subtotal)} before delivery · Asked {formatOrderDay(preOrder.createdAt)}

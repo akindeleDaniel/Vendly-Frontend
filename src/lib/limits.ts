@@ -43,6 +43,10 @@ export function validateListingFields(fields: ListingFields): string | null {
         return `Price must be ${PRICE_MAX.toLocaleString("en-NG")} or less`
     }
 
+    if (fields.stockQuantity.trim() === "") {
+        return "Stock quantity must be a whole number greater than or equal to 0"
+    }
+
     const stock = Number(fields.stockQuantity)
 
     if (!Number.isInteger(stock) || stock < 0) {

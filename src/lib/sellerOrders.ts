@@ -53,7 +53,10 @@ export function sellerProgressSteps(order: SellerOrderState): ProgressStep[] {
             ? { label: "You marked delivered", detail: day(order.deliveryReportedAt) || "—", state: "done" }
             : { label: "You marked delivered", detail: "Not yet", state: order.status === "SHIPPED" ? "waiting" : "next" },
         isDelivered
-            ? { label: "Buyer confirmed", detail: order.deliveryConfirmedAt ? day(order.deliveryConfirmedAt) : order.deliveryAutoClosedAt ? `Closed ${day(order.deliveryAutoClosedAt)}` : "—", state: "done" }
+            // An order the buyer never confirmed closes on its own after 7 days; it says so, not "Buyer confirmed".
+            ? !order.deliveryConfirmedAt && order.deliveryAutoClosedAt
+                ? { label: "Closed automatically", detail: day(order.deliveryAutoClosedAt), state: "done" }
+                : { label: "Buyer confirmed", detail: order.deliveryConfirmedAt ? day(order.deliveryConfirmedAt) : "—", state: "done" }
             : { label: "Buyer confirmed", detail: reported ? "Waiting" : "Not yet", state: reported ? "waiting" : "next" }
     ]
 }
